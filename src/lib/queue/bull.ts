@@ -1,11 +1,9 @@
 import Queue from 'bull'
 
-// Redis connection options
-const redisConfig = {
-  redis: process.env.REDIS_URL || 'redis://localhost:6379',
-}
+// Redis URL
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
 
-// Queue options with retry logic
+// Default job options with retry logic
 const defaultJobOptions: Queue.JobOptions = {
   attempts: 3,
   backoff: {
@@ -20,7 +18,7 @@ const defaultJobOptions: Queue.JobOptions = {
  * Question Evaluation Queue
  * Handles async AI evaluation of student questions
  */
-export const evaluationQueue = new Queue('question-evaluations', redisConfig, {
+export const evaluationQueue = new Queue('question-evaluations', redisUrl, {
   defaultJobOptions,
 })
 
@@ -28,7 +26,7 @@ export const evaluationQueue = new Queue('question-evaluations', redisConfig, {
  * Response Evaluation Queue
  * Handles async AI evaluation of student responses
  */
-export const responseEvaluationQueue = new Queue('response-evaluations', redisConfig, {
+export const responseEvaluationQueue = new Queue('response-evaluations', redisUrl, {
   defaultJobOptions,
 })
 
@@ -36,7 +34,7 @@ export const responseEvaluationQueue = new Queue('response-evaluations', redisCo
  * Email Queue
  * Handles async email sending
  */
-export const emailQueue = new Queue('emails', redisConfig, {
+export const emailQueue = new Queue('emails', redisUrl, {
   defaultJobOptions: {
     ...defaultJobOptions,
     attempts: 5,
@@ -47,7 +45,7 @@ export const emailQueue = new Queue('emails', redisConfig, {
  * Leaderboard Update Queue
  * Handles async leaderboard recalculations
  */
-export const leaderboardQueue = new Queue('leaderboard-updates', redisConfig, {
+export const leaderboardQueue = new Queue('leaderboard-updates', redisUrl, {
   defaultJobOptions: {
     ...defaultJobOptions,
     attempts: 2,
