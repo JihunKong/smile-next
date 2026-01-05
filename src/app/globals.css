@@ -76,3 +76,16 @@ body {
   opacity: 0.9;
   transform: scale(1.05);
 }
+
+/* Form Input Styles - Ensure text is always visible */
+input,
+textarea,
+select {
+  color: #111827; /* text-gray-900 */
+  background-color: #ffffff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af; /* text-gray-400 */
+}
