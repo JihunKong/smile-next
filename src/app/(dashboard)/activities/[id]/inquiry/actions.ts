@@ -5,6 +5,32 @@ import { prisma } from '@/lib/db/prisma'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/types/activities'
 
+// Helper to queue evaluation via API (avoids Bull import in Server Components)
+async function queueQuestionEvaluationViaApi(data: {
+  questionId: string
+  activityId: string
+  userId: string
+  questionContent: string
+  context: {
+    activityName: string
+    groupName: string
+    subject?: string
+    topic?: string
+    educationLevel?: string
+  }
+}): Promise<void> {
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'http://localhost:3000'
+  try {
+    await fetch(`${baseUrl}/api/queue/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'question', data }),
+    })
+  } catch (error) {
+    console.warn('Failed to queue evaluation via API:', error)
+  }
+}
+
 interface StartInquiryResult extends ActionResult<{ attemptId: string }> {}
 interface SubmitQuestionResult extends ActionResult<{
   questionId: string
@@ -155,25 +181,32 @@ export async function submitInquiryQuestion(
       },
     })
 
-    // TODO: Trigger AI evaluation (for now, simulate)
-    // In production, this would call an AI service
-    const simulatedEvaluation = {
-      score: 6 + Math.random() * 4, // 6-10
-      bloomsLevel: ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'][
-        Math.floor(Math.random() * 6)
-      ],
-      feedback: 'Good question that demonstrates understanding of the concepts.',
+    // Get activity and group info for evaluation context
+    const activityWithGroup = await prisma.activity.findUnique({
+      where: { id: attempt.activityId },
+      include: {
+        owningGroup: { select: { name: true } },
+      },
+    })
+
+    // Provide immediate estimated evaluation for UX
+    // Background AI evaluation will refine this later
+    const estimatedEvaluation = {
+      score: 7.0, // Neutral score, AI will update
+      bloomsLevel: 'understand',
+      feedback: 'Evaluating your question...',
     }
 
-    // Create evaluation record
-    await prisma.questionEvaluation.create({
+    // Create preliminary evaluation record
+    const evaluation = await prisma.questionEvaluation.create({
       data: {
         questionId: question.id,
         activityId: attempt.activityId,
         evaluationType: 'inquiry',
-        overallScore: simulatedEvaluation.score,
-        bloomsLevel: simulatedEvaluation.bloomsLevel,
-        evaluationText: simulatedEvaluation.feedback,
+        overallScore: estimatedEvaluation.score,
+        bloomsLevel: estimatedEvaluation.bloomsLevel,
+        evaluationText: estimatedEvaluation.feedback,
+        evaluationStatus: 'pending', // Will be updated by worker
       },
     })
 
@@ -181,7 +214,30 @@ export async function submitInquiryQuestion(
     await prisma.question.update({
       where: { id: question.id },
       data: {
-        questionEvaluationScore: simulatedEvaluation.score,
+        questionEvaluationId: evaluation.id,
+        questionEvaluationScore: estimatedEvaluation.score,
+      },
+    })
+
+    // Queue background AI evaluation job
+    const inquirySettings = attempt.activity.inquirySettings as {
+      subject?: string
+      topic?: string
+      educationLevel?: string
+    } | null
+
+    // Queue background AI evaluation (fire and forget)
+    queueQuestionEvaluationViaApi({
+      questionId: question.id,
+      activityId: attempt.activityId,
+      userId: session.user.id,
+      questionContent: content.trim(),
+      context: {
+        activityName: activityWithGroup?.name || 'Unknown Activity',
+        groupName: activityWithGroup?.owningGroup?.name || 'Unknown Group',
+        subject: inquirySettings?.subject,
+        topic: inquirySettings?.topic,
+        educationLevel: inquirySettings?.educationLevel,
       },
     })
 
@@ -192,7 +248,7 @@ export async function submitInquiryQuestion(
       data: {
         questionId: question.id,
         questionNumber: newQuestionCount,
-        evaluation: simulatedEvaluation,
+        evaluation: estimatedEvaluation,
       },
     }
   } catch (error) {
