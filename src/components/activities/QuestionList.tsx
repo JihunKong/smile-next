@@ -7,18 +7,22 @@ import type { QuestionWithEvaluation } from '@/types/activities'
 
 interface QuestionListProps {
   questions: QuestionWithEvaluation[]
+  activityId: string
   currentUserId?: string
   activityCreatorId?: string
   groupCreatorId?: string
   showActions?: boolean
+  likedQuestionIds?: Set<string>
 }
 
 export function QuestionList({
   questions,
+  activityId,
   currentUserId,
   activityCreatorId,
   groupCreatorId,
   showActions = false,
+  likedQuestionIds = new Set(),
 }: QuestionListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -55,10 +59,12 @@ export function QuestionList({
         <div key={question.id} className={deletingId === question.id ? 'opacity-50' : ''}>
           <QuestionCard
             question={question}
+            activityId={activityId}
             showActions={showActions && deletingId !== question.id}
             currentUserId={currentUserId}
             activityCreatorId={activityCreatorId}
             groupCreatorId={groupCreatorId}
+            isLiked={likedQuestionIds.has(question.id)}
             onDelete={handleDelete}
           />
         </div>

@@ -1,21 +1,29 @@
+'use client'
+
+import Link from 'next/link'
 import { getBloomBadgeColor, getBloomLabel, formatScore, getScoreColor, formatRelativeTime } from '@/lib/activities/utils'
+import { LikeButton } from './LikeButton'
 import type { QuestionWithEvaluation } from '@/types/activities'
 
 interface QuestionCardProps {
   question: QuestionWithEvaluation
+  activityId: string
   showActions?: boolean
   currentUserId?: string
   activityCreatorId?: string
   groupCreatorId?: string
+  isLiked?: boolean
   onDelete?: (questionId: string) => void
 }
 
 export function QuestionCard({
   question,
+  activityId,
   showActions = false,
   currentUserId,
   activityCreatorId,
   groupCreatorId,
+  isLiked = false,
   onDelete,
 }: QuestionCardProps) {
   const canDelete =
@@ -24,7 +32,7 @@ export function QuestionCard({
     currentUserId === groupCreatorId
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition">
       {/* Question header */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
@@ -67,7 +75,11 @@ export function QuestionCard({
         {/* Actions */}
         {showActions && canDelete && onDelete && (
           <button
-            onClick={() => onDelete(question.id)}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onDelete(question.id)
+            }}
             className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
             title="Delete question"
           >
@@ -78,8 +90,12 @@ export function QuestionCard({
         )}
       </div>
 
-      {/* Question content */}
-      <p className="text-gray-800 whitespace-pre-wrap">{question.content}</p>
+      {/* Question content - clickable link */}
+      <Link href={`/activities/${activityId}/questions/${question.id}`} className="block">
+        <p className="text-gray-800 whitespace-pre-wrap hover:text-[var(--stanford-cardinal)] transition line-clamp-3">
+          {question.content}
+        </p>
+      </Link>
 
       {/* AI Evaluation */}
       {question.evaluation && (
@@ -113,27 +129,29 @@ export function QuestionCard({
 
           {/* Feedback */}
           {question.evaluation.evaluationText && (
-            <p className="mt-2 text-sm text-gray-600 italic">
+            <p className="mt-2 text-sm text-gray-600 italic line-clamp-2">
               {question.evaluation.evaluationText}
             </p>
           )}
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stats with LikeButton */}
       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
-        <span className="flex items-center gap-1">
+        <Link
+          href={`/activities/${activityId}/questions/${question.id}`}
+          className="flex items-center gap-1 hover:text-[var(--stanford-cardinal)] transition"
+        >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
           {question._count.responses} responses
-        </span>
-        <span className="flex items-center gap-1">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-          {question._count.likes} likes
-        </span>
+        </Link>
+        <LikeButton
+          questionId={question.id}
+          initialLiked={isLiked}
+          initialCount={question._count.likes}
+        />
       </div>
     </div>
   )

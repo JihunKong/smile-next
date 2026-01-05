@@ -75,6 +75,17 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
     notFound()
   }
 
+  // Fetch user's likes for these questions
+  const questionIds = activity.questions.map((q) => q.id)
+  const userLikes = await prisma.like.findMany({
+    where: {
+      userId: session.user.id,
+      questionId: { in: questionIds },
+    },
+    select: { questionId: true },
+  })
+  const likedQuestionIds = new Set(userLikes.map((l) => l.questionId))
+
   const mode = activity.mode as ActivityMode
   const isManager = canManageActivity(session.user.id, activity.creatorId, activity.owningGroup.creatorId)
 
@@ -177,10 +188,12 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
               </h2>
               <QuestionList
                 questions={activity.questions}
+                activityId={activity.id}
                 currentUserId={session.user.id}
                 activityCreatorId={activity.creatorId}
                 groupCreatorId={activity.owningGroup.creatorId}
                 showActions={true}
+                likedQuestionIds={likedQuestionIds}
               />
             </div>
           </div>
