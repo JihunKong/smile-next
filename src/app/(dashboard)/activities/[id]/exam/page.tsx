@@ -4,6 +4,8 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getExamAttemptStatus } from './actions'
 import { ExamStartButton } from './exam-client'
+import { AttemptHistoryList } from '@/components/modes/AttemptHistoryList'
+import { LeaderboardSection } from '@/components/modes/LeaderboardSection'
 import type { ExamSettings } from '@/types/activities'
 
 interface ExamPageProps {
@@ -136,38 +138,14 @@ export default async function ExamPage({ params }: ExamPageProps) {
           </div>
 
           {/* Previous Attempts */}
-          {attemptStatus && attemptStatus.completed.length > 0 && (
+          {attemptStatus && attemptStatus.allAttempts && attemptStatus.allAttempts.length > 0 && (
             <div className="mb-6">
-              <h3 className="font-medium text-gray-900 mb-3">Previous Attempts</h3>
-              <div className="space-y-2">
-                {attemptStatus.completed.map((attempt, index) => (
-                  <div
-                    key={attempt.id}
-                    className={`flex items-center justify-between p-3 rounded-lg ${
-                      attempt.passed ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-                    }`}
-                  >
-                    <div>
-                      <span className="font-medium">
-                        Attempt {attemptStatus.completed.length - index}
-                      </span>
-                      <span className="text-sm text-gray-600 ml-2">
-                        {attempt.completedAt ? new Date(attempt.completedAt).toLocaleDateString() : ''}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`font-bold ${attempt.passed ? 'text-green-600' : 'text-red-600'}`}>
-                        {attempt.score?.toFixed(1)}%
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        attempt.passed ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
-                      }`}>
-                        {attempt.passed ? 'PASSED' : 'FAILED'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <AttemptHistoryList
+                attempts={attemptStatus.allAttempts}
+                activityId={activityId}
+                mode="exam"
+                passThreshold={examSettings.passThreshold}
+              />
             </div>
           )}
 
@@ -191,6 +169,13 @@ export default async function ExamPage({ params }: ExamPageProps) {
             </div>
           )}
         </div>
+
+        {/* Leaderboard */}
+        <LeaderboardSection
+          activityId={activityId}
+          mode="exam"
+          title="Top Performers"
+        />
       </div>
     </div>
   )

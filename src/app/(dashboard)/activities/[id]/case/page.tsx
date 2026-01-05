@@ -4,6 +4,8 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getCaseAttemptStatus } from './actions'
 import { CaseStartButton } from './case-client'
+import { AttemptHistoryList } from '@/components/modes/AttemptHistoryList'
+import { LeaderboardSection } from '@/components/modes/LeaderboardSection'
 import type { CaseSettings } from '@/types/activities'
 
 interface CasePageProps {
@@ -162,39 +164,15 @@ export default async function CasePage({ params }: CasePageProps) {
             </div>
           </div>
 
-          {/* Status / Previous Attempts */}
-          {attemptStatus && (
-            <div className={`p-4 rounded-lg mb-6 ${
-              attemptStatus.status === 'completed'
-                ? 'bg-green-50 border border-green-200'
-                : attemptStatus.status === 'in_progress'
-                ? 'bg-yellow-50 border border-yellow-200'
-                : 'bg-gray-50 border border-gray-200'
-            }`}>
-              <h3 className={`font-medium mb-2 ${
-                attemptStatus.status === 'completed'
-                  ? 'text-green-800'
-                  : attemptStatus.status === 'in_progress'
-                  ? 'text-yellow-800'
-                  : 'text-gray-800'
-              }`}>
-                {attemptStatus.status === 'completed'
-                  ? 'Completed'
-                  : attemptStatus.status === 'in_progress'
-                  ? 'In Progress'
-                  : 'Not Started'}
-              </h3>
-              {attemptStatus.status === 'in_progress' && (
-                <p className="text-sm text-yellow-700">
-                  Scenarios completed: {attemptStatus.scenariosCompleted} / {attemptStatus.totalScenarios}
-                </p>
-              )}
-              {attemptStatus.status === 'completed' && (
-                <div className="text-sm text-green-700">
-                  <p>Best Score: {attemptStatus.bestScore?.toFixed(1)} / 10</p>
-                  <p>Attempts Used: {attemptStatus.attemptsUsed} / {attemptStatus.maxAttempts}</p>
-                </div>
-              )}
+          {/* Previous Attempts */}
+          {attemptStatus && attemptStatus.allAttempts && attemptStatus.allAttempts.length > 0 && (
+            <div className="mb-6">
+              <AttemptHistoryList
+                attempts={attemptStatus.allAttempts}
+                activityId={activityId}
+                mode="case"
+                passThreshold={caseSettings.passThreshold}
+              />
             </div>
           )}
 
@@ -218,6 +196,13 @@ export default async function CasePage({ params }: CasePageProps) {
             </div>
           )}
         </div>
+
+        {/* Leaderboard */}
+        <LeaderboardSection
+          activityId={activityId}
+          mode="case"
+          title="Top Problem Solvers"
+        />
       </div>
     </div>
   )

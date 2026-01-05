@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ExamTimer } from '@/components/modes/ExamTimer'
-import { submitInquiryQuestion, completeInquiryAttempt } from '../actions'
+import { TabSwitchWarning } from '@/components/modes/TabSwitchWarning'
+import { useAntiCheat, type AntiCheatStats } from '@/hooks/useAntiCheat'
+import { submitInquiryQuestion, completeInquiryAttempt, updateInquiryCheatingStats } from '../actions'
 
 interface SubmittedQuestion {
   id: string
@@ -48,6 +50,44 @@ export function InquiryTakeClient({
     averageScore: number
     questionsGenerated: number
   } | null>(null)
+
+  // Anti-cheating hook
+  const lastSyncedStats = useRef<AntiCheatStats | null>(null)
+
+  const handleStatsChange = useCallback(
+    async (stats: AntiCheatStats) => {
+      // Only sync if there are new events
+      if (
+        lastSyncedStats.current &&
+        stats.events.length === lastSyncedStats.current.events.length
+      ) {
+        return
+      }
+
+      // Get new events since last sync
+      const lastEventCount = lastSyncedStats.current?.events.length || 0
+      const newEvents = stats.events.slice(lastEventCount)
+
+      if (newEvents.length > 0) {
+        await updateInquiryCheatingStats(attemptId, {
+          tabSwitchCount: stats.tabSwitchCount,
+          copyAttempts: stats.copyAttempts,
+          pasteAttempts: stats.pasteAttempts,
+          cheatingFlags: newEvents.map((e) => ({ type: e.type, timestamp: e.timestamp })),
+        })
+      }
+
+      lastSyncedStats.current = stats
+    },
+    [attemptId]
+  )
+
+  const { stats: antiCheatStats, isWarningVisible, dismissWarning } = useAntiCheat({
+    enabled: true,
+    onStatsChange: handleStatsChange,
+    preventPaste: false, // Allow paste for inquiry since they're generating questions
+    showWarningOnTabSwitch: true,
+  })
 
   const questionsRemaining = questionsRequired - submittedQuestions.length
   const isComplete = questionsRemaining <= 0
@@ -168,6 +208,14 @@ export function InquiryTakeClient({
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* Anti-Cheat Warning Modal */}
+      <TabSwitchWarning
+        isVisible={isWarningVisible}
+        onDismiss={dismissWarning}
+        tabSwitchCount={antiCheatStats.tabSwitchCount}
+        maxWarnings={3}
+      />
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">

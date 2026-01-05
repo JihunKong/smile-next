@@ -491,6 +491,12 @@ model ExamAttempt {
   questionOrder       Json?     @map("question_order")
   choiceShuffles      Json?     @map("choice_shuffles")
 
+  // Anti-cheating tracking
+  tabSwitchCount      Int       @default(0) @map("tab_switch_count")
+  copyAttempts        Int       @default(0) @map("copy_attempts")
+  pasteAttempts       Int       @default(0) @map("paste_attempts")
+  cheatingFlags       Json?     @map("cheating_flags") // Timestamp log of events
+
   // Timestamps
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
@@ -520,6 +526,12 @@ model InquiryAttempt {
 
   // Status
   status              String    @default("in_progress")
+
+  // Anti-cheating tracking
+  tabSwitchCount      Int       @default(0) @map("tab_switch_count")
+  copyAttempts        Int       @default(0) @map("copy_attempts")
+  pasteAttempts       Int       @default(0) @map("paste_attempts")
+  cheatingFlags       Json?     @map("cheating_flags")
 
   // Timestamps
   createdAt           DateTime  @default(now()) @map("created_at")
@@ -552,6 +564,12 @@ model CaseAttempt {
 
   // Status
   status              String    @default("in_progress")  // in_progress, completed
+
+  // Anti-cheating tracking
+  tabSwitchCount      Int       @default(0) @map("tab_switch_count")
+  copyAttempts        Int       @default(0) @map("copy_attempts")
+  pasteAttempts       Int       @default(0) @map("paste_attempts")
+  cheatingFlags       Json?     @map("cheating_flags")
 
   // Timestamps
   createdAt           DateTime  @default(now()) @map("created_at")

@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ExamTimer } from '@/components/modes/ExamTimer'
-import { saveCaseResponse, submitCaseAttempt } from '../actions'
+import { TabSwitchWarning } from '@/components/modes/TabSwitchWarning'
+import { useAntiCheat, type AntiCheatStats } from '@/hooks/useAntiCheat'
+import { saveCaseResponse, submitCaseAttempt, updateCaseCheatingStats } from '../actions'
 import type { CaseScenario } from '@/types/activities'
 
 interface ScenarioResponse {
@@ -45,6 +47,44 @@ export function CaseTakeClient({
     passed: boolean
     scenarioScores: Array<{ scenarioId: string; title: string; score: number; feedback: string }>
   } | null>(null)
+
+  // Anti-cheating hook
+  const lastSyncedStats = useRef<AntiCheatStats | null>(null)
+
+  const handleStatsChange = useCallback(
+    async (stats: AntiCheatStats) => {
+      // Only sync if there are new events
+      if (
+        lastSyncedStats.current &&
+        stats.events.length === lastSyncedStats.current.events.length
+      ) {
+        return
+      }
+
+      // Get new events since last sync
+      const lastEventCount = lastSyncedStats.current?.events.length || 0
+      const newEvents = stats.events.slice(lastEventCount)
+
+      if (newEvents.length > 0) {
+        await updateCaseCheatingStats(attemptId, {
+          tabSwitchCount: stats.tabSwitchCount,
+          copyAttempts: stats.copyAttempts,
+          pasteAttempts: stats.pasteAttempts,
+          cheatingFlags: newEvents.map((e) => ({ type: e.type, timestamp: e.timestamp })),
+        })
+      }
+
+      lastSyncedStats.current = stats
+    },
+    [attemptId]
+  )
+
+  const { stats: antiCheatStats, isWarningVisible, dismissWarning } = useAntiCheat({
+    enabled: true,
+    onStatsChange: handleStatsChange,
+    preventPaste: false, // Allow paste for case study since they're writing solutions
+    showWarningOnTabSwitch: true,
+  })
 
   // Calculate remaining time based on when attempt started
   const elapsedSeconds = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
@@ -203,6 +243,14 @@ export function CaseTakeClient({
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* Anti-Cheat Warning Modal */}
+      <TabSwitchWarning
+        isVisible={isWarningVisible}
+        onDismiss={dismissWarning}
+        tabSwitchCount={antiCheatStats.tabSwitchCount}
+        maxWarnings={3}
+      />
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">

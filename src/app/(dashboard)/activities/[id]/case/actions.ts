@@ -264,6 +264,15 @@ export async function getCaseAttemptStatus(activityId: string): Promise<{
   bestScore?: number
   attemptsUsed?: number
   maxAttempts?: number
+  allAttempts?: Array<{
+    id: string
+    status: string
+    startedAt: Date
+    completedAt: Date | null
+    score: number | null
+    passed: boolean | null
+    timeSpentSeconds: number | null
+  }>
 } | null> {
   const session = await auth()
 
@@ -282,14 +291,37 @@ export async function getCaseAttemptStatus(activityId: string): Promise<{
       maxAttempts: 1,
     }
 
-    // Check for in-progress attempt
-    const inProgressAttempt = await prisma.caseAttempt.findFirst({
+    // Get all attempts for history
+    const allAttempts = await prisma.caseAttempt.findMany({
       where: {
         userId: session.user.id,
         activityId,
-        status: 'in_progress',
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        startedAt: true,
+        completedAt: true,
+        totalScore: true,
+        passed: true,
+        timeSpentSeconds: true,
+        responses: true,
       },
     })
+
+    const formattedAttempts = allAttempts.map((a) => ({
+      id: a.id,
+      status: a.status,
+      startedAt: a.startedAt,
+      completedAt: a.completedAt,
+      score: a.totalScore,
+      passed: a.passed,
+      timeSpentSeconds: a.timeSpentSeconds,
+    }))
+
+    // Check for in-progress attempt
+    const inProgressAttempt = allAttempts.find((a) => a.status === 'in_progress')
 
     if (inProgressAttempt) {
       const responses = (inProgressAttempt.responses as Record<string, unknown>) || {}
@@ -298,25 +330,21 @@ export async function getCaseAttemptStatus(activityId: string): Promise<{
         attemptId: inProgressAttempt.id,
         scenariosCompleted: Object.keys(responses).length,
         totalScenarios: caseSettings.scenarios.length,
+        allAttempts: formattedAttempts,
       }
     }
 
     // Check for completed attempts
-    const completedAttempts = await prisma.caseAttempt.findMany({
-      where: {
-        userId: session.user.id,
-        activityId,
-        status: 'completed',
-      },
-      orderBy: { totalScore: 'desc' },
-    })
+    const completedAttempts = allAttempts.filter((a) => a.status === 'completed')
 
     if (completedAttempts.length > 0) {
+      const bestScore = Math.max(...completedAttempts.map((a) => a.totalScore || 0))
       return {
         status: 'completed',
-        bestScore: completedAttempts[0].totalScore || 0,
+        bestScore,
         attemptsUsed: completedAttempts.length,
         maxAttempts: caseSettings.maxAttempts,
+        allAttempts: formattedAttempts,
       }
     }
 
@@ -324,9 +352,63 @@ export async function getCaseAttemptStatus(activityId: string): Promise<{
       status: 'not_started',
       attemptsUsed: 0,
       maxAttempts: caseSettings.maxAttempts,
+      allAttempts: formattedAttempts,
     }
   } catch (error) {
     console.error('Error getting case attempt status:', error)
     return null
+  }
+}
+
+/**
+ * Update anti-cheating statistics for a case attempt
+ */
+export async function updateCaseCheatingStats(
+  attemptId: string,
+  stats: {
+    tabSwitchCount?: number
+    copyAttempts?: number
+    pasteAttempts?: number
+    cheatingFlags?: Array<{ type: string; timestamp: string }>
+  }
+): Promise<ActionResult> {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { success: false, error: 'You must be logged in' }
+  }
+
+  try {
+    // Verify attempt belongs to user and is in progress
+    const attempt = await prisma.caseAttempt.findUnique({
+      where: { id: attemptId },
+    })
+
+    if (!attempt || attempt.userId !== session.user.id) {
+      return { success: false, error: 'Attempt not found' }
+    }
+
+    if (attempt.status !== 'in_progress') {
+      return { success: false, error: 'This case study has already been completed' }
+    }
+
+    // Merge new events with existing
+    const existingFlags = (attempt.cheatingFlags as Array<{ type: string; timestamp: string }>) || []
+    const newFlags = stats.cheatingFlags || []
+    const mergedFlags = [...existingFlags, ...newFlags]
+
+    await prisma.caseAttempt.update({
+      where: { id: attemptId },
+      data: {
+        tabSwitchCount: stats.tabSwitchCount ?? attempt.tabSwitchCount,
+        copyAttempts: stats.copyAttempts ?? attempt.copyAttempts,
+        pasteAttempts: stats.pasteAttempts ?? attempt.pasteAttempts,
+        cheatingFlags: mergedFlags,
+      },
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to update cheating stats:', error)
+    return { success: false, error: 'Failed to update stats' }
   }
 }

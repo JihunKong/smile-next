@@ -300,9 +300,11 @@ export async function getExamAttemptStatus(activityId: string) {
         status: true,
         score: true,
         passed: true,
+        startedAt: true,
         completedAt: true,
         totalQuestions: true,
         correctAnswers: true,
+        timeSpentSeconds: true,
       },
     })
 
@@ -313,6 +315,7 @@ export async function getExamAttemptStatus(activityId: string) {
       inProgress,
       completed,
       attemptCount: completed.length,
+      allAttempts: attempts,
     }
   } catch (error) {
     console.error('Failed to get attempt status:', error)
@@ -333,4 +336,57 @@ function shuffleArray<T>(array: T[]): T[] {
 function arraysEqual(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false
   return a.every((val, idx) => val === b[idx])
+}
+
+/**
+ * Update anti-cheating statistics for an exam attempt
+ */
+export async function updateExamCheatingStats(
+  attemptId: string,
+  stats: {
+    tabSwitchCount?: number
+    copyAttempts?: number
+    pasteAttempts?: number
+    cheatingFlags?: Array<{ type: string; timestamp: string }>
+  }
+): Promise<ActionResult> {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { success: false, error: 'You must be logged in' }
+  }
+
+  try {
+    // Verify attempt belongs to user and is in progress
+    const attempt = await prisma.examAttempt.findUnique({
+      where: { id: attemptId },
+    })
+
+    if (!attempt || attempt.userId !== session.user.id) {
+      return { success: false, error: 'Attempt not found' }
+    }
+
+    if (attempt.status !== 'in_progress') {
+      return { success: false, error: 'This exam has already been submitted' }
+    }
+
+    // Merge new events with existing
+    const existingFlags = (attempt.cheatingFlags as Array<{ type: string; timestamp: string }>) || []
+    const newFlags = stats.cheatingFlags || []
+    const mergedFlags = [...existingFlags, ...newFlags]
+
+    await prisma.examAttempt.update({
+      where: { id: attemptId },
+      data: {
+        tabSwitchCount: stats.tabSwitchCount ?? attempt.tabSwitchCount,
+        copyAttempts: stats.copyAttempts ?? attempt.copyAttempts,
+        pasteAttempts: stats.pasteAttempts ?? attempt.pasteAttempts,
+        cheatingFlags: mergedFlags,
+      },
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to update cheating stats:', error)
+    return { success: false, error: 'Failed to update stats' }
+  }
 }

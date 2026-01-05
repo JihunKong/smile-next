@@ -291,17 +291,96 @@ export async function getInquiryAttemptStatus(activityId: string) {
   }
 
   try {
-    const attempt = await prisma.inquiryAttempt.findFirst({
+    const attempts = await prisma.inquiryAttempt.findMany({
       where: {
         userId: session.user.id,
         activityId,
       },
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        startedAt: true,
+        completedAt: true,
+        questionsGenerated: true,
+        questionsRequired: true,
+      },
     })
 
-    return attempt
+    const latestAttempt = attempts[0] || null
+
+    // Format attempts for AttemptHistoryList
+    const formattedAttempts = attempts.map((a) => ({
+      id: a.id,
+      status: a.status,
+      startedAt: a.startedAt,
+      completedAt: a.completedAt,
+      score: null as number | null, // Inquiry doesn't have a simple score
+      passed: null as boolean | null,
+      timeSpentSeconds: null as number | null,
+      questionsGenerated: a.questionsGenerated,
+      questionsRequired: a.questionsRequired,
+    }))
+
+    return {
+      ...latestAttempt,
+      allAttempts: formattedAttempts,
+    }
   } catch (error) {
     console.error('Failed to get attempt status:', error)
     return null
+  }
+}
+
+/**
+ * Update anti-cheating statistics for an inquiry attempt
+ */
+export async function updateInquiryCheatingStats(
+  attemptId: string,
+  stats: {
+    tabSwitchCount?: number
+    copyAttempts?: number
+    pasteAttempts?: number
+    cheatingFlags?: Array<{ type: string; timestamp: string }>
+  }
+): Promise<ActionResult> {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { success: false, error: 'You must be logged in' }
+  }
+
+  try {
+    // Verify attempt belongs to user and is in progress
+    const attempt = await prisma.inquiryAttempt.findUnique({
+      where: { id: attemptId },
+    })
+
+    if (!attempt || attempt.userId !== session.user.id) {
+      return { success: false, error: 'Attempt not found' }
+    }
+
+    if (attempt.status !== 'in_progress') {
+      return { success: false, error: 'This inquiry has already been completed' }
+    }
+
+    // Merge new events with existing
+    const existingFlags = (attempt.cheatingFlags as Array<{ type: string; timestamp: string }>) || []
+    const newFlags = stats.cheatingFlags || []
+    const mergedFlags = [...existingFlags, ...newFlags]
+
+    await prisma.inquiryAttempt.update({
+      where: { id: attemptId },
+      data: {
+        tabSwitchCount: stats.tabSwitchCount ?? attempt.tabSwitchCount,
+        copyAttempts: stats.copyAttempts ?? attempt.copyAttempts,
+        pasteAttempts: stats.pasteAttempts ?? attempt.pasteAttempts,
+        cheatingFlags: mergedFlags,
+      },
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to update cheating stats:', error)
+    return { success: false, error: 'Failed to update stats' }
   }
 }

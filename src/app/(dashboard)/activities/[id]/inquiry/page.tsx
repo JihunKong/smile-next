@@ -4,6 +4,8 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getInquiryAttemptStatus } from './actions'
 import { InquiryStartButton } from './inquiry-client'
+import { AttemptHistoryList } from '@/components/modes/AttemptHistoryList'
+import { LeaderboardSection } from '@/components/modes/LeaderboardSection'
 import type { InquirySettings } from '@/types/activities'
 
 interface InquiryPageProps {
@@ -155,17 +157,16 @@ export default async function InquiryPage({ params }: InquiryPageProps) {
             </ul>
           </div>
 
-          {/* Progress / Status */}
-          {attemptStatus && (
-            <div className={`p-4 rounded-lg mb-6 ${
-              isCompleted ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'
-            }`}>
-              <h3 className={`font-medium mb-2 ${isCompleted ? 'text-green-800' : 'text-yellow-800'}`}>
-                {isCompleted ? 'Completed' : 'In Progress'}
-              </h3>
-              <p className={`text-sm ${isCompleted ? 'text-green-700' : 'text-yellow-700'}`}>
-                Questions generated: {attemptStatus.questionsGenerated} / {attemptStatus.questionsRequired}
-              </p>
+          {/* Previous Attempts */}
+          {attemptStatus && attemptStatus.allAttempts && attemptStatus.allAttempts.length > 0 && (
+            <div className="mb-6">
+              <AttemptHistoryList
+                attempts={attemptStatus.allAttempts}
+                activityId={activityId}
+                mode="inquiry"
+                passThreshold={inquirySettings.passThreshold}
+                showViewLink={false}
+              />
             </div>
           )}
 
@@ -183,6 +184,13 @@ export default async function InquiryPage({ params }: InquiryPageProps) {
             </div>
           )}
         </div>
+
+        {/* Leaderboard */}
+        <LeaderboardSection
+          activityId={activityId}
+          mode="inquiry"
+          title="Top Question Creators"
+        />
       </div>
     </div>
   )
