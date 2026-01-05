@@ -15,6 +15,9 @@ const createActivitySchema = z.object({
   aiRatingEnabled: z.boolean().default(true),
   isAnonymousAuthorAllowed: z.boolean().default(false),
   hideUsernames: z.boolean().default(false),
+  examSettings: z.string().optional(),
+  inquirySettings: z.string().optional(),
+  caseSettings: z.string().optional(),
 })
 
 const createQuestionSchema = z.object({
@@ -40,6 +43,9 @@ export async function createActivity(formData: FormData): Promise<CreateActivity
     aiRatingEnabled: formData.get('aiRatingEnabled') === 'true',
     isAnonymousAuthorAllowed: formData.get('isAnonymousAuthorAllowed') === 'true',
     hideUsernames: formData.get('hideUsernames') === 'true',
+    examSettings: formData.get('examSettings') as string | undefined,
+    inquirySettings: formData.get('inquirySettings') as string | undefined,
+    caseSettings: formData.get('caseSettings') as string | undefined,
   }
 
   const result = createActivitySchema.safeParse(rawData)
@@ -69,6 +75,31 @@ export async function createActivity(formData: FormData): Promise<CreateActivity
       return { success: false, error: 'You do not have permission to create activities in this group' }
     }
 
+    // Parse mode-specific settings
+    let examSettingsJson = null
+    let inquirySettingsJson = null
+    let openModeSettingsJson = null // Used for Case mode
+
+    if (data.mode === ActivityModes.EXAM && data.examSettings) {
+      try {
+        examSettingsJson = JSON.parse(data.examSettings)
+      } catch {
+        return { success: false, error: 'Invalid exam settings' }
+      }
+    } else if (data.mode === ActivityModes.INQUIRY && data.inquirySettings) {
+      try {
+        inquirySettingsJson = JSON.parse(data.inquirySettings)
+      } catch {
+        return { success: false, error: 'Invalid inquiry settings' }
+      }
+    } else if (data.mode === ActivityModes.CASE && data.caseSettings) {
+      try {
+        openModeSettingsJson = JSON.parse(data.caseSettings) // Store case settings in openModeSettings
+      } catch {
+        return { success: false, error: 'Invalid case settings' }
+      }
+    }
+
     const activity = await prisma.activity.create({
       data: {
         name: data.name,
@@ -79,6 +110,9 @@ export async function createActivity(formData: FormData): Promise<CreateActivity
         aiRatingEnabled: data.aiRatingEnabled,
         isAnonymousAuthorAllowed: data.isAnonymousAuthorAllowed,
         hideUsernames: data.hideUsernames,
+        examSettings: examSettingsJson,
+        inquirySettings: inquirySettingsJson,
+        openModeSettings: openModeSettingsJson,
       },
     })
 

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { QuestionList } from '@/components/activities/QuestionList'
 import { DeleteActivityButton } from './actions-client'
 import { getModeLabel, getModeBadgeColor, canManageActivity } from '@/lib/activities/utils'
-import type { ActivityMode } from '@/types/activities'
+import { ActivityModes, type ActivityMode } from '@/types/activities'
 
 interface ActivityDetailPageProps {
   params: Promise<{ id: string }>
@@ -161,15 +161,55 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
 
           {/* Action buttons */}
           <div className="flex items-center gap-3 mt-6">
-            <Link
-              href={`/activities/${activity.id}/questions/create`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 font-medium rounded-lg hover:bg-gray-100 transition"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Ask a Question
-            </Link>
+            {/* Mode-specific start buttons */}
+            {mode === ActivityModes.EXAM && (
+              <Link
+                href={`/activities/${activity.id}/exam`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                Take Exam
+              </Link>
+            )}
+
+            {mode === ActivityModes.INQUIRY && (
+              <Link
+                href={`/activities/${activity.id}/inquiry`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                Start Inquiry
+              </Link>
+            )}
+
+            {mode === ActivityModes.CASE && (
+              <Link
+                href={`/activities/${activity.id}/case`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Start Case Study
+              </Link>
+            )}
+
+            {/* Open mode: Ask a Question */}
+            {mode === ActivityModes.OPEN && (
+              <Link
+                href={`/activities/${activity.id}/questions/create`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 font-medium rounded-lg hover:bg-gray-100 transition"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Ask a Question
+              </Link>
+            )}
 
             {isManager && (
               <DeleteActivityButton activityId={activity.id} activityName={activity.name} />

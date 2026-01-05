@@ -110,3 +110,139 @@ export interface CreateQuestionFormData {
   activityId: string
   isAnonymous?: boolean
 }
+
+// ============================================================================
+// Learning Mode Settings
+// ============================================================================
+
+// Exam Mode Settings
+export interface ExamSettings {
+  timeLimit: number // in minutes
+  questionsToShow: number
+  passThreshold: number // percentage (0-100)
+  shuffleQuestions: boolean
+  shuffleChoices: boolean
+  maxAttempts: number
+}
+
+export const defaultExamSettings: ExamSettings = {
+  timeLimit: 30,
+  questionsToShow: 10,
+  passThreshold: 60,
+  shuffleQuestions: true,
+  shuffleChoices: true,
+  maxAttempts: 1,
+}
+
+// Inquiry Mode Settings
+export interface InquirySettings {
+  questionsRequired: number
+  timePerQuestion: number // in seconds
+  keywordPool1: string[]
+  keywordPool2: string[]
+  passThreshold: number // score 0-10
+}
+
+export const defaultInquirySettings: InquirySettings = {
+  questionsRequired: 5,
+  timePerQuestion: 240, // 4 minutes
+  keywordPool1: [],
+  keywordPool2: [],
+  passThreshold: 6.0,
+}
+
+// Case Mode Settings
+export interface CaseScenario {
+  id: string
+  title: string
+  content: string
+}
+
+export interface CaseSettings {
+  scenarios: CaseScenario[]
+  timePerCase: number // in minutes
+  totalTimeLimit: number // in minutes
+  maxAttempts: number
+  passThreshold: number // score 0-10
+}
+
+export const defaultCaseSettings: CaseSettings = {
+  scenarios: [],
+  timePerCase: 10,
+  totalTimeLimit: 60,
+  maxAttempts: 1,
+  passThreshold: 6.0,
+}
+
+// Mode metadata for UI
+export interface ModeInfo {
+  id: ActivityMode
+  name: string
+  description: string
+  icon: string
+  color: string
+}
+
+export const modeInfoList: ModeInfo[] = [
+  {
+    id: ActivityModes.OPEN,
+    name: 'Open Mode',
+    description: 'Free discussion and question posting',
+    icon: 'chat',
+    color: 'blue',
+  },
+  {
+    id: ActivityModes.EXAM,
+    name: 'Exam Mode',
+    description: 'Timed multiple choice assessment',
+    icon: 'clipboard',
+    color: 'red',
+  },
+  {
+    id: ActivityModes.INQUIRY,
+    name: 'Inquiry Mode',
+    description: 'Generate questions using keyword pairs',
+    icon: 'lightbulb',
+    color: 'yellow',
+  },
+  {
+    id: ActivityModes.CASE,
+    name: 'Case Study',
+    description: 'Analyze business scenarios',
+    icon: 'briefcase',
+    color: 'green',
+  },
+]
+
+// Attempt result types
+export interface ExamAttemptResult {
+  attemptId: string
+  score: number
+  passed: boolean
+  totalQuestions: number
+  correctAnswers: number
+  timeSpent: number
+}
+
+export interface InquiryAttemptResult {
+  attemptId: string
+  questionsGenerated: number
+  averageScore: number
+  passed: boolean
+  evaluations: Array<{
+    questionId: string
+    score: number
+    bloomsLevel: string
+  }>
+}
+
+export interface CaseAttemptResult {
+  attemptId: string
+  totalScore: number
+  passed: boolean
+  scenarioScores: Array<{
+    scenarioId: string
+    score: number
+    feedback: string
+  }>
+}

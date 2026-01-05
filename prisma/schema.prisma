@@ -70,6 +70,7 @@ model User {
   subscriptions           Subscription[]
   examAttempts            ExamAttempt[]
   inquiryAttempts         InquiryAttempt[]
+  caseAttempts            CaseAttempt[]
   likes                   Like[]
 
   @@index([email])
@@ -265,6 +266,7 @@ model Activity {
   leaderboards          Leaderboard[]
   examAttempts          ExamAttempt[]
   inquiryAttempts       InquiryAttempt[]
+  caseAttempts          CaseAttempt[]
   questionEvaluations   QuestionEvaluation[]
 
   @@index([creatorId])
@@ -526,6 +528,38 @@ model InquiryAttempt {
   @@index([userId])
   @@index([activityId])
   @@map("inquiry_attempts")
+}
+
+model CaseAttempt {
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
+  user                User      @relation(fields: [userId], references: [id])
+  activityId          String    @map("activity_id")
+  activity            Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  // Attempt info
+  startedAt           DateTime  @default(now()) @map("started_at")
+  completedAt         DateTime? @map("completed_at")
+  timeSpentSeconds    Int?      @map("time_spent_seconds")
+
+  // Responses per scenario (JSON: { scenarioId: { issues: string, solution: string } })
+  responses           Json?     @default("{}")
+
+  // Results
+  totalScore          Float?    @map("total_score")
+  scenarioScores      Json?     @map("scenario_scores")  // { scenarioId: { issuesScore, solutionScore, feedback } }
+  passed              Boolean?
+
+  // Status
+  status              String    @default("in_progress")  // in_progress, completed
+
+  // Timestamps
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([activityId])
+  @@map("case_attempts")
 }
 
 // ============================================================================
