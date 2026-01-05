@@ -1,0 +1,624 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// Core User & Auth Models
+// ============================================================================
+
+model User {
+  id                      String    @id @default(uuid())
+  email                   String    @unique
+  username                String?   @unique
+  passwordHash            String?   @map("password_hash")
+  firstName               String?   @map("first_name")
+  lastName                String?   @map("last_name")
+
+  // Avatar
+  avatarPublicId          String?   @map("avatar_public_id")
+  avatarUrl               String?   @map("avatar_url")
+
+  // Firebase integration
+  firebaseUserId          String?   @unique @map("firebase_user_id")
+
+  // Role (0=Super Admin, 1=Admin, 2=Teacher, 3=Student)
+  roleId                  Int       @default(3) @map("role_id")
+  role                    Role?     @relation(fields: [roleUuid], references: [id])
+  roleUuid                String?   @map("role")
+  loggedAs                String?   @map("logged_as")
+
+  // Account status
+  isBlocked               Boolean   @default(false) @map("is_blocked")
+  isDeleted               Boolean   @default(false) @map("is_deleted")
+
+  // Password reset
+  resetPasswordToken      String?   @map("reset_password_token")
+  resetPasswordExpire     DateTime? @map("reset_password_expire")
+
+  // Email verification
+  emailVerified           Boolean   @default(false) @map("email_verified")
+  emailVerificationToken  String?   @map("email_verification_token")
+  emailVerificationExpire DateTime? @map("email_verification_expire")
+
+  // Invitation tracking
+  invitedById             String?   @map("invited_by")
+  invitedByUser           User?     @relation("UserInvitations", fields: [invitedById], references: [id])
+  invitedUsers            User[]    @relation("UserInvitations")
+  registrationMethod      String    @default("manual") @map("registration_method")
+  invitationCode          String?   @map("invitation_code")
+
+  // Timestamps
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  createdGroups           Group[]   @relation("GroupCreator")
+  groupMemberships        GroupUser[] @relation("GroupMember")
+  suspendedMembers        GroupUser[] @relation("GroupSuspender")
+  createdActivities       Activity[]
+  createdQuestions        Question[]
+  responses               Response[] @relation("ResponseCreator")
+  deletedResponses        Response[] @relation("ResponseDeleter")
+  subscriptions           Subscription[]
+  examAttempts            ExamAttempt[]
+  inquiryAttempts         InquiryAttempt[]
+  likes                   Like[]
+
+  @@index([email])
+  @@index([isDeleted])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String   @id @default(uuid())
+  roleId       String   @map("role")
+  permissionId String   @map("permission")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================================================
+// Group & Membership Models
+// ============================================================================
+
+model Group {
+  id                  String    @id @default(uuid())
+  creatorId           String    @map("creator")
+  creator             User      @relation("GroupCreator", fields: [creatorId], references: [id])
+  name                String    @default("")
+  description         String?
+  contacts            String?
+  coverImage          String?   @map("cover_image")
+
+  // Group image (Cloudinary)
+  groupImagePublicId  String?   @map("group_image_public_id")
+  groupImageUrl       String?   @map("group_image_url")
+
+  // Auto-generated icon
+  autoIconType        String?   @map("auto_icon_type")
+  autoIconValue       String?   @map("auto_icon_value")
+  autoIconGradient    String?   @map("auto_icon_gradient")
+  autoIconTheme       String?   @map("auto_icon_theme")
+
+  // Settings
+  groupType           String    @default("StudentPaced") @map("group_type")
+  requirePasscode     Boolean   @default(false) @map("require_passcode")
+  passcode            String?
+  isPrivate           Boolean   @default(false) @map("is_private")
+  isDeleted           Boolean   @default(false) @map("is_deleted")
+  isDefault           Boolean   @default(false) @map("is_default")
+
+  // Metadata
+  dateDeleted         DateTime? @map("date_deleted")
+  inviteCode          String?   @unique @map("invite_code")
+  resetInviteCodeExpire DateTime? @map("reset_invite_code_expire")
+  version             String?   @default("3")
+
+  // Timestamps
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  members             GroupUser[]
+  activities          Activity[]
+
+  @@index([creatorId])
+  @@index([isDeleted])
+  @@map("groups")
+}
+
+model GroupUser {
+  id            String    @id @default(uuid())
+  userId        String    @map("user")
+  groupId       String    @map("group")
+  role          Int       @default(0) // 0=Member, 1=Admin, 2=Co-Owner
+  joinedAt      DateTime  @default(now()) @map("joined_at")
+  isSuspended   Boolean   @default(false) @map("is_suspended")
+  suspendedAt   DateTime? @map("suspended_at")
+  suspendedById String?   @map("suspended_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user          User      @relation("GroupMember", fields: [userId], references: [id], onDelete: Cascade)
+  group         Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  suspendedBy   User?     @relation("GroupSuspender", fields: [suspendedById], references: [id])
+
+  @@unique([userId, groupId])
+  @@map("group_users")
+}
+
+// ============================================================================
+// Activity Model
+// ============================================================================
+
+model Activity {
+  id                    String    @id @default(uuid())
+  creatorId             String    @map("creator")
+  creator               User      @relation(fields: [creatorId], references: [id])
+  name                  String
+  description           String?
+
+  // Settings
+  activityType          String    @default("Open Mode") @map("activity_type")
+  aiRatingEnabled       Boolean   @default(true) @map("ai_rating_enabled")
+  ratingType            String    @default("Star") @map("rating_type")
+  commentVisible        Boolean   @default(true) @map("comment_visible")
+  level                 String?
+  visible               Boolean   @default(true)
+
+  // Group association
+  owningGroupId         String    @map("owning_group")
+  owningGroup           Group     @relation(fields: [owningGroupId], references: [id], onDelete: Cascade)
+
+  // Mode (0=Open, 1=Exam, 2=Inquiry, 3=Case)
+  mode                  Int       @default(0)
+
+  // Mode settings (JSONB)
+  examSettings          Json?     @map("exam_settings")
+  inquirySettings       Json?     @map("inquiry_settings")
+  openModeSettings      Json?     @map("open_mode_settings")
+
+  // School-related
+  schoolGrade           Int       @default(-1) @map("school_grade")
+  educationLevel        String?   @map("education_level")
+  targetAudience        String?   @map("target_audience")
+  schoolSubject         String?   @map("school_subject")
+  topic                 String?
+
+  // Grading rubric (JSON)
+  gradeLevels           Json?     @map("grade_levels")
+
+  // Privacy settings
+  hideUsernames         Boolean   @default(false) @map("hide_usernames")
+  hideActivities        Boolean   @default(false) @map("hide_activities")
+  isAnonymousAuthorAllowed Boolean @default(false) @map("is_anonymous_author_allowed")
+
+  // Deletion
+  isDeleted             Boolean   @default(false) @map("is_deleted")
+  dateDeleted           DateTime? @map("date_deleted")
+
+  // Ordering
+  position              Int?
+
+  // Statistics
+  numberOfLikes         Int       @default(0) @map("number_of_likes")
+  numberOfQuestions     Int       @default(0) @map("number_of_questions")
+  numberOfAnswers       Int       @default(0) @map("number_of_answers")
+  numberOfRatings       Int       @default(0) @map("number_of_ratings")
+
+  // Sharing
+  publicSharingCode     String?   @map("public_sharing_code")
+
+  // Prompter settings
+  prompterEnabled       Boolean   @default(false) @map("prompter_enabled")
+  prompterKeywords      Json?     @map("prompter_keywords")
+
+  // RAG context
+  referenceDocument     String?   @map("reference_document")
+  ragContext            String?   @map("rag_context")
+
+  // Timestamps
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  questions             Question[]
+  leaderboards          Leaderboard[]
+  examAttempts          ExamAttempt[]
+  inquiryAttempts       InquiryAttempt[]
+  questionEvaluations   QuestionEvaluation[]
+
+  @@index([creatorId])
+  @@index([owningGroupId])
+  @@index([isDeleted])
+  @@index([position])
+  @@map("activities")
+}
+
+// ============================================================================
+// Question & Response Models
+// ============================================================================
+
+model Question {
+  id                      String    @id @default(uuid())
+  creatorId               String    @map("creator")
+  creator                 User      @relation(fields: [creatorId], references: [id])
+  content                 String
+  activityId              String    @map("activity")
+  activity                Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  // Question type and settings
+  questionType            String?   @map("question_type")
+  isAnonymous             Boolean   @default(false) @map("is_anonymous")
+
+  // Multiple choice (JSON)
+  choices                 Json?     @default("[]")
+  correctAnswers          Json?     @default("[]") @map("correct_answers")
+
+  // Media
+  questionImagePublicId   String?   @map("question_image_public_id")
+  questionImageUrl        String?   @map("question_image_url")
+  attachedFiles           String[]  @default([]) @map("attached_files")
+  videoUrl                String?   @map("video_url")
+
+  // Ratings and statistics
+  ratings                 Float     @default(0.0)
+  averageRating           Float?    @map("average_rating")
+  viewCount               Int       @default(0) @map("view_count")
+  numberOfAnswers         Int       @default(0) @map("number_of_answers")
+  numOfReviews            Int       @default(0) @map("num_of_reviews")
+  numberOfRatings         Int       @default(0) @map("number_of_ratings")
+
+  // Reviews (JSON array)
+  reviews                 Json?     @default("[]")
+
+  // Deletion
+  isDeleted               Boolean   @default(false) @map("is_deleted")
+  dateDeleted             DateTime? @map("date_deleted")
+
+  // Timing
+  creationTimeInSeconds   Float?    @map("creation_time_in_seconds")
+
+  // AI Evaluation
+  questionEvaluationId    String?   @map("question_evaluation")
+  questionEvaluationScore Float?    @map("question_evaluation_score")
+
+  // Prompter
+  prompterEnabled         Boolean   @default(false) @map("prompter_enabled")
+  prompterKeywordsUsed    String[]  @default([]) @map("prompter_keywords_used")
+
+  // AI Generation flag
+  aiGenerated             Boolean   @default(false) @map("ai_generated")
+
+  // Timestamps
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  responses               Response[]
+  likes                   Like[]
+  evaluation              QuestionEvaluation? @relation(fields: [questionEvaluationId], references: [id])
+
+  @@index([creatorId])
+  @@index([activityId])
+  @@index([isDeleted])
+  @@index([aiGenerated])
+  @@map("questions")
+}
+
+model Response {
+  id                    String    @id @default(uuid())
+  creatorId             String    @map("creator")
+  creator               User      @relation("ResponseCreator", fields: [creatorId], references: [id])
+  content               String
+  questionId            String    @map("question")
+  question              Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  // Multiple choice
+  choice                String?
+
+  // Deletion
+  isDeleted             Boolean   @default(false) @map("is_deleted")
+  dateDeleted           DateTime? @map("date_deleted")
+  deletedById           String?   @map("deleted_by")
+  deletedBy             User?     @relation("ResponseDeleter", fields: [deletedById], references: [id])
+
+  // Response metadata
+  responseTimeSeconds   Float?    @map("response_time_seconds")
+  isCorrect             Boolean?  @map("is_correct")
+  score                 Float?
+  isAnonymous           Boolean   @default(false) @map("is_anonymous")
+
+  // Exam mode
+  examAttemptId         String?   @map("exam_attempt_id")
+  examAttempt           ExamAttempt? @relation(fields: [examAttemptId], references: [id], onDelete: SetNull)
+
+  // AI Evaluation
+  aiEvaluationStatus    String?   @default("pending") @map("ai_evaluation_status")
+  aiEvaluationRating    String?   @map("ai_evaluation_rating")
+  aiEvaluationScore     Float?    @map("ai_evaluation_score")
+  aiEvaluationFeedback  String?   @map("ai_evaluation_feedback")
+  aiEvaluationTimestamp DateTime? @map("ai_evaluation_timestamp")
+
+  // Timestamps
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@index([creatorId])
+  @@index([questionId])
+  @@index([isDeleted])
+  @@index([examAttemptId])
+  @@index([aiEvaluationStatus])
+  @@map("responses")
+}
+
+// ============================================================================
+// AI Evaluation Models
+// ============================================================================
+
+model QuestionEvaluation {
+  id                  String    @id @default(uuid())
+  questionId          String    @map("question")
+  activityId          String    @map("activity")
+  activity            Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  // AI Model
+  aiModel             String    @default("gpt-4-turbo") @map("ai_model")
+  aiModelVersion      String?   @map("ai_model_version")
+
+  // Evaluation context
+  evaluationType      String    @map("evaluation_type")
+  promptUsed          String?   @map("prompt_used")
+
+  // Bloom's Taxonomy
+  bloomsLevel         String?   @map("blooms_level")
+  bloomsConfidence    Float?    @map("blooms_confidence")
+
+  // Quality scores
+  overallScore        Float     @default(0.0) @map("overall_score")
+  creativityScore     Float?    @map("creativity_score")
+  clarityScore        Float?    @map("clarity_score")
+  relevanceScore      Float?    @map("relevance_score")
+  complexityScore     Float?    @map("complexity_score")
+  innovationScore     Float?    @map("innovation_score")
+
+  // Detailed evaluation
+  evaluationText      String?   @map("evaluation_text")
+  strengths           Json?     @default("[]")
+  improvements        Json?     @default("[]")
+  keywordsFound       Json?     @default("[]") @map("keywords_found")
+  enhancedQuestions   Json?     @default("[]") @map("enhanced_questions")
+
+  // School context
+  gradeLevelAlignment String?   @map("grade_level_alignment")
+  subjectAlignment    String?   @map("subject_alignment")
+  curriculumStandards Json?     @default("[]") @map("curriculum_standards")
+
+  // Processing info
+  processingTimeMs    Int?      @map("processing_time_ms")
+  tokensUsed          Int?      @map("tokens_used")
+  costEstimate        Float?    @map("cost_estimate")
+
+  // Tier 2 guidance
+  bloomsGuidance      Json?     @map("blooms_guidance")
+  tier2GeneratedAt    DateTime? @map("tier2_generated_at")
+  tier2Model          String?   @map("tier2_model")
+
+  // Status
+  evaluationStatus    String    @default("completed") @map("evaluation_status")
+  errorMessage        String?   @map("error_message")
+  retryCount          Int       @default(0) @map("retry_count")
+
+  // Timestamps
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  questions           Question[]
+
+  @@index([questionId])
+  @@index([activityId])
+  @@map("question_evaluations")
+}
+
+// ============================================================================
+// Exam & Attempt Models
+// ============================================================================
+
+model ExamAttempt {
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
+  user                User      @relation(fields: [userId], references: [id])
+  activityId          String    @map("activity_id")
+  activity            Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  // Attempt info
+  startedAt           DateTime  @default(now()) @map("started_at")
+  completedAt         DateTime? @map("completed_at")
+  timeSpentSeconds    Int?      @map("time_spent_seconds")
+
+  // Results
+  totalQuestions      Int       @default(0) @map("total_questions")
+  correctAnswers      Int       @default(0) @map("correct_answers")
+  score               Float?
+  passed              Boolean?
+
+  // Status
+  status              String    @default("in_progress") // in_progress, completed, abandoned
+
+  // Randomization mapping (JSON)
+  questionOrder       Json?     @map("question_order")
+  choiceShuffles      Json?     @map("choice_shuffles")
+
+  // Timestamps
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  responses           Response[]
+
+  @@index([userId])
+  @@index([activityId])
+  @@map("exam_attempts")
+}
+
+model InquiryAttempt {
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
+  user                User      @relation(fields: [userId], references: [id])
+  activityId          String    @map("activity_id")
+  activity            Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  // Attempt info
+  startedAt           DateTime  @default(now()) @map("started_at")
+  completedAt         DateTime? @map("completed_at")
+
+  // Progress
+  questionsGenerated  Int       @default(0) @map("questions_generated")
+  questionsRequired   Int       @default(5) @map("questions_required")
+
+  // Status
+  status              String    @default("in_progress")
+
+  // Timestamps
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([activityId])
+  @@map("inquiry_attempts")
+}
+
+// ============================================================================
+// Supporting Models
+// ============================================================================
+
+model Like {
+  id          String   @id @default(uuid())
+  userId      String   @map("user")
+  questionId  String   @map("question")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@map("likes")
+}
+
+model Leaderboard {
+  id              String   @id @default(uuid())
+  activityId      String   @map("activity")
+  activity        Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId          String   @map("user_id")
+
+  totalScore      Float    @default(0.0) @map("total_score")
+  totalQuestions  Int      @default(0) @map("total_questions")
+  totalResponses  Int      @default(0) @map("total_responses")
+  averageScore    Float?   @map("average_score")
+  rank            Int?
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([activityId, userId])
+  @@map("leaderboards")
+}
+
+model Subscription {
+  id              String   @id @default(uuid())
+  userId          String   @map("user")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  plan            String   @default("free")
+  status          String   @default("active")
+  startDate       DateTime @default(now()) @map("start_date")
+  endDate         DateTime? @map("end_date")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("subscriptions")
+}
+
+// ============================================================================
+// NextAuth.js Models (Required for Auth.js)
+// ============================================================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
