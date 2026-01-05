@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { MemberList } from '@/components/groups/MemberList'
+import { ActivityCard } from '@/components/activities/ActivityCard'
 import { LeaveGroupButton, DeleteGroupButton } from './actions-client'
 import { getRoleLabel, getGradientColors, getGroupInitials, canManageGroup } from '@/lib/groups/utils'
 import { GroupRoles, type GroupRole } from '@/types/groups'
@@ -42,6 +43,27 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
   if (!group) {
     notFound()
   }
+
+  // Fetch activities for this group
+  const activities = await prisma.activity.findMany({
+    where: {
+      owningGroupId: id,
+      isDeleted: false,
+    },
+    include: {
+      creator: {
+        select: { id: true, firstName: true, lastName: true, username: true, avatarUrl: true },
+      },
+      owningGroup: {
+        select: { id: true, name: true, creatorId: true },
+      },
+      _count: {
+        select: { questions: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 6, // Limit to 6 activities on group page
+  })
 
   // Check if user is a member
   const currentUserMembership = group.members.find((m) => m.userId === session.user.id)
@@ -157,7 +179,9 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
             {/* Activities Section */}
             <section className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Activities</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Activities ({group._count.activities})
+                </h2>
                 {canEdit && (
                   <Link
                     href={`/groups/${group.id}/activities/create`}
@@ -167,15 +191,31 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
                   </Link>
                 )}
               </div>
-              <div className="text-center py-8 text-gray-500">
-                <svg className="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <p>No activities yet.</p>
-                {canEdit && (
-                  <p className="text-sm mt-2">Create your first activity to get started!</p>
-                )}
-              </div>
+              {activities.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <svg className="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <p>No activities yet.</p>
+                  {canEdit && (
+                    <p className="text-sm mt-2">Create your first activity to get started!</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activities.map((activity) => (
+                    <ActivityCard key={activity.id} activity={activity} showGroup={false} />
+                  ))}
+                  {group._count.activities > 6 && (
+                    <Link
+                      href={`/activities?groupId=${group.id}`}
+                      className="block text-center text-sm text-[var(--stanford-cardinal)] hover:underline mt-4"
+                    >
+                      View all {group._count.activities} activities
+                    </Link>
+                  )}
+                </div>
+              )}
             </section>
           </div>
 
