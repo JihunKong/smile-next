@@ -2,6 +2,7 @@ import { Job } from 'bull'
 import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/db/prisma'
 import { evaluationQueue, EvaluationJob } from '../bull'
+import { buildInquiryEvaluationPrompt, buildTier2GuidancePrompt } from '@/lib/ai/prompts'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -15,65 +16,52 @@ interface BloomsEvaluationResult {
   clarityScore: number
   relevanceScore: number
   complexityScore: number
+  innovationScore: number
   evaluationText: string
   strengths: string[]
   improvements: string[]
   keywordsFound: string[]
-  enhancedQuestions: string[]
+  enhancedQuestions: Array<{ level: string; question: string }> | string[]
+  pedagogicalNotes?: string
+  nextLevelGuidance?: string
+}
+
+interface Tier2Guidance {
+  currentLevelExplanation: string
+  cognitiveGapAnalysis: string
+  transformationStrategies: Array<{ strategy: string; example: string }>
+  scaffoldedPath: Array<{ level: string; question: string; thinkingRequired: string }>
+  teacherTips: string[]
+  resourceSuggestions: string[]
 }
 
 const BLOOMS_LEVELS = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create']
 
 /**
- * Evaluate a question using Claude AI
+ * Evaluate a question using Claude AI with comprehensive Flask-style prompts
  */
 async function evaluateQuestion(job: EvaluationJob): Promise<BloomsEvaluationResult> {
   const { questionContent, context } = job
 
-  const systemPrompt = `You are an expert in educational assessment and Bloom's Taxonomy.
-Evaluate student-generated questions for their cognitive complexity, clarity, and educational value.
-
-Bloom's Taxonomy Levels (from lowest to highest):
-1. Remember - Recall facts and basic concepts
-2. Understand - Explain ideas or concepts
-3. Apply - Use information in new situations
-4. Analyze - Draw connections among ideas
-5. Evaluate - Justify a decision or course of action
-6. Create - Produce new or original work
-
-Always respond in JSON format.`
-
-  const userPrompt = `Evaluate this student-generated question:
-
-Question: "${questionContent}"
-
-Context:
-- Activity: ${context.activityName}
-- Group: ${context.groupName}
-- Subject: ${context.subject || 'Not specified'}
-- Topic: ${context.topic || 'Not specified'}
-- Education Level: ${context.educationLevel || 'Not specified'}
-${context.ragContext ? `- Additional Context: ${context.ragContext}` : ''}
-
-Provide a comprehensive evaluation in JSON format:
-{
-  "bloomsLevel": "one of: remember, understand, apply, analyze, evaluate, create",
-  "bloomsConfidence": 0.0 to 1.0,
-  "overallScore": 0.0 to 10.0,
-  "creativityScore": 0.0 to 10.0,
-  "clarityScore": 0.0 to 10.0,
-  "relevanceScore": 0.0 to 10.0,
-  "complexityScore": 0.0 to 10.0,
-  "evaluationText": "Detailed feedback explaining the evaluation",
-  "strengths": ["List of strengths in this question"],
-  "improvements": ["Suggestions for improvement"],
-  "keywordsFound": ["Key concepts/keywords found in the question"],
-  "enhancedQuestions": ["2-3 improved versions of this question at higher Bloom's levels"]
-}`
+  // Build comprehensive prompt using Flask-style prompt builder
+  const { system: systemPrompt, user: userPrompt } = buildInquiryEvaluationPrompt({
+    questionContent,
+    activityName: context.activityName,
+    groupName: context.groupName,
+    subject: context.subject,
+    topic: context.topic,
+    educationLevel: context.educationLevel,
+    targetAudience: context.targetAudience,
+    ragContext: context.ragContext,
+    prompterKeywords: context.prompterKeywords,
+    previousQuestions: context.previousQuestions,
+    attemptNumber: context.attemptNumber,
+    questionsRequired: context.questionsRequired,
+  })
 
   const response = await anthropic.messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
-    max_tokens: 2048,
+    max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
   })
@@ -99,7 +87,48 @@ Provide a comprehensive evaluation in JSON format:
     result.bloomsLevel = result.bloomsLevel.toLowerCase()
   }
 
+  // Ensure innovationScore exists (new field)
+  if (typeof result.innovationScore !== 'number') {
+    result.innovationScore = result.complexityScore || 5
+  }
+
   return result
+}
+
+/**
+ * Generate Tier 2 Bloom's guidance for helping students improve
+ */
+async function generateTier2Guidance(
+  question: string,
+  currentLevel: string,
+  context: { subject?: string; educationLevel?: string }
+): Promise<Tier2Guidance> {
+  const { system: systemPrompt, user: userPrompt } = buildTier2GuidancePrompt({
+    question,
+    currentLevel,
+    subject: context.subject,
+    educationLevel: context.educationLevel,
+  })
+
+  const response = await anthropic.messages.create({
+    model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }],
+  })
+
+  const content = response.content[0]
+  if (content.type !== 'text') {
+    throw new Error('Unexpected response type from Claude')
+  }
+
+  let jsonText = content.text
+  const jsonMatch = jsonText.match(/```json\n?([\s\S]*?)\n?```/)
+  if (jsonMatch) {
+    jsonText = jsonMatch[1]
+  }
+
+  return JSON.parse(jsonText) as Tier2Guidance
 }
 
 /**

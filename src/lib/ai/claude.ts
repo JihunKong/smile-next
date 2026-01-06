@@ -1,4 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
+import {
+  BLOOMS_TAXONOMY,
+  buildTier2GuidancePrompt,
+  buildExamEvaluationPrompt,
+  buildCaseEvaluationPrompt,
+  buildAnswerEvaluationPrompt
+} from './prompts'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -13,6 +20,12 @@ export interface BloomsGuidance {
     level: string
     question: string
   }[]
+  // Enhanced fields from Flask-style prompts
+  currentLevelExplanation?: string
+  cognitiveGapAnalysis?: string
+  transformationStrategies?: Array<{ strategy: string; example: string }>
+  scaffoldedPath?: Array<{ level: string; question: string; thinkingRequired: string }>
+  teacherTips?: string[]
 }
 
 export interface CoachingResponse {
@@ -22,8 +35,32 @@ export interface CoachingResponse {
   resources?: string[]
 }
 
+export interface ExamGradingResult {
+  score: number
+  isCorrect: boolean
+  feedback: string
+  partialCreditReasoning?: string
+  conceptualStrengths: string[]
+  misconceptions: string[]
+  learningTips: string[]
+}
+
+export interface CaseEvaluationResult {
+  issuesScore: number
+  solutionScore: number
+  analysisScore: number
+  totalScore: number
+  identifiedIssues: string[]
+  missedIssues: string[]
+  solutionStrengths: string[]
+  solutionWeaknesses: string[]
+  feedback: string
+  exemplarResponse?: string
+}
+
 /**
  * Generate detailed Bloom's Taxonomy guidance using Claude
+ * Enhanced with Flask-style comprehensive prompts
  */
 export async function generateBloomsGuidance(
   question: string,
@@ -34,41 +71,19 @@ export async function generateBloomsGuidance(
     educationLevel?: string
   }
 ): Promise<BloomsGuidance> {
+  // Use the comprehensive Tier 2 guidance prompt from Flask
+  const { system: systemPrompt, user: userPrompt } = buildTier2GuidancePrompt({
+    question,
+    currentLevel,
+    subject: context.subject,
+    educationLevel: context.educationLevel,
+  })
+
   const response = await anthropic.messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
-    max_tokens: 2048,
-    system: `You are an expert in Bloom's Taxonomy and educational question design.
-Provide detailed pedagogical guidance to help students improve their question-asking skills.
-
-Always respond in JSON format.`,
-    messages: [
-      {
-        role: 'user',
-        content: `Analyze this question and provide Bloom's Taxonomy guidance:
-
-Question: "${question}"
-Current Bloom's Level: ${currentLevel}
-Subject: ${context.subject || 'General'}
-Topic: ${context.topic || 'Not specified'}
-Education Level: ${context.educationLevel || 'Not specified'}
-
-Provide a JSON response with:
-{
-  "currentLevel": "string",
-  "levelDescription": "Explain what this Bloom's level means",
-  "nextLevelSuggestions": ["How to elevate to the next level..."],
-  "pedagogicalTips": ["Teaching tips..."],
-  "exampleQuestions": [
-    {"level": "remember", "question": "..."},
-    {"level": "understand", "question": "..."},
-    {"level": "apply", "question": "..."},
-    {"level": "analyze", "question": "..."},
-    {"level": "evaluate", "question": "..."},
-    {"level": "create", "question": "..."}
-  ]
-}`,
-      },
-    ],
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }],
   })
 
   const content = response.content[0]
@@ -83,7 +98,95 @@ Provide a JSON response with:
     jsonText = jsonMatch[1]
   }
 
-  return JSON.parse(jsonText) as BloomsGuidance
+  const result = JSON.parse(jsonText)
+
+  // Transform to BloomsGuidance format for backwards compatibility
+  const levelConfig = BLOOMS_TAXONOMY[currentLevel.toLowerCase()]
+
+  return {
+    currentLevel: currentLevel,
+    levelDescription: levelConfig?.description || result.currentLevelExplanation,
+    nextLevelSuggestions: result.transformationStrategies?.map((s: { example: string }) => s.example) || [],
+    pedagogicalTips: result.teacherTips || [],
+    exampleQuestions: result.scaffoldedPath?.map((p: { level: string; question: string }) => ({
+      level: p.level,
+      question: p.question
+    })) || [],
+    // Enhanced fields
+    currentLevelExplanation: result.currentLevelExplanation,
+    cognitiveGapAnalysis: result.cognitiveGapAnalysis,
+    transformationStrategies: result.transformationStrategies,
+    scaffoldedPath: result.scaffoldedPath,
+    teacherTips: result.teacherTips,
+  }
+}
+
+/**
+ * Grade exam response using comprehensive rubric-based evaluation
+ */
+export async function gradeExamResponse(context: {
+  question: string
+  studentAnswer: string
+  correctAnswer: string
+  rubric?: string
+  subject?: string
+  maxScore?: number
+}): Promise<ExamGradingResult> {
+  const { system: systemPrompt, user: userPrompt } = buildExamEvaluationPrompt(context)
+
+  const response = await anthropic.messages.create({
+    model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
+    max_tokens: 2048,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }],
+  })
+
+  const content = response.content[0]
+  if (content.type !== 'text') {
+    throw new Error('Unexpected response type from Claude')
+  }
+
+  let jsonText = content.text
+  const jsonMatch = jsonText.match(/```json\n?([\s\S]*?)\n?```/)
+  if (jsonMatch) {
+    jsonText = jsonMatch[1]
+  }
+
+  return JSON.parse(jsonText) as ExamGradingResult
+}
+
+/**
+ * Evaluate case study response with comprehensive analysis
+ */
+export async function evaluateCaseResponse(context: {
+  scenario: string
+  studentIssues: string
+  studentSolution: string
+  expectedIssues?: string[]
+  expectedApproaches?: string[]
+  subject?: string
+}): Promise<CaseEvaluationResult> {
+  const { system: systemPrompt, user: userPrompt } = buildCaseEvaluationPrompt(context)
+
+  const response = await anthropic.messages.create({
+    model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
+    max_tokens: 3072,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }],
+  })
+
+  const content = response.content[0]
+  if (content.type !== 'text') {
+    throw new Error('Unexpected response type from Claude')
+  }
+
+  let jsonText = content.text
+  const jsonMatch = jsonText.match(/```json\n?([\s\S]*?)\n?```/)
+  if (jsonMatch) {
+    jsonText = jsonMatch[1]
+  }
+
+  return JSON.parse(jsonText) as CaseEvaluationResult
 }
 
 /**

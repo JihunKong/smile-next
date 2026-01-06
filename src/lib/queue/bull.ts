@@ -64,7 +64,12 @@ export interface EvaluationJob {
     educationLevel?: string
     subject?: string
     topic?: string
+    targetAudience?: string
     ragContext?: string
+    prompterKeywords?: string[]
+    previousQuestions?: string[]
+    attemptNumber?: number
+    questionsRequired?: number
   }
 }
 
