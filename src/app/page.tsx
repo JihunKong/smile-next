@@ -1,20 +1,13 @@
 import Link from 'next/link'
-import Image from 'next/image'
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen bg-gray-900">
-      {/* Background Image */}
-      <Image
-        src="/images/sbg_optimized.jpg"
-        alt="SMILE Background"
-        fill
-        priority
-        className="object-cover object-center z-0"
-        quality={85}
-      />
+    <div
+      className="relative min-h-screen bg-cover bg-center bg-no-repeat bg-gray-900"
+      style={{ backgroundImage: "url('/images/sbg_optimized.jpg')" }}
+    >
       {/* Overlay for readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-40 z-[1]" />
+      <div className="absolute inset-0 bg-black bg-opacity-40" />
 
       {/* Main Content */}
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
@@ -57,7 +50,7 @@ export default function Home() {
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white animate-bounce">
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white animate-bounce z-10">
         <svg
           className="h-8 w-8"
           fill="none"
