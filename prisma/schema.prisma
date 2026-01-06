@@ -72,6 +72,7 @@ model User {
   inquiryAttempts         InquiryAttempt[]
   caseAttempts            CaseAttempt[]
   likes                   Like[]
+  createdCertificates     Certificate[] @relation("CertificateCreator")
 
   @@index([email])
   @@index([isDeleted])
@@ -641,6 +642,7 @@ model Subscription {
 model Certificate {
   id                    String    @id @default(uuid())
   creatorId             String    @map("creator_id")
+  creator               User      @relation("CertificateCreator", fields: [creatorId], references: [id])
 
   // Basic info
   name                  String
@@ -674,7 +676,9 @@ model Certificate {
   // Approval workflow
   submittedAt           DateTime? @map("submitted_at")
   approvedAt            DateTime? @map("approved_at")
-  approvedById          String?   @map("approved_by_id")
+  approvedBy            String?   @map("approved_by")
+  rejectedAt            DateTime? @map("rejected_at")
+  rejectedBy            String?   @map("rejected_by")
 
   // Timestamps
   createdAt             DateTime  @default(now()) @map("created_at")
