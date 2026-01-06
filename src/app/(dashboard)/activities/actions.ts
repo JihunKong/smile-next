@@ -6,6 +6,32 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { ActivityModes, type ActionResult, type CreateActivityResult, type CreateQuestionResult } from '@/types/activities'
 
+// Helper to queue question evaluation via API (avoids Bull import in Server Components)
+async function queueQuestionEvaluationViaApi(data: {
+  questionId: string
+  activityId: string
+  userId: string
+  questionContent: string
+  context: {
+    activityName: string
+    groupName: string
+    subject?: string
+    topic?: string
+    educationLevel?: string
+  }
+}): Promise<void> {
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'http://localhost:3000'
+  try {
+    await fetch(`${baseUrl}/api/queue/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'question', data }),
+    })
+  } catch (error) {
+    console.warn('Failed to queue question evaluation via API:', error)
+  }
+}
+
 // Validation schemas
 const createActivitySchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name is too long'),
@@ -190,8 +216,19 @@ export async function createQuestion(formData: FormData): Promise<CreateQuestion
       data: { numberOfQuestions: { increment: 1 } },
     })
 
-    // TODO: Queue AI evaluation job
-    // await queueQuestionEvaluation(question.id, activity.id)
+    // Queue AI evaluation job (fire and forget)
+    if (activity.aiRatingEnabled) {
+      queueQuestionEvaluationViaApi({
+        questionId: question.id,
+        activityId: data.activityId,
+        userId: session.user.id,
+        questionContent: data.content,
+        context: {
+          activityName: activity.name,
+          groupName: activity.owningGroup.name,
+        },
+      })
+    }
 
     revalidatePath(`/activities/${data.activityId}`)
     return { success: true, data: { questionId: question.id } }

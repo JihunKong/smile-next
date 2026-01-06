@@ -6,6 +6,30 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import type { CreateResponseResult, UpdateResponseResult, DeleteResponseResult, ToggleLikeResult } from '@/types/responses'
 
+// Helper to queue response evaluation via API (avoids Bull import in Server Components)
+async function queueResponseEvaluationViaApi(data: {
+  responseId: string
+  activityId: string
+  userId: string
+  responseContent: string
+  questionContent: string
+  context: {
+    activityName: string
+    groupName: string
+  }
+}): Promise<void> {
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'http://localhost:3000'
+  try {
+    await fetch(`${baseUrl}/api/queue/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'response', data }),
+    })
+  } catch (error) {
+    console.warn('Failed to queue response evaluation via API:', error)
+  }
+}
+
 // Validation schemas
 const createResponseSchema = z.object({
   content: z.string().min(1, 'Response is required').max(5000, 'Response is too long'),
@@ -95,8 +119,20 @@ export async function createResponse(formData: FormData): Promise<CreateResponse
       data: { numberOfAnswers: { increment: 1 } },
     })
 
-    // TODO: Queue AI evaluation job
-    // await queueResponseEvaluation(response.id, question.activityId)
+    // Queue AI evaluation job (fire and forget)
+    if (question.activity.aiRatingEnabled) {
+      queueResponseEvaluationViaApi({
+        responseId: response.id,
+        activityId: question.activityId,
+        userId: session.user.id,
+        responseContent: data.content,
+        questionContent: question.content,
+        context: {
+          activityName: question.activity.name,
+          groupName: question.activity.owningGroup.name,
+        },
+      })
+    }
 
     revalidatePath(`/activities/${question.activityId}`)
     revalidatePath(`/activities/${question.activityId}/questions/${data.questionId}`)
