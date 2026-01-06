@@ -35,12 +35,19 @@ export default function Navigation() {
         try {
           const res = await fetch('/api/messages?type=inbox')
           if (res.ok) {
-            const data = await res.json()
-            const unread = data.messages?.filter((m: { isRead: boolean }) => !m.isRead).length || 0
-            setUnreadCount(unread)
+            const text = await res.text()
+            // Guard against empty or invalid JSON responses
+            if (text && text.trim()) {
+              const data = JSON.parse(text)
+              if (data && Array.isArray(data.messages)) {
+                const unread = data.messages.filter((m: { isRead: boolean }) => !m.isRead).length
+                setUnreadCount(unread)
+              }
+            }
           }
-        } catch {
-          // Silently fail
+        } catch (error) {
+          // Silently fail - don't let message fetch errors break the app
+          console.warn('Failed to fetch unread count:', error)
         }
       }
       fetchUnreadCount()
