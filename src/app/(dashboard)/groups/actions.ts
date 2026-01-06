@@ -28,12 +28,12 @@ export async function createGroup(formData: FormData): Promise<CreateGroupResult
   }
 
   const rawData = {
-    name: formData.get('name') as string,
-    description: formData.get('description') || undefined,
+    name: formData.get('name')?.toString() ?? '',
+    description: formData.get('description')?.toString() || undefined,
     isPrivate: formData.get('isPrivate') === 'true',
     requirePasscode: formData.get('requirePasscode') === 'true',
-    passcode: formData.get('passcode') || undefined,
-    groupType: formData.get('groupType') || 'StudentPaced',
+    passcode: formData.get('passcode')?.toString() || undefined,
+    groupType: formData.get('groupType')?.toString() || 'StudentPaced',
   }
 
   const result = createGroupSchema.safeParse(rawData)

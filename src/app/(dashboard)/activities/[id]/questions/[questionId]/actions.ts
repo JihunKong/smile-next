@@ -27,8 +27,8 @@ export async function createResponse(formData: FormData): Promise<CreateResponse
   }
 
   const rawData = {
-    content: formData.get('content') as string,
-    questionId: formData.get('questionId') as string,
+    content: formData.get('content')?.toString() ?? '',
+    questionId: formData.get('questionId')?.toString() ?? '',
     isAnonymous: formData.get('isAnonymous') === 'true',
   }
 
@@ -117,7 +117,7 @@ export async function updateResponse(responseId: string, formData: FormData): Pr
   }
 
   const rawData = {
-    content: formData.get('content') as string,
+    content: formData.get('content')?.toString() ?? '',
   }
 
   const result = updateResponseSchema.safeParse(rawData)
