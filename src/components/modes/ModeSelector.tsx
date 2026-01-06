@@ -70,6 +70,7 @@ export function ModeSelector({ selectedMode, onModeChange, disabled = false }: M
           <button
             key={mode.id}
             type="button"
+            data-mode={mode.id}
             onClick={() => !disabled && onModeChange(mode.id)}
             disabled={disabled}
             className={`

@@ -36,6 +36,8 @@ export function CaseStartButton({ activityId, hasInProgress }: CaseStartButtonPr
       <button
         onClick={handleStart}
         disabled={isLoading}
+        data-testid="start-case"
+        suppressHydrationWarning
         className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition flex items-center gap-2 mx-auto"
       >
         {isLoading ? (

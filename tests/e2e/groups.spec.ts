@@ -11,8 +11,8 @@ test.describe('Groups', () => {
       await page.goto('/groups')
       await page.waitForLoadState('networkidle')
 
-      // Should see the groups page
-      await expect(page.locator('h1, h2').filter({ hasText: /group/i })).toBeVisible()
+      // Should see the groups page (heading contains "Groups" or "group")
+      await expect(page.locator('h1, h2').filter({ hasText: /group/i }).first()).toBeVisible()
 
       // Should see the CS group that teacher1 owns
       await expect(
@@ -126,6 +126,7 @@ test.describe('Groups', () => {
 
       const groupName = `Delete Me ${Date.now()}`
       await page.fill('input[name="name"]', groupName)
+      await page.fill('textarea[name="description"], input[name="description"]', 'Group to be deleted')
       await page.click('button[type="submit"]')
 
       await page.waitForLoadState('networkidle')
@@ -141,9 +142,20 @@ test.describe('Groups', () => {
       if (await deleteButton.isVisible()) {
         await deleteButton.click()
 
-        // Confirm deletion if modal appears
+        // Wait for modal to appear
+        await page.waitForTimeout(500)
+
+        // Type the group name to confirm deletion
+        const confirmInput = page.locator(
+          'input[data-testid="confirm-group-name"], input[placeholder*="group name"]'
+        )
+        if (await confirmInput.isVisible()) {
+          await confirmInput.fill(groupName)
+        }
+
+        // Click confirm delete button
         const confirmButton = page.locator(
-          'button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")'
+          'button[data-testid="confirm-delete"], button:has-text("Delete Group")'
         )
         if (await confirmButton.isVisible()) {
           await confirmButton.click()

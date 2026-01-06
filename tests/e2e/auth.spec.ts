@@ -13,8 +13,8 @@ test.describe('Authentication', () => {
       await fillSignupForm(page, newUser)
       await page.click('button[type="submit"]')
 
-      // Should redirect to login or dashboard
-      await expect(page).toHaveURL(/.*login.*|.*dashboard.*/, { timeout: 15000 })
+      // Should redirect to check-email, login, or dashboard
+      await expect(page).toHaveURL(/.*check-email.*|.*login.*|.*dashboard.*/, { timeout: 15000 })
     })
 
     test('should show error for weak password (missing uppercase)', async ({ page }) => {
@@ -24,8 +24,8 @@ test.describe('Authentication', () => {
       await fillSignupForm(page, { ...newUser, password: 'test1234!' })
       await page.click('button[type="submit"]')
 
-      // Should show validation error
-      await expect(page.locator('text=/uppercase|password/i')).toBeVisible({ timeout: 5000 })
+      // Should show validation error - "Password must contain an uppercase letter"
+      await expect(page.locator('text=/uppercase/i')).toBeVisible({ timeout: 5000 })
     })
 
     test('should show error for weak password (missing number)', async ({ page }) => {
@@ -35,8 +35,8 @@ test.describe('Authentication', () => {
       await fillSignupForm(page, { ...newUser, password: 'Testtest!' })
       await page.click('button[type="submit"]')
 
-      // Should show validation error
-      await expect(page.locator('text=/number|digit|password/i')).toBeVisible({ timeout: 5000 })
+      // Should show validation error - "Password must contain a number"
+      await expect(page.locator('text=/number/i')).toBeVisible({ timeout: 5000 })
     })
 
     test('should show error for password too short', async ({ page }) => {
@@ -46,8 +46,8 @@ test.describe('Authentication', () => {
       await fillSignupForm(page, { ...newUser, password: 'Test1!' })
       await page.click('button[type="submit"]')
 
-      // Should show validation error
-      await expect(page.locator('text=/8.*character|too short|password/i')).toBeVisible({
+      // Should show validation error - "Password must be at least 8 characters"
+      await expect(page.locator('text=/8 characters|at least 8/i')).toBeVisible({
         timeout: 5000,
       })
     })
@@ -64,8 +64,8 @@ test.describe('Authentication', () => {
       })
       await page.click('button[type="submit"]')
 
-      // Should show error about existing email
-      await expect(page.locator('text=/already.*exist|duplicate|registered/i')).toBeVisible({
+      // Should show error about existing email - "Email already exists" or similar
+      await expect(page.locator('text=/already|exist|registered|in use/i')).toBeVisible({
         timeout: 5000,
       })
     })
@@ -107,19 +107,17 @@ test.describe('Authentication', () => {
       // Initially password should be hidden
       await expect(passwordInput).toHaveAttribute('type', 'password')
 
-      // Click toggle button
-      const toggleButton = page.locator(
-        'button:has(svg), [data-testid="toggle-password"], button[aria-label*="password"]'
-      )
-      if (await toggleButton.isVisible()) {
-        await toggleButton.first().click()
-        // Password should now be visible
-        await expect(passwordInput).toHaveAttribute('type', 'text')
+      // Click toggle button - use specific data-testid
+      const toggleButton = page.locator('[data-testid="toggle-password"]')
+      await expect(toggleButton).toBeVisible({ timeout: 5000 })
+      await toggleButton.click()
 
-        // Click again to hide
-        await toggleButton.first().click()
-        await expect(passwordInput).toHaveAttribute('type', 'password')
-      }
+      // Password should now be visible
+      await expect(passwordInput).toHaveAttribute('type', 'text')
+
+      // Click again to hide
+      await toggleButton.click()
+      await expect(passwordInput).toHaveAttribute('type', 'password')
     })
   })
 

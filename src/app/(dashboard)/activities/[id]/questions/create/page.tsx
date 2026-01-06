@@ -89,7 +89,7 @@ export default function CreateQuestionPage() {
       </section>
 
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
+        <form onSubmit={handleSubmit} data-testid="question-form" className="bg-white rounded-lg shadow-md p-6 space-y-6">
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
@@ -159,6 +159,8 @@ export default function CreateQuestionPage() {
                     type="checkbox"
                     checked={isAnonymous}
                     onChange={(e) => setIsAnonymous(e.target.checked)}
+                    data-testid="anonymous-toggle"
+                    name="isAnonymous"
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[var(--stanford-cardinal)]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--stanford-cardinal)]"></div>

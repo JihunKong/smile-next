@@ -36,6 +36,8 @@ export function InquiryStartButton({ activityId, hasInProgress }: InquiryStartBu
       <button
         onClick={handleStart}
         disabled={isLoading}
+        data-testid="start-inquiry"
+        suppressHydrationWarning
         className="px-8 py-3 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 disabled:opacity-50 transition flex items-center gap-2 mx-auto"
       >
         {isLoading ? (

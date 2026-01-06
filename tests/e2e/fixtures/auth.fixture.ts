@@ -72,11 +72,15 @@ export async function fillSignupForm(
     confirmPassword?: string
     firstName: string
     lastName: string
+    username?: string
   }
 ) {
   await page.fill('input[name="email"]', data.email)
   await page.fill('input[name="firstName"]', data.firstName)
   await page.fill('input[name="lastName"]', data.lastName)
+  // Generate username from email if not provided
+  const username = data.username || data.email.split('@')[0]
+  await page.fill('input[name="username"]', username)
   await page.fill('input[name="password"]', data.password)
   await page.fill('input[name="confirmPassword"]', data.confirmPassword || data.password)
 }

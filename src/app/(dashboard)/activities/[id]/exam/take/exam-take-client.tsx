@@ -285,7 +285,7 @@ export function ExamTakeClient({
               </div>
 
               {/* Question Content */}
-              <div className="mb-6">
+              <div className="mb-6 question-content" data-testid="question">
                 <p className="text-lg text-gray-900 whitespace-pre-wrap">{currentQuestion.content}</p>
               </div>
 
@@ -299,6 +299,9 @@ export function ExamTakeClient({
                     <button
                       key={choiceIndex}
                       onClick={() => handleAnswerChange(choice)}
+                      data-testid="answer-option"
+                      role="radio"
+                      aria-checked={isSelected}
                       className={`
                         w-full text-left p-4 rounded-lg border-2 transition
                         ${isSelected

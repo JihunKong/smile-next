@@ -320,6 +320,7 @@ export function CaseTakeClient({
                 Identify the Key Issues
               </label>
               <textarea
+                name="issues"
                 value={currentResponse.issues}
                 onChange={(e) => updateResponse('issues', e.target.value)}
                 placeholder="What are the main problems or challenges in this scenario?"
@@ -338,6 +339,7 @@ export function CaseTakeClient({
                 Propose Your Solution
               </label>
               <textarea
+                name="solution"
                 value={currentResponse.solution}
                 onChange={(e) => updateResponse('solution', e.target.value)}
                 placeholder="How would you address these issues? What steps would you take?"

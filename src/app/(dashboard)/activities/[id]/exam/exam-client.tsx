@@ -36,6 +36,8 @@ export function ExamStartButton({ activityId, hasInProgress }: ExamStartButtonPr
       <button
         onClick={handleStart}
         disabled={isLoading}
+        data-testid="start-exam"
+        suppressHydrationWarning
         className="px-8 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 transition flex items-center gap-2 mx-auto"
       >
         {isLoading ? (

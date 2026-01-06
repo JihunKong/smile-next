@@ -29,11 +29,11 @@ export async function createGroup(formData: FormData): Promise<CreateGroupResult
 
   const rawData = {
     name: formData.get('name') as string,
-    description: formData.get('description') as string | undefined,
+    description: formData.get('description') || undefined,
     isPrivate: formData.get('isPrivate') === 'true',
     requirePasscode: formData.get('requirePasscode') === 'true',
-    passcode: formData.get('passcode') as string | undefined,
-    groupType: (formData.get('groupType') as string) || 'StudentPaced',
+    passcode: formData.get('passcode') || undefined,
+    groupType: formData.get('groupType') || 'StudentPaced',
   }
 
   const result = createGroupSchema.safeParse(rawData)
@@ -424,7 +424,7 @@ export async function deleteGroup(groupId: string): Promise<ActionResult> {
     })
 
     revalidatePath('/groups')
-    redirect('/groups')
+    return { success: true }
   } catch (error) {
     console.error('Failed to delete group:', error)
     return { success: false, error: 'Failed to delete group. Please try again.' }

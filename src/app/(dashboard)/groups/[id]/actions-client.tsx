@@ -65,6 +65,7 @@ interface DeleteGroupButtonProps {
 }
 
 export function DeleteGroupButton({ groupId, groupName }: DeleteGroupButtonProps) {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [confirmText, setConfirmText] = useState('')
@@ -76,11 +77,12 @@ export function DeleteGroupButton({ groupId, groupName }: DeleteGroupButtonProps
     }
     setIsLoading(true)
     const result = await deleteGroup(groupId)
-    if (!result.success) {
+    if (result.success) {
+      router.push('/groups')
+    } else {
       alert(result.error || 'Failed to delete group')
       setIsLoading(false)
     }
-    // Redirect happens in the action
   }
 
   if (showConfirm) {
@@ -98,6 +100,7 @@ export function DeleteGroupButton({ groupId, groupName }: DeleteGroupButtonProps
             type="text"
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
+            data-testid="confirm-group-name"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
             placeholder="Type group name to confirm"
           />
@@ -114,6 +117,7 @@ export function DeleteGroupButton({ groupId, groupName }: DeleteGroupButtonProps
             <button
               onClick={handleDelete}
               disabled={isLoading || confirmText !== groupName}
+              data-testid="confirm-delete"
               className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 disabled:opacity-50"
             >
               {isLoading ? 'Deleting...' : 'Delete Group'}
@@ -127,6 +131,8 @@ export function DeleteGroupButton({ groupId, groupName }: DeleteGroupButtonProps
   return (
     <button
       onClick={() => setShowConfirm(true)}
+      data-testid="delete-group"
+      aria-label="Delete group"
       className="inline-flex items-center gap-2 px-4 py-2 bg-red-500/80 text-white font-medium rounded-lg hover:bg-red-600 transition"
     >
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

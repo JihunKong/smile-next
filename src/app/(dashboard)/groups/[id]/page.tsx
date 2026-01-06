@@ -141,9 +141,22 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
           <div className="lg:col-span-2 space-y-6">
             {/* Activities Section */}
             <section className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Activities ({group._count.activities})
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Activities ({group._count.activities})
+                </h2>
+                {currentUserMembership && (
+                  <Link
+                    href={`/groups/${group.id}/activities/create`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--stanford-cardinal)] text-white rounded-lg hover:bg-[var(--stanford-cardinal-dark)] transition-colors text-sm font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Activity
+                  </Link>
+                )}
+              </div>
               {activities.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <svg className="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

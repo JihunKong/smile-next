@@ -276,6 +276,7 @@ export function InquiryTakeClient({
             </h2>
 
             <textarea
+              name="question"
               value={currentQuestion}
               onChange={(e) => setCurrentQuestion(e.target.value)}
               placeholder="Type your question here. Try to connect concepts from both keyword pools..."
@@ -333,7 +334,7 @@ export function InquiryTakeClient({
                       </div>
                       <p className="text-gray-800">{q.content}</p>
                       {q.feedback && (
-                        <p className="text-sm text-gray-600 mt-2 italic">{q.feedback}</p>
+                        <p className="feedback text-sm text-gray-600 mt-2 italic" data-testid="feedback">{q.feedback}</p>
                       )}
                     </div>
                     <div className="text-right">

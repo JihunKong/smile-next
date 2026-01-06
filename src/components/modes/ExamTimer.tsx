@@ -76,8 +76,9 @@ export function ExamTimer({ totalSeconds, onTimeUp, paused = false, size = 'md' 
 
   return (
     <div
+      data-testid="timer"
       className={`
-        inline-flex items-center gap-2 rounded-lg font-mono font-bold
+        timer inline-flex items-center gap-2 rounded-lg font-mono font-bold
         ${sizeClasses[size]}
         ${colorClass}
         ${isWarning ? 'animate-pulse' : ''}

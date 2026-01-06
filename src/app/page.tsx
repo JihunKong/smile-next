@@ -1,13 +1,20 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Home() {
   return (
-    <div
-      className="relative min-h-screen bg-cover bg-center bg-fixed"
-      style={{ backgroundImage: "url('/images/sbg_optimized.jpg')" }}
-    >
+    <div className="relative min-h-screen bg-gray-900">
+      {/* Background Image */}
+      <Image
+        src="/images/sbg_optimized.jpg"
+        alt="SMILE Background"
+        fill
+        priority
+        className="object-cover object-center"
+        quality={85}
+      />
       {/* Overlay for readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-40" />
+      <div className="absolute inset-0 bg-black bg-opacity-40 z-[1]" />
 
       {/* Main Content */}
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4">

@@ -202,6 +202,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
             {mode === ActivityModes.OPEN && (
               <Link
                 href={`/activities/${activity.id}/questions/create`}
+                data-testid="ask-question"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 font-medium rounded-lg hover:bg-gray-100 transition"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

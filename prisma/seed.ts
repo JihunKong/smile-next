@@ -264,9 +264,29 @@ async function main() {
   console.log('Created Inquiry Mode activity:', inquiryActivity.name)
 
   // Case Mode Activity (mode = 3)
+  const caseSettings = {
+    timePerCase: 10,
+    totalTimeLimit: 45,
+    passThreshold: 6.0,
+    maxAttempts: 3,
+    scenarios: [
+      {
+        id: 'scenario-1',
+        title: 'Data Privacy Dilemma',
+        content: 'A tech company discovers a vulnerability in their software that could expose user data. Fixing it would delay a major product launch by 3 months. The company has 10 million users. The vulnerability has not been exploited yet, but security researchers have privately disclosed it.',
+      },
+      {
+        id: 'scenario-2',
+        title: 'Environmental vs Profit',
+        content: 'A manufacturing company can reduce costs by 30% by switching to a cheaper but more polluting production method. The pollution levels would still be within legal limits, but environmental groups are already monitoring the company closely.',
+      },
+    ],
+  }
   const caseActivity = await prisma.activity.upsert({
     where: { id: 'case-business-ethics' },
-    update: {},
+    update: {
+      openModeSettings: caseSettings,
+    },
     create: {
       id: 'case-business-ethics',
       creatorId: teacher1.id,
@@ -274,24 +294,7 @@ async function main() {
       name: 'Business Ethics Case Study',
       description: 'Analyze real-world business ethics scenarios and propose solutions.',
       mode: 3,
-      examSettings: {
-        timeLimit: 45,
-        passThreshold: 6.0,
-        scenarios: [
-          {
-            id: 'scenario-1',
-            title: 'Data Privacy Dilemma',
-            description: 'A tech company discovers a vulnerability in their software that could expose user data. Fixing it would delay a major product launch by 3 months.',
-            context: 'The company has 10 million users. The vulnerability has not been exploited yet, but security researchers have privately disclosed it.',
-          },
-          {
-            id: 'scenario-2',
-            title: 'Environmental vs Profit',
-            description: 'A manufacturing company can reduce costs by 30% by switching to a cheaper but more polluting production method.',
-            context: 'The pollution levels would still be within legal limits, but environmental groups are already monitoring the company closely.',
-          },
-        ],
-      },
+      openModeSettings: caseSettings,
       aiRatingEnabled: true,
     },
   })

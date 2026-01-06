@@ -95,9 +95,12 @@ export default function PressMediaPage() {
                 </div>
                 <h3 className="text-xl font-semibold mb-3 text-[#8C1515]">{item.title}</h3>
                 <p className="text-gray-700 mb-3">{item.description}</p>
-                <span className="text-sm font-medium text-[#8C1515] hover:underline cursor-pointer">
+                <a
+                  href="#"
+                  className="text-sm font-medium text-[#8C1515] hover:underline"
+                >
                   Read more →
-                </span>
+                </a>
               </article>
             ))}
           </div>

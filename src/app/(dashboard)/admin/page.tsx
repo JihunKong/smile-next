@@ -155,7 +155,7 @@ export default function AdminDashboardPage() {
                   </div>
                 </Link>
                 <Link
-                  href="/tools/certificate-designer"
+                  href="/certificates"
                   className="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <svg className="w-8 h-8 text-[#8C1515] mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
