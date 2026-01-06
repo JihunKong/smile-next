@@ -33,26 +33,17 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/blooms-taxonomy"
-                  className="text-gray-300 hover:text-white"
-                >
+                <Link href="/blooms-taxonomy" className="text-gray-300 hover:text-white">
                   Bloom&apos;s Taxonomy
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/research-publication"
-                  className="text-gray-300 hover:text-white"
-                >
+                <Link href="/research-publication" className="text-gray-300 hover:text-white">
                   Research
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/smile-stories"
-                  className="text-gray-300 hover:text-white"
-                >
+                <Link href="/smile-stories" className="text-gray-300 hover:text-white">
                   Success Stories
                 </Link>
               </li>
@@ -71,26 +62,17 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/privacy-policy"
-                  className="text-gray-300 hover:text-white"
-                >
+                <Link href="/privacy-policy" className="text-gray-300 hover:text-white">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/terms-of-service"
-                  className="text-gray-300 hover:text-white"
-                >
+                <Link href="/terms-of-service" className="text-gray-300 hover:text-white">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/press-media"
-                  className="text-gray-300 hover:text-white"
-                >
+                <Link href="/press-media" className="text-gray-300 hover:text-white">
                   Press &amp; Media
                 </Link>
               </li>

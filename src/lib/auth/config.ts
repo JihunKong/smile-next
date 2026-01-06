@@ -1,5 +1,4 @@
 import NextAuth from 'next-auth'
-import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
@@ -8,10 +7,6 @@ import { prisma } from '@/lib/db/prisma'
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma) as any,
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
     Credentials({
       name: 'credentials',
       credentials: {
@@ -19,7 +14,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        console.log('[Auth] Login attempt for:', credentials?.email)
+
         if (!credentials?.email || !credentials?.password) {
+          console.log('[Auth] Missing credentials')
           return null
         }
 
@@ -27,7 +25,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: credentials.email as string },
         })
 
+        console.log('[Auth] User found:', !!user)
+
         if (!user || !user.passwordHash) {
+          console.log('[Auth] User not found or no password hash')
           return null
         }
 
@@ -35,6 +36,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           credentials.password as string,
           user.passwordHash
         )
+
+        console.log('[Auth] Password valid:', isPasswordValid)
 
         if (!isPasswordValid) {
           return null

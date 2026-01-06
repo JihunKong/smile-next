@@ -165,7 +165,6 @@ export default async function InquiryPage({ params }: InquiryPageProps) {
                 activityId={activityId}
                 mode="inquiry"
                 passThreshold={inquirySettings.passThreshold}
-                showViewLink={false}
               />
             </div>
           )}

@@ -19,7 +19,6 @@ interface AttemptHistoryListProps {
   activityId: string
   mode: 'exam' | 'inquiry' | 'case'
   passThreshold?: number
-  showViewLink?: boolean
 }
 
 function formatDuration(seconds: number): string {
@@ -47,7 +46,6 @@ export function AttemptHistoryList({
   activityId,
   mode,
   passThreshold,
-  showViewLink = true,
 }: AttemptHistoryListProps) {
   if (attempts.length === 0) {
     return (
@@ -153,18 +151,6 @@ export function AttemptHistoryList({
                 </div>
               )}
 
-              {/* View Results Link */}
-              {showViewLink && isCompleted && (
-                <Link
-                  href={`/activities/${activityId}/${mode}/results?attempt=${attempt.id}`}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="View Results"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              )}
 
               {/* Resume Button for In Progress */}
               {isInProgress && (

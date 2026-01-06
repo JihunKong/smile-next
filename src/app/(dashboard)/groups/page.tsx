@@ -174,40 +174,6 @@ export default async function GroupsPage() {
           )}
         </section>
 
-        {/* Join with Invite Code */}
-        <section className="mt-12">
-          <div className="bg-white rounded-lg shadow-sm p-6 border-2 border-dashed border-gray-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-blue-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                  />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900">Have an invite code?</h3>
-                <p className="text-sm text-gray-500">
-                  Enter an invite code to join a private group.
-                </p>
-              </div>
-              <Link
-                href="/groups/join"
-                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
-              >
-                Enter Code
-              </Link>
-            </div>
-          </div>
-        </section>
       </div>
     </div>
   )

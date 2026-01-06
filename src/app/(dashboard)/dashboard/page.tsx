@@ -75,21 +75,6 @@ export default async function DashboardPage() {
                 <p className="text-sm text-gray-500">Browse learning activities</p>
               </div>
             </Link>
-
-            <Link
-              href="/profile"
-              className="flex items-center gap-4 p-4 bg-white rounded-lg border-2 border-dashed border-gray-300 hover:border-yellow-500 hover:bg-yellow-50 transition group"
-            >
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-200 transition">
-                <svg className="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Profile</p>
-                <p className="text-sm text-gray-500">View and edit profile</p>
-              </div>
-            </Link>
           </div>
         </section>
 

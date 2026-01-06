@@ -58,18 +58,6 @@ export default function Navigation() {
                 >
                   Groups
                 </Link>
-                <Link
-                  href="/tools"
-                  className="text-[var(--stanford-pine)] hover:opacity-80"
-                >
-                  Tools
-                </Link>
-                <Link
-                  href="/profile"
-                  className="text-[var(--stanford-pine)] hover:opacity-80"
-                >
-                  Profile
-                </Link>
                 <button
                   onClick={() => signOut()}
                   className="text-white px-4 py-2 rounded-md hover:opacity-80"
@@ -159,18 +147,6 @@ export default function Navigation() {
                   className="block px-3 py-2 text-[var(--stanford-pine)] hover:opacity-80"
                 >
                   Groups
-                </Link>
-                <Link
-                  href="/tools"
-                  className="block px-3 py-2 text-[var(--stanford-pine)] hover:opacity-80"
-                >
-                  Tools
-                </Link>
-                <Link
-                  href="/profile"
-                  className="block px-3 py-2 text-[var(--stanford-pine)] hover:opacity-80"
-                >
-                  Profile
                 </Link>
                 <button
                   onClick={() => signOut()}

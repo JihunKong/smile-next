@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { MemberList } from '@/components/groups/MemberList'
 import { ActivityCard } from '@/components/activities/ActivityCard'
 import { LeaveGroupButton, DeleteGroupButton } from './actions-client'
-import { getRoleLabel, getGradientColors, getGroupInitials, canManageGroup } from '@/lib/groups/utils'
+import { getRoleLabel, getGradientColors, getGroupInitials } from '@/lib/groups/utils'
 import { GroupRoles, type GroupRole } from '@/types/groups'
 
 interface GroupDetailPageProps {
@@ -78,9 +78,7 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
   const gradient = getGradientColors(gradientIndex)
   const initials = getGroupInitials(group.name)
 
-  const canEdit = canManageGroup(userRole, 'edit')
-  const canDelete = canManageGroup(userRole, 'delete')
-  const canInvite = canManageGroup(userRole, 'invite')
+  const canDelete = userRole === GroupRoles.OWNER
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -126,47 +124,12 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
           {/* Action Buttons */}
           {currentUserMembership && (
             <div className="flex items-center gap-3 mt-6">
-              {canInvite && (
-                <Link
-                  href={`/groups/${group.id}/invite`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 font-medium rounded-lg hover:bg-gray-100 transition"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  Invite Members
-                </Link>
-              )}
-              {canEdit && (
-                <Link
-                  href={`/groups/${group.id}/settings`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Settings
-                </Link>
-              )}
               {userRole !== GroupRoles.OWNER && (
                 <LeaveGroupButton groupId={group.id} />
               )}
               {canDelete && (
                 <DeleteGroupButton groupId={group.id} groupName={group.name} />
               )}
-            </div>
-          )}
-
-          {/* Non-member: Join Button */}
-          {!currentUserMembership && !group.isPrivate && (
-            <div className="mt-6">
-              <Link
-                href={`/groups/${group.id}/join`}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition"
-              >
-                Join This Group
-              </Link>
             </div>
           )}
         </div>
@@ -178,28 +141,15 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
           <div className="lg:col-span-2 space-y-6">
             {/* Activities Section */}
             <section className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Activities ({group._count.activities})
-                </h2>
-                {canEdit && (
-                  <Link
-                    href={`/groups/${group.id}/activities/create`}
-                    className="text-sm text-[var(--stanford-cardinal)] hover:underline"
-                  >
-                    Create Activity
-                  </Link>
-                )}
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Activities ({group._count.activities})
+              </h2>
               {activities.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <svg className="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                   <p>No activities yet.</p>
-                  {canEdit && (
-                    <p className="text-sm mt-2">Create your first activity to get started!</p>
-                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -250,23 +200,12 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
                     </span>
                   </div>
                 )}
-                {canInvite && group.inviteCode && (
+                {canDelete && group.inviteCode && (
                   <div className="pt-3 border-t border-gray-100">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-gray-500">Invite Code</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 px-3 py-2 bg-gray-100 rounded font-mono text-sm">{group.inviteCode}</code>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(group.inviteCode!)}
-                        className="p-2 text-gray-500 hover:text-gray-700"
-                        title="Copy invite code"
-                      >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </button>
-                    </div>
+                    <code className="block px-3 py-2 bg-gray-100 rounded font-mono text-sm text-center">{group.inviteCode}</code>
                   </div>
                 )}
               </div>
@@ -274,33 +213,15 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
 
             {/* Members */}
             <section className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Members ({group.members.length})
-                </h2>
-                {canManageGroup(userRole, 'manageMember') && (
-                  <Link
-                    href={`/groups/${group.id}/members`}
-                    className="text-sm text-[var(--stanford-cardinal)] hover:underline"
-                  >
-                    Manage
-                  </Link>
-                )}
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Members ({group.members.length})
+              </h2>
               <MemberList
                 members={group.members}
                 currentUserRole={userRole}
                 showActions={false}
-                limit={5}
+                limit={10}
               />
-              {group.members.length > 5 && (
-                <Link
-                  href={`/groups/${group.id}/members`}
-                  className="block text-center text-sm text-[var(--stanford-cardinal)] hover:underline mt-4"
-                >
-                  View all members
-                </Link>
-              )}
             </section>
           </div>
         </div>
