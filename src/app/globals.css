@@ -37,8 +37,9 @@
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
   --color-highlight: var(--highlight);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* System fonts matching Flask */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --font-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -51,8 +52,32 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }
+
+/* Font Awesome icon helper classes - matching Flask */
+.fa-icon {
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1;
+}
+
+/* Bloom's Taxonomy Level Colors - matching Flask */
+.blooms-remember { color: #6b7280; } /* gray-500 */
+.blooms-understand { color: #3b82f6; } /* blue-500 */
+.blooms-apply { color: #22c55e; } /* green-500 */
+.blooms-analyze { color: #f59e0b; } /* amber-500 */
+.blooms-evaluate { color: #f97316; } /* orange-500 */
+.blooms-create { color: #8b5cf6; } /* violet-500 */
+
+.blooms-badge-remember { background-color: #f3f4f6; color: #374151; }
+.blooms-badge-understand { background-color: #dbeafe; color: #1e40af; }
+.blooms-badge-apply { background-color: #dcfce7; color: #166534; }
+.blooms-badge-analyze { background-color: #fef3c7; color: #92400e; }
+.blooms-badge-evaluate { background-color: #ffedd5; color: #9a3412; }
+.blooms-badge-create { background-color: #ede9fe; color: #5b21b6; }
 
 /* Button Styles */
 .btn-primary {
