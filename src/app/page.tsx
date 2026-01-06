@@ -10,7 +10,7 @@ export default function Home() {
         alt="SMILE Background"
         fill
         priority
-        className="object-cover object-center"
+        className="object-cover object-center z-0"
         quality={85}
       />
       {/* Overlay for readability */}
