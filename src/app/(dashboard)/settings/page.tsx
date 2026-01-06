@@ -4,12 +4,21 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
+interface UserProfile {
+  firstName: string | null
+  lastName: string | null
+  username: string | null
+  email: string
+}
+
 export default function SettingsPage() {
   const { data: session, update } = useSession()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('account')
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
 
   // Account form state
   const [accountForm, setAccountForm] = useState({
@@ -41,12 +50,27 @@ export default function SettingsPage() {
   })
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch('/api/user/profile')
+        if (response.ok) {
+          const data = await response.json()
+          setProfile(data.user)
+          setAccountForm({
+            firstName: data.user.firstName || '',
+            lastName: data.user.lastName || '',
+            username: data.user.username || '',
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile:', error)
+      } finally {
+        setIsLoadingProfile(false)
+      }
+    }
+
     if (session?.user) {
-      setAccountForm({
-        firstName: session.user.firstName || '',
-        lastName: session.user.lastName || '',
-        username: session.user.username || '',
-      })
+      fetchProfile()
     }
   }, [session])
 

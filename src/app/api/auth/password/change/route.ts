@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/db/prisma'
 import bcrypt from 'bcryptjs'
 
 export async function PUT(request: NextRequest) {

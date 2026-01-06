@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/db/prisma'
 import Link from 'next/link'
 
 interface VerifyPageProps {

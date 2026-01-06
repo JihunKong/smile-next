@@ -11,6 +11,14 @@ interface UserStats {
   averageScore: number
 }
 
+interface UserProfile {
+  firstName: string | null
+  lastName: string | null
+  username: string | null
+  email: string
+  avatarUrl: string | null
+}
+
 export default function ProfilePage() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState('overview')
@@ -20,32 +28,41 @@ export default function ProfilePage() {
     totalGroups: 0,
     averageScore: 0,
   })
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/user/stats')
-        if (response.ok) {
-          const data = await response.json()
-          setStats(data)
+        const [statsRes, profileRes] = await Promise.all([
+          fetch('/api/user/stats'),
+          fetch('/api/user/profile'),
+        ])
+
+        if (statsRes.ok) {
+          const statsData = await statsRes.json()
+          setStats(statsData)
+        }
+
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          setProfile(profileData.user)
         }
       } catch (error) {
-        console.error('Failed to fetch stats:', error)
+        console.error('Failed to fetch data:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
     if (session?.user) {
-      fetchStats()
+      fetchData()
     }
   }, [session])
 
-  const user = session?.user
-  const initials = user
-    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase()
-    : '?'
+  const initials = profile
+    ? `${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`.toUpperCase() || profile.email?.[0]?.toUpperCase()
+    : session?.user?.name?.[0]?.toUpperCase() || '?'
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -72,9 +89,9 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-12 space-y-4 sm:space-y-0 sm:space-x-6">
               {/* Avatar */}
               <div className="w-32 h-32 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center text-4xl font-bold text-[#8C1515]">
-                {user?.avatarUrl ? (
+                {profile?.avatarUrl ? (
                   <img
-                    src={user.avatarUrl}
+                    src={profile.avatarUrl}
                     alt="Avatar"
                     className="w-full h-full rounded-full object-cover"
                   />
@@ -86,10 +103,10 @@ export default function ProfilePage() {
               {/* User Info */}
               <div className="text-center sm:text-left flex-1 pb-2">
                 <h1 className="text-2xl font-bold text-[#2E2D29]">
-                  {user?.firstName} {user?.lastName}
+                  {profile?.firstName || ''} {profile?.lastName || ''}
                 </h1>
-                <p className="text-gray-600">@{user?.username || 'username'}</p>
-                <p className="text-sm text-gray-500">{user?.email}</p>
+                <p className="text-gray-600">@{profile?.username || 'username'}</p>
+                <p className="text-sm text-gray-500">{profile?.email || session?.user?.email}</p>
               </div>
 
               {/* Edit Profile Button */}

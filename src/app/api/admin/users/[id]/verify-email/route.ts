@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/db/prisma'
 
 export async function POST(
   request: NextRequest,
@@ -54,8 +54,8 @@ export async function POST(
       where: { id: targetUserId },
       data: {
         emailVerified: true,
-        verificationToken: null,
-        verificationExpire: null,
+        emailVerificationToken: null,
+        emailVerificationExpire: null,
       },
       select: {
         id: true,

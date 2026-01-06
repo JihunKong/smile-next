@@ -48,6 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
           image: user.avatarUrl,
+          roleId: user.roleId,
         }
       },
     }),
@@ -63,14 +64,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.roleId = (user as { roleId?: number }).roleId
       }
       return token
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
+        session.user.roleId = token.roleId as number
       }
       return session
     },
   },
 })
+
+// Extend the types for TypeScript
+declare module 'next-auth' {
+  interface User {
+    roleId?: number
+  }
+  interface Session {
+    user: {
+      id: string
+      roleId?: number
+      email?: string | null
+      name?: string | null
+      image?: string | null
+    }
+  }
+  interface JWT {
+    id?: string
+    roleId?: number
+  }
+}

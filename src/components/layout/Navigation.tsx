@@ -78,7 +78,7 @@ export default function Navigation() {
                     className="flex items-center space-x-2 text-[var(--stanford-pine)] hover:opacity-80"
                   >
                     <div className="w-8 h-8 rounded-full bg-[var(--stanford-cardinal)] flex items-center justify-center text-white text-sm font-medium">
-                      {session?.user?.firstName?.[0]?.toUpperCase() || session?.user?.email?.[0]?.toUpperCase() || '?'}
+                      {session?.user?.name?.[0]?.toUpperCase() || session?.user?.email?.[0]?.toUpperCase() || '?'}
                     </div>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -88,7 +88,7 @@ export default function Navigation() {
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
                       <div className="px-4 py-2 border-b">
                         <p className="text-sm font-medium text-gray-900">
-                          {session?.user?.firstName} {session?.user?.lastName}
+                          {session?.user?.name || 'User'}
                         </p>
                         <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
                       </div>
