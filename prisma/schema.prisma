@@ -268,6 +268,7 @@ model Activity {
   inquiryAttempts       InquiryAttempt[]
   caseAttempts          CaseAttempt[]
   questionEvaluations   QuestionEvaluation[]
+  certificateActivities CertificateActivity[]
 
   @@index([creatorId])
   @@index([owningGroupId])
@@ -631,6 +632,148 @@ model Subscription {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("subscriptions")
+}
+
+// ============================================================================
+// Certificate System Models
+// ============================================================================
+
+model Certificate {
+  id                    String    @id @default(uuid())
+  creatorId             String    @map("creator_id")
+
+  // Basic info
+  name                  String
+  organizationName      String?   @map("organization_name")
+  programName           String?   @map("program_name")
+  signatoryName         String?   @map("signatory_name")
+  programAvailableDate  DateTime? @map("program_available_date")
+
+  // Content
+  certificateStatement  String?   @map("certificate_statement") @db.Text
+  studentInstructions   String?   @map("student_instructions") @db.Text
+
+  // Design - Logo
+  logoImageUrl          String?   @map("logo_image_url")
+  logoPosition          String?   @default("top-left") @map("logo_position")
+
+  // Design - Watermark
+  watermarkImageUrl     String?   @map("watermark_image_url")
+
+  // Design - Signature
+  signatureImageUrl     String?   @map("signature_image_url")
+
+  // QR Code
+  qrCodeEnabled         Boolean   @default(true) @map("qr_code_enabled")
+  qrCodePosition        String?   @default("bottom-right") @map("qr_code_position")
+
+  // Status: draft, pending_approval, approved, active, rejected, archived
+  status                String    @default("draft")
+  rejectionReason       String?   @map("rejection_reason") @db.Text
+
+  // Approval workflow
+  submittedAt           DateTime? @map("submitted_at")
+  approvedAt            DateTime? @map("approved_at")
+  approvedById          String?   @map("approved_by_id")
+
+  // Timestamps
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  activities            CertificateActivity[]
+  studentCertificates   StudentCertificate[]
+
+  @@index([creatorId])
+  @@index([status])
+  @@map("certificates")
+}
+
+model CertificateActivity {
+  id              String   @id @default(uuid())
+  certificateId   String   @map("certificate_id")
+  activityId      String   @map("activity_id")
+  sequenceOrder   Int      @default(0) @map("sequence_order")
+  required        Boolean  @default(true)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  certificate     Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  activity        Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([certificateId, activityId])
+  @@index([certificateId])
+  @@index([activityId])
+  @@map("certificate_activities")
+}
+
+model StudentCertificate {
+  id                String    @id @default(uuid())
+  certificateId     String    @map("certificate_id")
+  studentId         String    @map("student_id")
+
+  // Status: enrolled, in_progress, completed, expired
+  status            String    @default("enrolled")
+
+  // Dates
+  enrollmentDate    DateTime  @default(now()) @map("enrollment_date")
+  completionDate    DateTime? @map("completion_date")
+
+  // Generated certificate
+  certificatePdfUrl String?   @map("certificate_pdf_url")
+  verificationCode  String    @unique @default(uuid()) @map("verification_code")
+
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  certificate       Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@unique([certificateId, studentId])
+  @@index([certificateId])
+  @@index([studentId])
+  @@index([verificationCode])
+  @@map("student_certificates")
+}
+
+// ============================================================================
+// Message System Models
+// ============================================================================
+
+model Message {
+  id            String    @id @default(uuid())
+  senderId      String    @map("sender_id")
+  receiverId    String    @map("receiver_id")
+  content       String    @db.Text
+  isRead        Boolean   @default(false) @map("is_read")
+  isAnonymous   Boolean   @default(false) @map("is_anonymous")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([isRead])
+  @@map("messages")
+}
+
+model MessagePreference {
+  id                    String   @id @default(uuid())
+  userId                String   @unique @map("user_id")
+
+  enableUserMessages    Boolean  @default(true) @map("enable_user_messages")
+  enableNotifications   Boolean  @default(true) @map("enable_notifications")
+  allowAnonymousMessages Boolean @default(true) @map("allow_anonymous_messages")
+  allowMessagesFrom     String   @default("everyone") @map("allow_messages_from") // everyone, groups_only, none
+
+  // Notification settings (JSON)
+  notificationSettings  Json?    @default("{}") @map("notification_settings")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("message_preferences")
 }
 
 // ============================================================================
