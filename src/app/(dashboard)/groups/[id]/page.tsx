@@ -35,7 +35,9 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
         orderBy: { role: 'desc' },
       },
       _count: {
-        select: { activities: true },
+        select: {
+          activities: { where: { isDeleted: false } },
+        },
       },
     },
   })
