@@ -7,7 +7,7 @@ export default function Home() {
       style={{ backgroundImage: "url('/images/sbg_optimized.jpg')" }}
     >
       {/* Overlay for readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-40" />
+      <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }} />
 
       {/* Main Content */}
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
