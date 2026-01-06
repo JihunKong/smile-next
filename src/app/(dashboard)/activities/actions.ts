@@ -36,16 +36,16 @@ export async function createActivity(formData: FormData): Promise<CreateActivity
   }
 
   const rawData = {
-    name: formData.get('name') as string,
-    description: formData.get('description') as string | undefined,
-    groupId: formData.get('groupId') as string,
-    mode: parseInt(formData.get('mode') as string) || 0,
+    name: formData.get('name')?.toString() ?? '',
+    description: formData.get('description')?.toString() || undefined,
+    groupId: formData.get('groupId')?.toString() ?? '',
+    mode: parseInt(formData.get('mode')?.toString() ?? '0') || 0,
     aiRatingEnabled: formData.get('aiRatingEnabled') === 'true',
     isAnonymousAuthorAllowed: formData.get('isAnonymousAuthorAllowed') === 'true',
     hideUsernames: formData.get('hideUsernames') === 'true',
-    examSettings: formData.get('examSettings') as string | undefined,
-    inquirySettings: formData.get('inquirySettings') as string | undefined,
-    caseSettings: formData.get('caseSettings') as string | undefined,
+    examSettings: formData.get('examSettings')?.toString() || undefined,
+    inquirySettings: formData.get('inquirySettings')?.toString() || undefined,
+    caseSettings: formData.get('caseSettings')?.toString() || undefined,
   }
 
   const result = createActivitySchema.safeParse(rawData)
@@ -135,8 +135,8 @@ export async function createQuestion(formData: FormData): Promise<CreateQuestion
   }
 
   const rawData = {
-    content: formData.get('content') as string,
-    activityId: formData.get('activityId') as string,
+    content: formData.get('content')?.toString() ?? '',
+    activityId: formData.get('activityId')?.toString() ?? '',
     isAnonymous: formData.get('isAnonymous') === 'true',
   }
 
