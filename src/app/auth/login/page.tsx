@@ -117,6 +117,14 @@ function LoginForm() {
             </div>
           </div>
 
+          <div className="flex justify-end">
+            <Link
+              href="/auth/forgot-password"
+              className="text-sm text-[var(--stanford-cardinal)] hover:underline"
+            >
+              Forgot Password?
+            </Link>
+          </div>
 
           <button
             type="submit"

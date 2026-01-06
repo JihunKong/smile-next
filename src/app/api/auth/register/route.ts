@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/db/prisma'
+
+// Token expiry time: 24 hours
+const TOKEN_EXPIRY_HOURS = 24
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,21 +75,62 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 12)
 
-    // Create user
+    // Generate email verification token
+    const verificationToken = randomBytes(32).toString('hex')
+    const verificationExpire = new Date(Date.now() + TOKEN_EXPIRY_HOURS * 60 * 60 * 1000)
+
+    // Create user with email verification token
     const user = await prisma.user.create({
       data: {
         firstName,
         lastName,
         username,
-        email,
+        email: email.toLowerCase(),
         passwordHash,
         roleId: 3, // Default role: Student (3)
+        emailVerified: false,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpire: verificationExpire,
       },
     })
+
+    // Create default group for user
+    const defaultGroup = await prisma.group.create({
+      data: {
+        name: `${firstName}'s Group`,
+        creatorId: user.id,
+        isDefault: true,
+      },
+    })
+
+    // Add user as group member
+    await prisma.groupUser.create({
+      data: {
+        userId: user.id,
+        groupId: defaultGroup.id,
+        role: 2, // Owner
+      },
+    })
+
+    // Generate verification URL
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const verifyUrl = `${baseUrl}/auth/verify-email?token=${verificationToken}`
+
+    // In production, send email here
+    // For now, log the verification URL (in development)
+    console.log('=== Email Verification ===')
+    console.log(`User: ${user.email}`)
+    console.log(`Verification URL: ${verifyUrl}`)
+    console.log(`Token expires: ${verificationExpire.toISOString()}`)
+    console.log('==========================')
+
+    // TODO: Implement actual email sending
+    // await sendEmailVerification(user.email, verifyUrl)
 
     return NextResponse.json(
       {
         success: true,
+        message: 'Registration successful. Please check your email to verify your account.',
         user: {
           id: user.id,
           email: user.email,
