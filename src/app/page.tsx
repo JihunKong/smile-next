@@ -2,10 +2,15 @@ import Link from 'next/link'
 
 export default function Home() {
   return (
-    <div
-      className="relative min-h-screen bg-cover bg-center bg-no-repeat bg-gray-900"
-      style={{ backgroundImage: "url('/images/sbg_optimized.jpg')" }}
-    >
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Background Image using img tag */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/images/sbg_optimized.jpg"
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
       {/* Overlay for readability */}
       <div className="absolute inset-0 bg-black bg-opacity-40" />
 
