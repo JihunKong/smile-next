@@ -73,7 +73,7 @@ function CheckEmailContent() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <div className="rounded-full bg-[#8C1515] bg-opacity-10 p-4">
+            <div className="rounded-full p-4" style={{ backgroundColor: 'rgba(140, 21, 21, 0.1)' }}>
               <svg
                 className="h-12 w-12 text-[#8C1515]"
                 fill="none"
