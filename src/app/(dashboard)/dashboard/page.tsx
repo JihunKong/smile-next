@@ -3,78 +3,100 @@ import { prisma } from '@/lib/db/prisma'
 import Link from 'next/link'
 
 async function getUserStats(userId: string) {
-  const oneWeekAgo = new Date()
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+  try {
+    const oneWeekAgo = new Date()
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
 
-  const [
-    totalQuestions,
-    questionsThisWeek,
-    examAttempts,
-    inquiryAttempts,
-    caseAttempts,
-    totalGroups,
-    examScores,
-    recentActivities,
-  ] = await Promise.all([
-    // Total questions
-    prisma.question.count({
-      where: { creatorId: userId, isDeleted: false },
-    }),
-    // Questions this week
-    prisma.question.count({
-      where: {
-        creatorId: userId,
-        isDeleted: false,
-        createdAt: { gte: oneWeekAgo },
-      },
-    }),
-    // Exam attempts
-    prisma.examAttempt.count({
-      where: { userId },
-    }),
-    // Inquiry attempts
-    prisma.inquiryAttempt.count({
-      where: { userId },
-    }),
-    // Case attempts
-    prisma.caseAttempt.count({
-      where: { userId },
-    }),
-    // Total groups
-    prisma.groupUser.count({
-      where: { userId, group: { isDeleted: false } },
-    }),
-    // Average score
-    prisma.examAttempt.aggregate({
-      where: { userId, status: 'completed', score: { not: null } },
-      _avg: { score: true },
-    }),
-    // Recent activities
-    prisma.question.findMany({
-      where: { creatorId: userId, isDeleted: false },
-      select: {
-        id: true,
-        content: true,
-        createdAt: true,
-        activity: {
-          select: { id: true, name: true },
+    const [
+      totalQuestions,
+      questionsThisWeek,
+      examAttempts,
+      inquiryAttempts,
+      caseAttempts,
+      totalGroups,
+      examScores,
+      recentActivities,
+    ] = await Promise.all([
+      // Total questions
+      prisma.question.count({
+        where: { creatorId: userId, isDeleted: false },
+      }),
+      // Questions this week
+      prisma.question.count({
+        where: {
+          creatorId: userId,
+          isDeleted: false,
+          createdAt: { gte: oneWeekAgo },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-    }),
-  ])
+      }),
+      // Exam attempts
+      prisma.examAttempt.count({
+        where: { userId },
+      }),
+      // Inquiry attempts
+      prisma.inquiryAttempt.count({
+        where: { userId },
+      }),
+      // Case attempts
+      prisma.caseAttempt.count({
+        where: { userId },
+      }),
+      // Total groups
+      prisma.groupUser.count({
+        where: { userId, group: { isDeleted: false } },
+      }),
+      // Average score
+      prisma.examAttempt.aggregate({
+        where: { userId, status: 'completed', score: { not: null } },
+        _avg: { score: true },
+      }),
+      // Recent activities - filter for non-deleted activities
+      prisma.question.findMany({
+        where: {
+          creatorId: userId,
+          isDeleted: false,
+          activity: { isDeleted: false },
+        },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          activity: {
+            select: { id: true, name: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+    ])
 
-  const totalActivities = examAttempts + inquiryAttempts + caseAttempts
-  const averageScore = examScores._avg.score || 0
+    const totalActivities = examAttempts + inquiryAttempts + caseAttempts
+    const averageScore = examScores._avg.score || 0
 
-  return {
-    totalQuestions,
-    questionsThisWeek,
-    totalActivities,
-    totalGroups,
-    averageScore,
-    recentActivities,
+    // Filter out any questions with null activity (extra safety)
+    const safeRecentActivities = recentActivities.filter(
+      (q) => q.activity !== null
+    )
+
+    return {
+      totalQuestions,
+      questionsThisWeek,
+      totalActivities,
+      totalGroups,
+      averageScore,
+      recentActivities: safeRecentActivities,
+    }
+  } catch (error) {
+    console.error('Failed to get user stats:', error)
+    // Return default values on error to prevent page crash
+    return {
+      totalQuestions: 0,
+      questionsThisWeek: 0,
+      totalActivities: 0,
+      totalGroups: 0,
+      averageScore: 0,
+      recentActivities: [],
+    }
   }
 }
 
@@ -265,20 +287,22 @@ export default async function DashboardPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Recent Questions</h2>
             {stats.recentActivities.length > 0 ? (
               <div className="space-y-3">
-                {stats.recentActivities.map((question) => (
-                  <Link
-                    key={question.id}
-                    href={`/activities/${question.activity.id}`}
-                    className="block p-3 rounded-lg hover:bg-gray-50 transition"
-                  >
-                    <p className="text-sm font-medium text-gray-900 line-clamp-1">
-                      {question.content}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {question.activity.name} • {new Date(question.createdAt).toLocaleDateString()}
-                    </p>
-                  </Link>
-                ))}
+                {stats.recentActivities.map((question) =>
+                  question.activity ? (
+                    <Link
+                      key={question.id}
+                      href={`/activities/${question.activity.id}`}
+                      className="block p-3 rounded-lg hover:bg-gray-50 transition"
+                    >
+                      <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                        {question.content}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {question.activity.name} • {new Date(question.createdAt).toLocaleDateString()}
+                      </p>
+                    </Link>
+                  ) : null
+                )}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
