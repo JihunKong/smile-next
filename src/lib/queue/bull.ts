@@ -75,9 +75,15 @@ export interface EvaluationJob {
 
 export interface ResponseEvaluationJob {
   responseId: string
-  questionId: string
   responseContent: string
   questionContent: string
+  // Optional context fields (passed but not required for evaluation)
+  activityId?: string
+  userId?: string
+  context?: {
+    activityName: string
+    groupName: string
+  }
 }
 
 export interface EmailJob {

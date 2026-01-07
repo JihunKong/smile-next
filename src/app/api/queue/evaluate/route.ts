@@ -32,10 +32,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
 
+      console.log(`[Queue API] Queueing question evaluation for ${body.data.questionId}`)
       const job = await queueQuestionEvaluation(body.data)
+      console.log(`[Queue API] Question evaluation job ${job.id} queued successfully`)
       return NextResponse.json({ success: true, jobId: job.id })
     } else if (body.type === 'response') {
+      console.log(`[Queue API] Queueing response evaluation for ${body.data.responseId}`)
       const job = await queueResponseEvaluation(body.data)
+      console.log(`[Queue API] Response evaluation job ${job.id} queued successfully`)
       return NextResponse.json({ success: true, jobId: job.id })
     }
 
