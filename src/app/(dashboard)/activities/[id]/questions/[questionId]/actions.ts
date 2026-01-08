@@ -5,30 +5,7 @@ import { prisma } from '@/lib/db/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import type { CreateResponseResult, UpdateResponseResult, DeleteResponseResult, ToggleLikeResult } from '@/types/responses'
-
-// Helper to queue response evaluation via API (avoids Bull import in Server Components)
-async function queueResponseEvaluationViaApi(data: {
-  responseId: string
-  activityId: string
-  userId: string
-  responseContent: string
-  questionContent: string
-  context: {
-    activityName: string
-    groupName: string
-  }
-}): Promise<void> {
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'http://localhost:3000'
-  try {
-    await fetch(`${baseUrl}/api/queue/evaluate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'response', data }),
-    })
-  } catch (error) {
-    console.warn('Failed to queue response evaluation via API:', error)
-  }
-}
+import { queueResponseEvaluation } from '@/lib/queue/bull'
 
 // Validation schemas
 const createResponseSchema = z.object({
@@ -121,16 +98,12 @@ export async function createResponse(formData: FormData): Promise<CreateResponse
 
     // Queue AI evaluation job (fire and forget)
     if (question.activity.aiRatingEnabled) {
-      queueResponseEvaluationViaApi({
+      queueResponseEvaluation({
         responseId: response.id,
-        activityId: question.activityId,
-        userId: session.user.id,
         responseContent: data.content,
         questionContent: question.content,
-        context: {
-          activityName: question.activity.name,
-          groupName: question.activity.owningGroup.name,
-        },
+      }).catch((error) => {
+        console.warn('[createResponse] Failed to queue response evaluation:', error)
       })
     }
 
