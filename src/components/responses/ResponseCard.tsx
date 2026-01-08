@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { formatResponseTime, getAIEvaluationBadgeColor, getAIEvaluationLabel, canEditResponse, canDeleteResponse } from '@/lib/responses/utils'
 import { AIEvaluationRatings } from '@/types/responses'
 import type { ResponseWithCreator } from '@/types/responses'
+import { useResponseEvaluationPolling } from '@/hooks/useResponseEvaluationPolling'
 
 interface ResponseCardProps {
   response: ResponseWithCreator
@@ -29,6 +30,18 @@ export function ResponseCard({
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(response.content)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Poll for AI evaluation status when pending
+  const { status: polledStatus, evaluation: polledEvaluation, isPolling } = useResponseEvaluationPolling(
+    response.id,
+    response.aiEvaluationStatus,
+    response.aiEvaluationStatus === 'pending'
+  )
+
+  // Use polled data if available, otherwise fall back to initial response data
+  const displayStatus = polledStatus || response.aiEvaluationStatus
+  const displayRating = polledEvaluation?.aiEvaluationRating || response.aiEvaluationRating
+  const displayFeedback = polledEvaluation?.aiEvaluationFeedback || response.aiEvaluationFeedback
 
   const showAsAnonymous = response.isAnonymous || hideUsernames
   const canEdit = canEditResponse(currentUserId, response.creatorId)
@@ -91,12 +104,12 @@ export function ResponseCard({
         {/* Actions */}
         <div className="flex items-center gap-1">
           {/* AI Evaluation Badge */}
-          {response.aiEvaluationStatus === 'completed' && response.aiEvaluationRating && (
+          {displayStatus === 'completed' && displayRating && (
             <span
-              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getAIEvaluationBadgeColor(response.aiEvaluationRating)}`}
-              title={response.aiEvaluationFeedback || undefined}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getAIEvaluationBadgeColor(displayRating)}`}
+              title={displayFeedback || undefined}
             >
-              {response.aiEvaluationRating === AIEvaluationRatings.THUMBS_UP ? (
+              {displayRating === AIEvaluationRatings.THUMBS_UP ? (
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                 </svg>
@@ -105,10 +118,10 @@ export function ResponseCard({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               )}
-              {getAIEvaluationLabel(response.aiEvaluationRating)}
+              {getAIEvaluationLabel(displayRating)}
             </span>
           )}
-          {response.aiEvaluationStatus === 'pending' && (
+          {displayStatus === 'pending' && (
             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
               <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -178,9 +191,9 @@ export function ResponseCard({
       )}
 
       {/* AI Feedback (if expanded) */}
-      {response.aiEvaluationFeedback && !isEditing && (
+      {displayFeedback && !isEditing && (
         <p className="mt-2 text-xs text-gray-500 italic border-t border-gray-200 pt-2">
-          AI Feedback: {response.aiEvaluationFeedback}
+          AI Feedback: {displayFeedback}
         </p>
       )}
     </div>
