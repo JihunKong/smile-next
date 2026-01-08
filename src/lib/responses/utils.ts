@@ -6,8 +6,12 @@ import { AIEvaluationRatings, type AIEvaluationRating, type AIEvaluationStatus }
 export function getAIEvaluationBadgeColor(rating: AIEvaluationRating | string | null): string {
   switch (rating) {
     case AIEvaluationRatings.THUMBS_UP:
+    case 'excellent':
+    case 'good':
       return 'bg-green-100 text-green-700'
     case AIEvaluationRatings.THUMBS_SIDEWAYS:
+    case 'average':
+    case 'needs_improvement':
       return 'bg-yellow-100 text-yellow-700'
     default:
       return 'bg-gray-100 text-gray-600'
@@ -20,8 +24,12 @@ export function getAIEvaluationBadgeColor(rating: AIEvaluationRating | string | 
 export function getAIEvaluationLabel(rating: AIEvaluationRating | string | null): string {
   switch (rating) {
     case AIEvaluationRatings.THUMBS_UP:
+    case 'excellent':
+    case 'good':
       return 'Excellent'
     case AIEvaluationRatings.THUMBS_SIDEWAYS:
+    case 'average':
+    case 'needs_improvement':
       return 'Good'
     default:
       return 'Pending'
