@@ -3,8 +3,16 @@ import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/db/prisma'
 import { responseEvaluationQueue, ResponseEvaluationJob } from '../bull'
 
+// Check for API key at module load
+const apiKey = process.env.ANTHROPIC_API_KEY
+if (!apiKey) {
+  console.error('[ResponseEvaluationWorker] WARNING: ANTHROPIC_API_KEY is not set!')
+} else {
+  console.log('[ResponseEvaluationWorker] ANTHROPIC_API_KEY is configured')
+}
+
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: apiKey,
 })
 
 interface CaseEvaluationResult {
@@ -50,26 +58,38 @@ Provide an evaluation in JSON format:
   "areasForImprovement": ["Specific suggestions for improvement"]
 }`
 
-  const response = await anthropic.messages.create({
-    model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
-    max_tokens: 1536,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
-  })
+  const modelId = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'
+  console.log(`[ResponseEvaluationWorker] Calling Anthropic API with model: ${modelId}`)
 
-  const content = response.content[0]
-  if (content.type !== 'text') {
-    throw new Error('Unexpected response type from Claude')
+  try {
+    const response = await anthropic.messages.create({
+      model: modelId,
+      max_tokens: 1536,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    })
+
+    console.log(`[ResponseEvaluationWorker] Anthropic API response received, stop_reason: ${response.stop_reason}`)
+
+    const content = response.content[0]
+    if (content.type !== 'text') {
+      throw new Error('Unexpected response type from Claude')
+    }
+
+    // Extract JSON from response
+    let jsonText = content.text
+    const jsonMatch = jsonText.match(/```json\n?([\s\S]*?)\n?```/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[1]
+    }
+
+    const result = JSON.parse(jsonText) as CaseEvaluationResult
+    console.log(`[ResponseEvaluationWorker] Parsed evaluation result: rating=${result.rating}, score=${result.overallScore}`)
+    return result
+  } catch (error) {
+    console.error('[ResponseEvaluationWorker] Anthropic API error:', error)
+    throw error
   }
-
-  // Extract JSON from response
-  let jsonText = content.text
-  const jsonMatch = jsonText.match(/```json\n?([\s\S]*?)\n?```/)
-  if (jsonMatch) {
-    jsonText = jsonMatch[1]
-  }
-
-  return JSON.parse(jsonText) as CaseEvaluationResult
 }
 
 /**
@@ -79,10 +99,13 @@ async function processResponseEvaluationJob(job: Job<ResponseEvaluationJob>): Pr
   const startTime = Date.now()
   const { responseId } = job.data
 
-  console.log(`[ResponseEvaluationWorker] Processing response ${responseId}`)
+  console.log(`[ResponseEvaluationWorker] ========== START Processing Job ${job.id} ==========`)
+  console.log(`[ResponseEvaluationWorker] Response ID: ${responseId}`)
+  console.log(`[ResponseEvaluationWorker] Job data keys: ${Object.keys(job.data).join(', ')}`)
 
   try {
     // Check if response still exists
+    console.log(`[ResponseEvaluationWorker] Step 1: Checking if response exists in DB...`)
     const existingResponse = await prisma.response.findUnique({
       where: { id: responseId },
       select: { id: true, aiEvaluationStatus: true },
@@ -92,12 +115,16 @@ async function processResponseEvaluationJob(job: Job<ResponseEvaluationJob>): Pr
       console.log(`[ResponseEvaluationWorker] Response ${responseId} not found, skipping`)
       return
     }
+    console.log(`[ResponseEvaluationWorker] Response found, current status: ${existingResponse.aiEvaluationStatus}`)
 
     // Evaluate the response
+    console.log(`[ResponseEvaluationWorker] Step 2: Calling AI evaluation...`)
     const evaluation = await evaluateResponse(job.data)
     const processingTime = Date.now() - startTime
+    console.log(`[ResponseEvaluationWorker] AI evaluation completed in ${processingTime}ms`)
 
     // Update response with evaluation results
+    console.log(`[ResponseEvaluationWorker] Step 3: Updating database with results...`)
     await prisma.response.update({
       where: { id: responseId },
       data: {
@@ -119,11 +146,12 @@ async function processResponseEvaluationJob(job: Job<ResponseEvaluationJob>): Pr
     })
 
     console.log(
-      `[ResponseEvaluationWorker] Completed evaluation for response ${responseId}. ` +
-        `Rating: ${evaluation.rating}, Score: ${evaluation.overallScore}`
+      `[ResponseEvaluationWorker] ========== SUCCESS Job ${job.id} ==========\n` +
+        `Rating: ${evaluation.rating}, Score: ${evaluation.overallScore}, Time: ${processingTime}ms`
     )
   } catch (error) {
-    console.error(`[ResponseEvaluationWorker] Failed to evaluate response ${responseId}:`, error)
+    console.error(`[ResponseEvaluationWorker] ========== FAILED Job ${job.id} ==========`)
+    console.error(`[ResponseEvaluationWorker] Error:`, error)
 
     // Mark as failed in database
     await prisma.response
@@ -133,7 +161,9 @@ async function processResponseEvaluationJob(job: Job<ResponseEvaluationJob>): Pr
           aiEvaluationStatus: 'failed',
         },
       })
-      .catch(() => {})
+      .catch((dbError) => {
+        console.error(`[ResponseEvaluationWorker] Failed to update DB status to failed:`, dbError)
+      })
 
     throw error // Will trigger retry
   }

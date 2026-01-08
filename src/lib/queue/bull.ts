@@ -3,6 +3,9 @@ import Queue from 'bull'
 // Redis URL
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
 
+// Log Redis connection status
+console.log(`[Bull Queue] Initializing with Redis URL: ${redisUrl ? 'configured' : 'using localhost'}`)
+
 // Default job options with retry logic
 const defaultJobOptions: Queue.JobOptions = {
   attempts: 3,
@@ -28,6 +31,23 @@ export const evaluationQueue = new Queue('question-evaluations', redisUrl, {
  */
 export const responseEvaluationQueue = new Queue('response-evaluations', redisUrl, {
   defaultJobOptions,
+})
+
+// Add error handlers to queues
+responseEvaluationQueue.on('error', (error) => {
+  console.error('[Bull Queue] Response evaluation queue error:', error)
+})
+
+responseEvaluationQueue.on('ready', () => {
+  console.log('[Bull Queue] Response evaluation queue is ready')
+})
+
+evaluationQueue.on('error', (error) => {
+  console.error('[Bull Queue] Evaluation queue error:', error)
+})
+
+evaluationQueue.on('ready', () => {
+  console.log('[Bull Queue] Evaluation queue is ready')
 })
 
 /**
@@ -113,9 +133,17 @@ export async function queueQuestionEvaluation(data: EvaluationJob) {
  * Add a response evaluation job
  */
 export async function queueResponseEvaluation(data: ResponseEvaluationJob) {
-  return responseEvaluationQueue.add('evaluate-response', data, {
-    priority: 2,
-  })
+  console.log(`[Bull Queue] Adding response evaluation job for response ${data.responseId}`)
+  try {
+    const job = await responseEvaluationQueue.add('evaluate-response', data, {
+      priority: 2,
+    })
+    console.log(`[Bull Queue] Job ${job.id} added successfully for response ${data.responseId}`)
+    return job
+  } catch (error) {
+    console.error(`[Bull Queue] Failed to add job for response ${data.responseId}:`, error)
+    throw error
+  }
 }
 
 /**
