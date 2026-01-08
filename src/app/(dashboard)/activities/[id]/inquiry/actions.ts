@@ -4,32 +4,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/types/activities'
-
-// Helper to queue evaluation via API (avoids Bull import in Server Components)
-async function queueQuestionEvaluationViaApi(data: {
-  questionId: string
-  activityId: string
-  userId: string
-  questionContent: string
-  context: {
-    activityName: string
-    groupName: string
-    subject?: string
-    topic?: string
-    educationLevel?: string
-  }
-}): Promise<void> {
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'http://localhost:3000'
-  try {
-    await fetch(`${baseUrl}/api/queue/evaluate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'question', data }),
-    })
-  } catch (error) {
-    console.warn('Failed to queue evaluation via API:', error)
-  }
-}
+import { queueQuestionEvaluation } from '@/lib/queue/bull'
 
 interface StartInquiryResult extends ActionResult<{ attemptId: string }> {}
 interface SubmitQuestionResult extends ActionResult<{
@@ -227,7 +202,7 @@ export async function submitInquiryQuestion(
     } | null
 
     // Queue background AI evaluation (fire and forget)
-    queueQuestionEvaluationViaApi({
+    queueQuestionEvaluation({
       questionId: question.id,
       activityId: attempt.activityId,
       userId: session.user.id,
@@ -239,6 +214,8 @@ export async function submitInquiryQuestion(
         topic: inquirySettings?.topic,
         educationLevel: inquirySettings?.educationLevel,
       },
+    }).catch((error) => {
+      console.warn('[submitInquiryQuestion] Failed to queue evaluation:', error)
     })
 
     revalidatePath(`/activities/${attempt.activityId}/inquiry`)

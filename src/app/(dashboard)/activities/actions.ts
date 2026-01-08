@@ -5,32 +5,7 @@ import { prisma } from '@/lib/db/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { ActivityModes, type ActionResult, type CreateActivityResult, type CreateQuestionResult } from '@/types/activities'
-
-// Helper to queue question evaluation via API (avoids Bull import in Server Components)
-async function queueQuestionEvaluationViaApi(data: {
-  questionId: string
-  activityId: string
-  userId: string
-  questionContent: string
-  context: {
-    activityName: string
-    groupName: string
-    subject?: string
-    topic?: string
-    educationLevel?: string
-  }
-}): Promise<void> {
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'http://localhost:3000'
-  try {
-    await fetch(`${baseUrl}/api/queue/evaluate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'question', data }),
-    })
-  } catch (error) {
-    console.warn('Failed to queue question evaluation via API:', error)
-  }
-}
+import { queueQuestionEvaluation } from '@/lib/queue/bull'
 
 // Validation schemas
 const createActivitySchema = z.object({
@@ -218,7 +193,7 @@ export async function createQuestion(formData: FormData): Promise<CreateQuestion
 
     // Queue AI evaluation job (fire and forget)
     if (activity.aiRatingEnabled) {
-      queueQuestionEvaluationViaApi({
+      queueQuestionEvaluation({
         questionId: question.id,
         activityId: data.activityId,
         userId: session.user.id,
@@ -227,6 +202,8 @@ export async function createQuestion(formData: FormData): Promise<CreateQuestion
           activityName: activity.name,
           groupName: activity.owningGroup.name,
         },
+      }).catch((error) => {
+        console.warn('[createQuestion] Failed to queue evaluation:', error)
       })
     }
 
