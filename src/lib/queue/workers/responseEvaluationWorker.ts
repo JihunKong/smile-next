@@ -74,6 +74,17 @@ function parseJsonFromResponse(text: string): unknown {
 }
 
 /**
+ * Convert AI evaluation rating to frontend format
+ * Maps: excellent/good -> thumbs_up, average/needs_improvement -> thumbs_sideways
+ */
+function convertRatingToFrontendFormat(rating: string): string {
+  if (['excellent', 'good'].includes(rating.toLowerCase())) {
+    return 'thumbs_up'
+  }
+  return 'thumbs_sideways'
+}
+
+/**
  * Evaluate a case study response using Claude AI
  */
 async function evaluateResponse(job: ResponseEvaluationJob): Promise<CaseEvaluationResult> {
@@ -186,11 +197,14 @@ async function processResponseEvaluationJob(job: Job<ResponseEvaluationJob>): Pr
 
     // Update response with evaluation results
     console.log(`[ResponseEvaluationWorker] Step 3: Updating database with results...`)
+    const frontendRating = convertRatingToFrontendFormat(evaluation.rating)
+    console.log(`[ResponseEvaluationWorker] Converting rating: ${evaluation.rating} -> ${frontendRating}`)
+
     await prisma.response.update({
       where: { id: responseId },
       data: {
         aiEvaluationStatus: 'completed',
-        aiEvaluationRating: evaluation.rating,
+        aiEvaluationRating: frontendRating,
         aiEvaluationScore: evaluation.overallScore,
         aiEvaluationFeedback: JSON.stringify({
           feedback: evaluation.feedback,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 interface EvaluationData {
   id: string
@@ -42,7 +42,12 @@ export function useResponseEvaluationPolling(
   const [isPolling, setIsPolling] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchStatus = useCallback(async () => {
+  // Use ref to track if polling should stop (avoids dependency issues)
+  const shouldStopRef = useRef(false)
+  const startTimeRef = useRef<number>(0)
+
+  // Memoized fetch function without status dependency
+  const fetchStatus = useCallback(async (): Promise<EvaluationData | null> => {
     try {
       const response = await fetch(`/api/responses/${responseId}/status`)
 
@@ -50,50 +55,60 @@ export function useResponseEvaluationPolling(
         throw new Error(`HTTP ${response.status}`)
       }
 
-      const data: EvaluationData = await response.json()
-
-      // Update state if status changed
-      if (data.aiEvaluationStatus !== status) {
-        setStatus(data.aiEvaluationStatus)
-        setEvaluation(data)
-      }
-
-      return data.aiEvaluationStatus
+      return await response.json()
     } catch (err) {
       console.error('[useResponseEvaluationPolling] Fetch error:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch status')
       return null
     }
-  }, [responseId, status])
+  }, [responseId])
 
   useEffect(() => {
     // Don't poll if disabled or status is not pending
-    if (!enabled || status !== 'pending') {
+    if (!enabled || initialStatus !== 'pending') {
       setIsPolling(false)
       return
     }
 
+    // Reset refs
+    shouldStopRef.current = false
+    startTimeRef.current = Date.now()
+
     setIsPolling(true)
     setError(null)
 
-    const startTime = Date.now()
     let intervalId: NodeJS.Timeout | null = null
 
     const poll = async () => {
-      // Stop if max duration exceeded
-      if (Date.now() - startTime > maxDuration) {
-        setIsPolling(false)
-        setError('Evaluation timeout - please refresh the page')
+      // Check if we should stop
+      if (shouldStopRef.current) {
         if (intervalId) clearInterval(intervalId)
         return
       }
 
-      const newStatus = await fetchStatus()
-
-      // Stop polling if evaluation is complete or failed
-      if (newStatus && newStatus !== 'pending') {
+      // Stop if max duration exceeded
+      if (Date.now() - startTimeRef.current > maxDuration) {
         setIsPolling(false)
+        setError('Evaluation timeout - please refresh the page')
+        shouldStopRef.current = true
         if (intervalId) clearInterval(intervalId)
+        return
+      }
+
+      const data = await fetchStatus()
+
+      if (data) {
+        // Always update with latest data
+        setStatus(data.aiEvaluationStatus)
+        setEvaluation(data)
+
+        // Stop polling if evaluation is complete or failed
+        if (data.aiEvaluationStatus !== 'pending') {
+          console.log('[useResponseEvaluationPolling] Evaluation complete:', data.aiEvaluationStatus)
+          setIsPolling(false)
+          shouldStopRef.current = true
+          if (intervalId) clearInterval(intervalId)
+        }
       }
     }
 
@@ -105,10 +120,11 @@ export function useResponseEvaluationPolling(
 
     // Cleanup
     return () => {
+      shouldStopRef.current = true
       if (intervalId) clearInterval(intervalId)
       setIsPolling(false)
     }
-  }, [enabled, status, interval, maxDuration, fetchStatus])
+  }, [enabled, initialStatus, interval, maxDuration, fetchStatus])
 
   return {
     status,
