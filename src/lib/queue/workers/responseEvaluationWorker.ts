@@ -27,6 +27,53 @@ interface CaseEvaluationResult {
 }
 
 /**
+ * Extract and parse JSON from a potentially messy AI response
+ */
+function parseJsonFromResponse(text: string): unknown {
+  // First try: direct JSON parse
+  try {
+    return JSON.parse(text)
+  } catch {
+    // Continue to other methods
+  }
+
+  // Second try: extract from markdown code block
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/)
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim())
+    } catch {
+      // Continue to other methods
+    }
+  }
+
+  // Third try: find JSON object in the text
+  const jsonObjectMatch = text.match(/\{[\s\S]*\}/)
+  if (jsonObjectMatch) {
+    try {
+      return JSON.parse(jsonObjectMatch[0])
+    } catch {
+      // Continue to other methods
+    }
+  }
+
+  // Fourth try: clean common issues and retry
+  let cleaned = text
+    .replace(/^\s*```\s*json?\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .replace(/[\x00-\x1F\x7F]/g, ' ') // Remove control characters
+    .trim()
+
+  try {
+    return JSON.parse(cleaned)
+  } catch (e) {
+    console.error('[parseJsonFromResponse] All parsing methods failed')
+    console.error('[parseJsonFromResponse] Original text (first 500 chars):', text.slice(0, 500))
+    throw new Error(`Failed to parse JSON from AI response: ${e instanceof Error ? e.message : String(e)}`)
+  }
+}
+
+/**
  * Evaluate a case study response using Claude AI
  */
 async function evaluateResponse(job: ResponseEvaluationJob): Promise<CaseEvaluationResult> {
@@ -76,14 +123,28 @@ Provide an evaluation in JSON format:
       throw new Error('Unexpected response type from Claude')
     }
 
-    // Extract JSON from response
-    let jsonText = content.text
-    const jsonMatch = jsonText.match(/```json\n?([\s\S]*?)\n?```/)
-    if (jsonMatch) {
-      jsonText = jsonMatch[1]
+    // Extract and parse JSON from response using robust parser
+    const result = parseJsonFromResponse(content.text) as CaseEvaluationResult
+
+    // Validate required fields and provide defaults
+    if (typeof result.overallScore !== 'number') {
+      result.overallScore = 5.0
+    }
+    if (!['excellent', 'good', 'average', 'needs_improvement'].includes(result.rating)) {
+      result.rating = result.overallScore >= 8 ? 'excellent' :
+                     result.overallScore >= 6 ? 'good' :
+                     result.overallScore >= 4 ? 'average' : 'needs_improvement'
+    }
+    if (!result.feedback) {
+      result.feedback = 'Evaluation completed.'
+    }
+    if (!Array.isArray(result.strengths)) {
+      result.strengths = []
+    }
+    if (!Array.isArray(result.areasForImprovement)) {
+      result.areasForImprovement = []
     }
 
-    const result = JSON.parse(jsonText) as CaseEvaluationResult
     console.log(`[ResponseEvaluationWorker] Parsed evaluation result: rating=${result.rating}, score=${result.overallScore}`)
     return result
   } catch (error) {

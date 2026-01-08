@@ -29,6 +29,38 @@ export async function GET(request: NextRequest) {
       evaluationQueue.getJobCounts(),
     ])
 
+    // Get failed jobs to see error details
+    const [failedResponseJobs, failedEvalJobs] = await Promise.all([
+      responseEvaluationQueue.getFailed(0, 5),
+      evaluationQueue.getFailed(0, 5),
+    ])
+
+    const failedJobDetails = {
+      responseEvaluation: failedResponseJobs.map((job) => ({
+        id: job.id,
+        failedReason: job.failedReason,
+        attemptsMade: job.attemptsMade,
+        data: {
+          responseId: job.data?.responseId,
+          hasResponseContent: !!job.data?.responseContent,
+          hasQuestionContent: !!job.data?.questionContent,
+        },
+        timestamp: job.timestamp,
+        finishedOn: job.finishedOn,
+      })),
+      evaluation: failedEvalJobs.map((job) => ({
+        id: job.id,
+        failedReason: job.failedReason,
+        attemptsMade: job.attemptsMade,
+        data: {
+          questionId: job.data?.questionId,
+          activityId: job.data?.activityId,
+        },
+        timestamp: job.timestamp,
+        finishedOn: job.finishedOn,
+      })),
+    }
+
     // Get recent responses with pending/evaluating status
     const pendingResponses = await prisma.response.findMany({
       where: {
@@ -62,6 +94,7 @@ export async function GET(request: NextRequest) {
       },
       responseEvaluationQueue: responseJobCounts,
       evaluationQueue: evalJobCounts,
+      failedJobDetails,
       pendingResponses,
       timestamp: new Date().toISOString(),
     })
