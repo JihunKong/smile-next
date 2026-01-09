@@ -138,13 +138,14 @@ Provide an evaluation in JSON format:
     const result = parseJsonFromResponse(content.text) as CaseEvaluationResult
 
     // Validate required fields and provide defaults
-    if (typeof result.overallScore !== 'number') {
-      result.overallScore = 5.0
+    if (typeof result.problemIdentificationScore !== 'number') {
+      result.problemIdentificationScore = 0
     }
-    if (!['excellent', 'good', 'average', 'needs_improvement'].includes(result.rating)) {
-      result.rating = result.overallScore >= 8 ? 'excellent' :
-                     result.overallScore >= 6 ? 'good' :
-                     result.overallScore >= 4 ? 'average' : 'needs_improvement'
+    if (typeof result.solutionQualityScore !== 'number') {
+      result.solutionQualityScore = 0
+    }
+    if (typeof result.clarityScore !== 'number') {
+      result.clarityScore = 0
     }
     if (!result.feedback) {
       result.feedback = 'Evaluation completed.'
@@ -156,7 +157,21 @@ Provide an evaluation in JSON format:
       result.areasForImprovement = []
     }
 
-    console.log(`[ResponseEvaluationWorker] Parsed evaluation result: rating=${result.rating}, score=${result.overallScore}`)
+    // CRITICAL FIX: Always calculate rating from scores (Flask-style)
+    // Never trust AI-returned rating - calculate from actual scores
+    const avgScore = (
+      result.problemIdentificationScore +
+      result.solutionQualityScore +
+      result.clarityScore
+    ) / 3
+
+    result.overallScore = Math.round(avgScore * 10) / 10 // Round to 1 decimal
+    result.rating = avgScore >= 8 ? 'excellent' :
+                   avgScore >= 6 ? 'good' :
+                   avgScore >= 4 ? 'average' : 'needs_improvement'
+
+    console.log(`[ResponseEvaluationWorker] Calculated scores - Problem: ${result.problemIdentificationScore}, Solution: ${result.solutionQualityScore}, Clarity: ${result.clarityScore}`)
+    console.log(`[ResponseEvaluationWorker] Final result: rating=${result.rating}, avgScore=${result.overallScore}`)
     return result
   } catch (error) {
     console.error('[ResponseEvaluationWorker] Anthropic API error:', error)
