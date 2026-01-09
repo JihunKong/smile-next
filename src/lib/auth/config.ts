@@ -1,11 +1,11 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import { PrismaAdapter } from '@auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db/prisma'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma) as any,
+  // PrismaAdapter removed - not needed for JWT strategy with Credentials provider
+  // Using JWT strategy stores session in cookie, not database
   providers: [
     Credentials({
       name: 'credentials',
