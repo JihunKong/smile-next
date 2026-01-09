@@ -322,6 +322,90 @@ export async function deleteQuestion(questionId: string): Promise<ActionResult> 
 }
 
 /**
+ * Duplicate an activity
+ */
+export async function duplicateActivity(activityId: string): Promise<{ success: boolean; error?: string; newActivityId?: string }> {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { success: false, error: 'You must be logged in' }
+  }
+
+  try {
+    const activity = await prisma.activity.findUnique({
+      where: { id: activityId, isDeleted: false },
+      include: {
+        owningGroup: {
+          include: {
+            members: {
+              where: { userId: session.user.id },
+            },
+          },
+        },
+        questions: {
+          where: { isDeleted: false },
+        },
+      },
+    })
+
+    if (!activity) {
+      return { success: false, error: 'Activity not found' }
+    }
+
+    // Check if user is a member with permission
+    const membership = activity.owningGroup.members[0]
+    if (!membership || membership.role < 2) {
+      return { success: false, error: 'You do not have permission to duplicate this activity' }
+    }
+
+    // Create duplicated activity
+    const newActivity = await prisma.activity.create({
+      data: {
+        name: `${activity.name} (Copy)`,
+        description: activity.description,
+        creatorId: session.user.id,
+        owningGroupId: activity.owningGroupId,
+        mode: activity.mode,
+        aiRatingEnabled: activity.aiRatingEnabled,
+        isAnonymousAuthorAllowed: activity.isAnonymousAuthorAllowed,
+        hideUsernames: activity.hideUsernames,
+        examSettings: activity.examSettings ?? undefined,
+        inquirySettings: activity.inquirySettings ?? undefined,
+        openModeSettings: activity.openModeSettings ?? undefined,
+        schoolGrade: activity.schoolGrade,
+        educationLevel: activity.educationLevel,
+        schoolSubject: activity.schoolSubject,
+        topic: activity.topic,
+      },
+    })
+
+    // Duplicate questions
+    if (activity.questions.length > 0) {
+      await prisma.question.createMany({
+        data: activity.questions.map((q) => ({
+          content: q.content,
+          creatorId: session.user.id,
+          activityId: newActivity.id,
+          isAnonymous: q.isAnonymous,
+        })),
+      })
+
+      // Update question count
+      await prisma.activity.update({
+        where: { id: newActivity.id },
+        data: { numberOfQuestions: activity.questions.length },
+      })
+    }
+
+    revalidatePath('/activities')
+    revalidatePath(`/groups/${activity.owningGroupId}`)
+    return { success: true, newActivityId: newActivity.id }
+  } catch (error) {
+    console.error('Failed to duplicate activity:', error)
+    return { success: false, error: 'Failed to duplicate activity. Please try again.' }
+  }
+}
+
+/**
  * Get activities for the current user's groups
  */
 export async function getMyActivities() {

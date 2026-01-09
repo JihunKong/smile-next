@@ -3,9 +3,30 @@ import { prisma } from '@/lib/db/prisma'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { QuestionList } from '@/components/activities/QuestionList'
-import { DeleteActivityButton } from './actions-client'
+import { DeleteActivityButton, QRCodeSection, ActionButtons } from './actions-client'
 import { getModeLabel, getModeBadgeColor, canManageActivity } from '@/lib/activities/utils'
 import { ActivityModes, type ActivityMode } from '@/types/activities'
+
+// Helper to get education level label
+function getEducationLevelLabel(level: string | null): string {
+  const labels: Record<string, string> = {
+    elementary: 'Elementary School',
+    middle: 'Middle School',
+    high: 'High School',
+    college: 'College/University',
+    graduate: 'Graduate School',
+    professional: 'Professional',
+  }
+  return level ? labels[level] || level : 'Not specified'
+}
+
+// Helper to get grade label
+function getGradeLabel(grade: number): string {
+  if (grade === -1) return 'Not specified'
+  if (grade >= 1 && grade <= 12) return `Grade ${grade}`
+  if (grade >= 13) return `Year ${grade - 12}`
+  return `Grade ${grade}`
+}
 
 interface ActivityDetailPageProps {
   params: Promise<{ id: string }>
@@ -30,6 +51,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
           id: true,
           name: true,
           creatorId: true,
+          inviteCode: true,
           members: {
             where: { userId: session.user.id },
             select: { userId: true, role: true },
@@ -168,27 +190,21 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                   href={`/activities/${activity.id}/edit`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition border border-white/30"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
+                  <i className="fas fa-edit"></i>
                   Edit
                 </Link>
                 <Link
                   href={`/activities/${activity.id}/analytics`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition border border-white/30"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
+                  <i className="fas fa-chart-bar"></i>
                   Analytics
                 </Link>
                 <Link
                   href={`/activities/${activity.id}/results`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition border border-white/30"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <i className="fas fa-file-alt"></i>
                   Results
                 </Link>
               </>
@@ -200,9 +216,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 href={`/activities/${activity.id}/exam`}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
+                <i className="fas fa-clipboard-check"></i>
                 Take Exam
               </Link>
             )}
@@ -212,9 +226,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 href={`/activities/${activity.id}/inquiry`}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
+                <i className="fas fa-lightbulb"></i>
                 Start Inquiry
               </Link>
             )}
@@ -224,9 +236,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 href={`/activities/${activity.id}/case`}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
+                <i className="fas fa-briefcase"></i>
                 Start Case Study
               </Link>
             )}
@@ -238,9 +248,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 data-testid="ask-question"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 font-medium rounded-lg hover:bg-gray-100 transition"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
+                <i className="fas fa-plus"></i>
                 Ask a Question
               </Link>
             )}
@@ -249,6 +257,18 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
               <DeleteActivityButton activityId={activity.id} activityName={activity.name} />
             )}
           </div>
+
+          {/* Additional Action Buttons (Flask-style) */}
+          {isManager && (
+            <div className="mt-4">
+              <ActionButtons
+                activityId={activity.id}
+                activityName={activity.name}
+                groupId={activity.owningGroupId}
+                isManager={isManager}
+              />
+            </div>
+          )}
         </div>
       </section>
 
@@ -274,9 +294,58 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Custom Instructions (Open Mode only) */}
+            {mode === ActivityModes.OPEN && activity.openModeSettings && (
+              <section className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h2 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                  <i className="fas fa-info-circle"></i>
+                  Instructions
+                </h2>
+                <p className="text-sm text-blue-700">
+                  {(activity.openModeSettings as { customInstructions?: string })?.customInstructions ||
+                   'Ask thoughtful questions related to the topic.'}
+                </p>
+              </section>
+            )}
+
+            {/* QR Code Invite Section */}
+            <QRCodeSection
+              activityId={activity.id}
+              inviteUrl={`${process.env.NEXT_PUBLIC_APP_URL || 'https://smile.example.com'}/activities/join?code=${activity.owningGroup.inviteCode || activity.id}`}
+            />
+
+            {/* Academic Information */}
+            <section className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                <i className="fas fa-graduation-cap mr-2 text-indigo-500"></i>
+                Academic Information
+              </h2>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Subject</span>
+                  <span className="font-medium">{activity.schoolSubject || 'Not specified'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Topic</span>
+                  <span className="font-medium">{activity.topic || 'Not specified'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Education Level</span>
+                  <span className="font-medium">{getEducationLevelLabel(activity.educationLevel)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Grade</span>
+                  <span className="font-medium">{getGradeLabel(activity.schoolGrade)}</span>
+                </div>
+              </div>
+            </section>
+
             {/* Activity Info */}
             <section className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity Info</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                <i className="fas fa-info-circle mr-2 text-gray-500"></i>
+                Activity Info
+              </h2>
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Group</span>
@@ -310,7 +379,10 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
 
             {/* Stats */}
             <section className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Statistics</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                <i className="fas fa-chart-pie mr-2 text-green-500"></i>
+                Statistics
+              </h2>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <p className="text-2xl font-bold text-[var(--stanford-cardinal)]">{activity._count.questions}</p>
@@ -322,6 +394,47 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 </div>
               </div>
             </section>
+
+            {/* Pass/Fail Progress (Open Mode with evaluation) */}
+            {mode === ActivityModes.OPEN && activity.aiRatingEnabled && activity.questions.length > 0 && (
+              <section className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  <i className="fas fa-tasks mr-2 text-purple-500"></i>
+                  Evaluation Progress
+                </h2>
+                <div className="space-y-3">
+                  {(() => {
+                    const evaluated = activity.questions.filter(q => q.evaluation).length
+                    const passing = activity.questions.filter(q => q.evaluation && (q.evaluation.overallScore || 0) >= 7).length
+                    const total = activity.questions.length
+                    return (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-500">Evaluated</span>
+                          <span className="font-medium text-blue-600">{evaluated} / {total}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${total > 0 ? (evaluated / total) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex items-center justify-between text-sm mt-3">
+                          <span className="text-gray-500">Passing (7+)</span>
+                          <span className="font-medium text-green-600">{passing} / {evaluated}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-green-600 h-2 rounded-full transition-all"
+                            style={{ width: `${evaluated > 0 ? (passing / evaluated) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+              </section>
+            )}
           </div>
         </div>
       </div>
