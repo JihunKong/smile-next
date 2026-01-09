@@ -239,9 +239,12 @@ async function getUserStats(userId: string) {
       total_groups: 0,
       activities: [],
       user_certificates: [],
+      error: error instanceof Error ? error.message : 'Failed to load statistics',
     }
   }
 }
+
+type UserStats = Awaited<ReturnType<typeof getUserStats>>
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -276,6 +279,35 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Banner if stats failed to load */}
+        {'error' in stats && stats.error && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <i className="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Some statistics could not be loaded
+                </h3>
+                <p className="mt-1 text-sm text-yellow-700">
+                  There was an issue loading your statistics. Some data may be incomplete.
+                  Try refreshing the page.
+                </p>
+                <div className="mt-2">
+                  <a
+                    href="/dashboard"
+                    className="text-sm font-medium text-yellow-800 hover:text-yellow-900 underline"
+                  >
+                    <i className="fas fa-redo mr-1"></i>
+                    Refresh Page
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Welcome Header - Flask style */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-white mb-8 shadow-lg">
           <div className="flex items-center">

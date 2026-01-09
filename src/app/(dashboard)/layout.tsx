@@ -1,6 +1,8 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
-import Navigation from '@/components/layout/Navigation'
+
+// Note: Navigation is rendered in RootLayout (/app/layout.tsx)
+// Do NOT add Navigation here to avoid duplicate navigation bars
 
 export default async function DashboardLayout({
   children,
@@ -8,13 +10,11 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   let session
-  let authError: string | null = null
 
   try {
     session = await auth()
   } catch (error) {
     console.error('[Dashboard Layout] Auth error:', error)
-    authError = error instanceof Error ? error.message : 'Unknown authentication error'
 
     // Check if it's a database connection error
     const errorMessage = error instanceof Error ? error.message : ''
@@ -41,10 +41,6 @@ export default async function DashboardLayout({
     redirect(`/auth/error?error=InvalidSession&message=${encodeURIComponent('Your session is invalid. Please log in again.')}`)
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <main>{children}</main>
-    </div>
-  )
+  // Children are rendered within the RootLayout which already has Navigation
+  return <>{children}</>
 }
