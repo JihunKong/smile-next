@@ -30,7 +30,13 @@ export default async function ExamTakePage({ params, searchParams }: ExamTakePag
         select: {
           id: true,
           name: true,
+          description: true,
           examSettings: true,
+          owningGroup: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
       responses: {
@@ -97,10 +103,15 @@ export default async function ExamTakePage({ params, searchParams }: ExamTakePag
     <ExamTakeClient
       activityId={activityId}
       activityName={attempt.activity.name}
+      groupName={attempt.activity.owningGroup.name}
       attemptId={attemptId}
       questions={questionsWithChoices}
       existingAnswers={existingAnswers}
       remainingSeconds={remainingSeconds}
+      totalQuestions={questionsWithChoices.length}
+      timeLimitMinutes={examSettings.timeLimit}
+      instructions={attempt.activity.description || undefined}
+      description={attempt.activity.description || undefined}
     />
   )
 }
