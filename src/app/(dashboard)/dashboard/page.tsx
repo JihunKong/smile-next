@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 async function getUserStats(userId: string) {
   try {
@@ -105,7 +106,7 @@ export default async function DashboardPage() {
   const user = session?.user
 
   if (!user?.id) {
-    return null
+    redirect('/auth/login')
   }
 
   const stats = await getUserStats(user.id)
