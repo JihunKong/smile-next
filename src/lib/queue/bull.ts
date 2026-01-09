@@ -97,6 +97,8 @@ export interface ResponseEvaluationJob {
   responseId: string
   responseContent: string
   questionContent: string
+  // Difficulty level for evaluation calibration (Flask-compatible)
+  difficultyLevel?: 'basic' | 'intermediate' | 'professional'
   // Optional context fields (passed but not required for evaluation)
   activityId?: string
   userId?: string

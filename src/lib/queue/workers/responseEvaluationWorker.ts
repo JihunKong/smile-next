@@ -15,15 +15,19 @@ const anthropic = new Anthropic({
   apiKey: apiKey,
 })
 
+/**
+ * Flask-compatible Case Evaluation Result
+ * Matches smile-flask-backend/app/services/case_evaluation_service.py
+ */
 interface CaseEvaluationResult {
-  overallScore: number
-  problemIdentificationScore: number
-  solutionQualityScore: number
-  clarityScore: number
-  rating: 'excellent' | 'good' | 'average' | 'needs_improvement'
-  feedback: string
-  strengths: string[]
-  areasForImprovement: string[]
+  understanding: { score: number; feedback: string }
+  ingenuity: { score: number; feedback: string }
+  critical_thinking: { score: number; feedback: string }
+  real_world: { score: number; feedback: string }
+  what_was_done_well: string
+  what_could_improve: string
+  suggestions: string
+  average_score: number
 }
 
 /**
@@ -74,47 +78,245 @@ function parseJsonFromResponse(text: string): unknown {
 }
 
 /**
- * Convert AI evaluation rating to frontend format
- * Maps: excellent/good -> thumbs_up, average/needs_improvement -> thumbs_sideways
+ * Create evaluation for empty/no response submissions
+ * Matches Flask's _create_empty_response_evaluation()
  */
-function convertRatingToFrontendFormat(rating: string): string {
-  if (['excellent', 'good'].includes(rating.toLowerCase())) {
-    return 'thumbs_up'
+function createEmptyResponseEvaluation(): CaseEvaluationResult {
+  return {
+    understanding: {
+      score: 0.0,
+      feedback: 'No response provided. Unable to assess understanding of the case issue.'
+    },
+    ingenuity: {
+      score: 0.0,
+      feedback: 'No response provided. Unable to evaluate solution suggestions.'
+    },
+    critical_thinking: {
+      score: 0.0,
+      feedback: 'No response provided. Unable to assess critical thinking depth.'
+    },
+    real_world: {
+      score: 0.0,
+      feedback: 'No response provided. Unable to evaluate real-world application.'
+    },
+    what_was_done_well: 'No response was submitted for this case.',
+    what_could_improve: 'To receive a score, you must provide a written analysis identifying flaws and proposing solutions.',
+    suggestions: 'For future attempts, make sure to complete all case analyses before submitting.',
+    average_score: 0.0
   }
-  return 'thumbs_sideways'
+}
+
+/**
+ * Create evaluation for error cases
+ * Matches Flask's _create_error_evaluation()
+ */
+function createErrorEvaluation(): CaseEvaluationResult {
+  return {
+    understanding: {
+      score: 0.0,
+      feedback: 'Evaluation failed due to technical error. Please contact support.'
+    },
+    ingenuity: {
+      score: 0.0,
+      feedback: 'Evaluation failed due to technical error. Please contact support.'
+    },
+    critical_thinking: {
+      score: 0.0,
+      feedback: 'Evaluation failed due to technical error. Please contact support.'
+    },
+    real_world: {
+      score: 0.0,
+      feedback: 'Evaluation failed due to technical error. Please contact support.'
+    },
+    what_was_done_well: 'Technical error during evaluation.',
+    what_could_improve: 'Please contact support for manual review.',
+    suggestions: 'This response will be reviewed manually.',
+    average_score: 0.0
+  }
+}
+
+/**
+ * Get difficulty-specific guidance for evaluation
+ * Matches Flask's difficulty_guidance dict
+ */
+function getDifficultyGuidance(difficultyLevel: string): Record<string, string> {
+  const guidance: Record<string, Record<string, string>> = {
+    basic: {
+      understanding: '7-8: Identifies main issue; 9-10: Identifies issue with context',
+      ingenuity: '7-8: Basic solution; 9-10: Creative approach',
+      critical_thinking: '7-8: Basic analysis; 9-10: Shows reasoning',
+      real_world: '7-8: Mentions application; 9-10: Practical details'
+    },
+    intermediate: {
+      understanding: '7-8: Multiple issues identified; 9-10: Root causes explained',
+      ingenuity: '7-8: Good solutions; 9-10: Innovative approaches',
+      critical_thinking: '7-8: Good analysis; 9-10: Deep connections',
+      real_world: '7-8: Realistic application; 9-10: Implementation plan'
+    },
+    professional: {
+      understanding: '7-8: Complex issues identified; 9-10: Systemic analysis',
+      ingenuity: '7-8: Sophisticated solutions; 9-10: Novel frameworks',
+      critical_thinking: '7-8: Multi-level analysis; 9-10: Philosophical depth',
+      real_world: '7-8: Strategic application; 9-10: Transformative vision'
+    }
+  }
+
+  return guidance[difficultyLevel] || guidance['professional']
+}
+
+/**
+ * Build evaluation prompt - matches Flask's _build_evaluation_prompt()
+ */
+function buildEvaluationPrompt(
+  studentResponse: string,
+  scenarioContent: string,
+  difficultyLevel: string = 'professional'
+): string {
+  const guidance = getDifficultyGuidance(difficultyLevel)
+
+  return `Evaluate the following student response to a business case scenario using 4 criteria.
+
+**Difficulty Level**: ${difficultyLevel}
+
+**Case Scenario**:
+${scenarioContent}
+
+**Student Response**:
+${studentResponse}
+
+---
+
+**EVALUATION CRITERIA** (Each scored 0-10):
+
+**1. Understanding the Case Issue** (0-10)
+- Did the student correctly identify the core problems/flaws?
+- How well did they understand the implications?
+- Did they miss critical issues or identify irrelevant ones?
+
+**Scoring Guide for ${difficultyLevel}**:
+- 0-4: Major misunderstanding, missed key issues
+- 5-6: Partial understanding, some issues identified
+- ${guidance.understanding}
+
+**2. Ingenuity in Solution Suggestion** (0-10)
+- How creative/innovative are the proposed solutions?
+- Do solutions address root causes?
+- Are solutions practical and well-thought-out?
+
+**Scoring Guide for ${difficultyLevel}**:
+- 0-4: No solutions or impractical suggestions
+- 5-6: Basic solutions, limited creativity
+- ${guidance.ingenuity}
+
+**3. Critical Thinking Depth** (0-10)
+- How deeply did the student analyze the situation?
+- Did they consider multiple perspectives?
+- Did they show logical reasoning and evidence-based thinking?
+
+**Scoring Guide for ${difficultyLevel}**:
+- 0-4: Superficial analysis, no depth
+- 5-6: Some analysis, limited depth
+- ${guidance.critical_thinking}
+
+**4. Real-World Application** (0-10)
+- How practical/applicable are their suggestions?
+- Did they consider implementation challenges?
+- Did they connect to real-world contexts?
+
+**Scoring Guide for ${difficultyLevel}**:
+- 0-4: Unrealistic or no application mentioned
+- 5-6: Some practical elements
+- ${guidance.real_world}
+
+---
+
+**Output Format** (JSON):
+{
+    "understanding": {
+        "score": 8.5,
+        "feedback": "The student correctly identified [specific strengths]. However, [specific areas to improve]. [Specific examples from their response]."
+    },
+    "ingenuity": {
+        "score": 7.0,
+        "feedback": "The solutions proposed show [strengths]. To improve ingenuity, consider [suggestions]. [Specific examples]."
+    },
+    "critical_thinking": {
+        "score": 9.0,
+        "feedback": "Excellent critical analysis demonstrated by [specific examples]. The reasoning about [topic] was particularly strong. [Areas for growth if any]."
+    },
+    "real_world": {
+        "score": 7.5,
+        "feedback": "The application to real-world contexts was [assessment]. [Specific strengths]. Could be strengthened by [suggestions]."
+    },
+    "what_was_done_well": "Overall summary of strengths across all criteria. Be specific about what impressed you.",
+    "what_could_improve": "Overall summary of areas for growth. Be constructive and specific.",
+    "suggestions": "Actionable suggestions for improving future case analyses. Be practical and encouraging."
+}
+
+**CRITICAL**:
+- Scores must be floats (e.g., 8.5, not 8 or 9)
+- Feedback must be specific and reference actual content from student response
+- Be fair but rigorous for the difficulty level
+- Provide constructive criticism with examples
+- Acknowledge strengths before suggesting improvements
+- For nonsensical or random text responses, all scores should be 0-2
+
+Return ONLY valid JSON. No additional text.`
+}
+
+/**
+ * Get system prompt for evaluation
+ * Matches Flask's _get_evaluation_system_prompt()
+ */
+function getEvaluationSystemPrompt(): string {
+  return `You are an expert educator specializing in business case analysis, critical thinking, and innovation assessment.
+
+Your role is to:
+1. Evaluate student responses fairly and consistently
+2. Provide detailed, constructive feedback on 4 criteria
+3. Recognize strengths and identify growth areas
+4. Calibrate scoring to difficulty level appropriately
+5. Give specific examples from student work
+
+Key principles:
+- Be rigorous but fair - match expectations to difficulty level
+- Provide actionable feedback, not just scores
+- Reference specific parts of student responses in feedback
+- Balance encouragement with honest assessment
+- Focus on learning outcomes, not just error-finding
+- Consider that multiple valid approaches may exist
+
+Scoring philosophy:
+- 0-2: Nonsensical, random text, or completely off-topic
+- 3-4: Below expectations, major gaps
+- 5-6: Approaching expectations, needs improvement
+- 7-8: Meets expectations, solid work
+- 9-10: Exceeds expectations, excellent work
+
+Remember: The goal is to help students learn and improve, not just to judge.
+
+Output ONLY valid JSON. No markdown, no explanations, just the JSON structure.`
 }
 
 /**
  * Evaluate a case study response using Claude AI
+ * Matches Flask's CaseEvaluationService.evaluate_response()
  */
 async function evaluateResponse(job: ResponseEvaluationJob): Promise<CaseEvaluationResult> {
-  const { responseContent, questionContent } = job
+  const { responseContent, questionContent, difficultyLevel } = job
 
-  const systemPrompt = `You are an expert evaluator for case study responses.
-Evaluate student responses based on:
-- Problem Identification (40%): Did they correctly identify the key issues?
-- Solution Quality (40%): Are the proposed solutions practical and well-reasoned?
-- Clarity & Organization (20%): Is the response clear and well-structured?
+  // Check for empty response
+  if (!responseContent || !responseContent.trim()) {
+    console.log('[ResponseEvaluationWorker] Empty response detected, returning zero score')
+    return createEmptyResponseEvaluation()
+  }
 
-Always respond in JSON format.`
-
-  const userPrompt = `Evaluate this case study response:
-
-Case Scenario: "${questionContent}"
-
-Student Response: "${responseContent}"
-
-Provide an evaluation in JSON format:
-{
-  "overallScore": 0.0 to 10.0,
-  "problemIdentificationScore": 0.0 to 10.0,
-  "solutionQualityScore": 0.0 to 10.0,
-  "clarityScore": 0.0 to 10.0,
-  "rating": "one of: excellent, good, average, needs_improvement",
-  "feedback": "Detailed feedback for the student",
-  "strengths": ["List of strengths in this response"],
-  "areasForImprovement": ["Specific suggestions for improvement"]
-}`
+  const systemPrompt = getEvaluationSystemPrompt()
+  const userPrompt = buildEvaluationPrompt(
+    responseContent,
+    questionContent,
+    difficultyLevel || 'professional'
+  )
 
   const modelId = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'
   console.log(`[ResponseEvaluationWorker] Calling Anthropic API with model: ${modelId}`)
@@ -122,7 +324,7 @@ Provide an evaluation in JSON format:
   try {
     const response = await anthropic.messages.create({
       model: modelId,
-      max_tokens: 1536,
+      max_tokens: 2000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     })
@@ -137,46 +339,43 @@ Provide an evaluation in JSON format:
     // Extract and parse JSON from response using robust parser
     const result = parseJsonFromResponse(content.text) as CaseEvaluationResult
 
-    // Validate required fields and provide defaults
-    if (typeof result.problemIdentificationScore !== 'number') {
-      result.problemIdentificationScore = 0
-    }
-    if (typeof result.solutionQualityScore !== 'number') {
-      result.solutionQualityScore = 0
-    }
-    if (typeof result.clarityScore !== 'number') {
-      result.clarityScore = 0
-    }
-    if (!result.feedback) {
-      result.feedback = 'Evaluation completed.'
-    }
-    if (!Array.isArray(result.strengths)) {
-      result.strengths = []
-    }
-    if (!Array.isArray(result.areasForImprovement)) {
-      result.areasForImprovement = []
-    }
+    // Validate and fix required fields
+    if (!result.understanding?.score) result.understanding = { score: 0, feedback: '' }
+    if (!result.ingenuity?.score) result.ingenuity = { score: 0, feedback: '' }
+    if (!result.critical_thinking?.score) result.critical_thinking = { score: 0, feedback: '' }
+    if (!result.real_world?.score) result.real_world = { score: 0, feedback: '' }
 
-    // CRITICAL FIX: Always calculate rating from scores (Flask-style)
-    // Never trust AI-returned rating - calculate from actual scores
-    const avgScore = (
-      result.problemIdentificationScore +
-      result.solutionQualityScore +
-      result.clarityScore
-    ) / 3
+    // Calculate average score from 4 criteria (Flask-style)
+    const scores = [
+      result.understanding.score,
+      result.ingenuity.score,
+      result.critical_thinking.score,
+      result.real_world.score
+    ]
+    result.average_score = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
 
-    result.overallScore = Math.round(avgScore * 10) / 10 // Round to 1 decimal
-    result.rating = avgScore >= 8 ? 'excellent' :
-                   avgScore >= 6 ? 'good' :
-                   avgScore >= 4 ? 'average' : 'needs_improvement'
+    console.log(`[ResponseEvaluationWorker] Evaluation scores:`)
+    console.log(`  - Understanding: ${result.understanding.score}`)
+    console.log(`  - Ingenuity: ${result.ingenuity.score}`)
+    console.log(`  - Critical Thinking: ${result.critical_thinking.score}`)
+    console.log(`  - Real World: ${result.real_world.score}`)
+    console.log(`  - Average: ${result.average_score}`)
 
-    console.log(`[ResponseEvaluationWorker] Calculated scores - Problem: ${result.problemIdentificationScore}, Solution: ${result.solutionQualityScore}, Clarity: ${result.clarityScore}`)
-    console.log(`[ResponseEvaluationWorker] Final result: rating=${result.rating}, avgScore=${result.overallScore}`)
     return result
   } catch (error) {
     console.error('[ResponseEvaluationWorker] Anthropic API error:', error)
     throw error
   }
+}
+
+/**
+ * Convert average score to rating
+ * Flask doesn't have ratings, but frontend expects them
+ */
+function scoreToRating(avgScore: number): string {
+  if (avgScore >= 8) return 'thumbs_up'
+  if (avgScore >= 6) return 'thumbs_up'
+  return 'thumbs_sideways'
 }
 
 /**
@@ -188,7 +387,6 @@ async function processResponseEvaluationJob(job: Job<ResponseEvaluationJob>): Pr
 
   console.log(`[ResponseEvaluationWorker] ========== START Processing Job ${job.id} ==========`)
   console.log(`[ResponseEvaluationWorker] Response ID: ${responseId}`)
-  console.log(`[ResponseEvaluationWorker] Job data keys: ${Object.keys(job.data).join(', ')}`)
 
   try {
     // Check if response still exists
@@ -210,34 +408,40 @@ async function processResponseEvaluationJob(job: Job<ResponseEvaluationJob>): Pr
     const processingTime = Date.now() - startTime
     console.log(`[ResponseEvaluationWorker] AI evaluation completed in ${processingTime}ms`)
 
+    // Convert to frontend rating
+    const frontendRating = scoreToRating(evaluation.average_score)
+    console.log(`[ResponseEvaluationWorker] Average score: ${evaluation.average_score} -> Rating: ${frontendRating}`)
+
     // Update response with evaluation results
     console.log(`[ResponseEvaluationWorker] Step 3: Updating database with results...`)
-    const frontendRating = convertRatingToFrontendFormat(evaluation.rating)
-    console.log(`[ResponseEvaluationWorker] Converting rating: ${evaluation.rating} -> ${frontendRating}`)
-
     await prisma.response.update({
       where: { id: responseId },
       data: {
         aiEvaluationStatus: 'completed',
         aiEvaluationRating: frontendRating,
-        aiEvaluationScore: evaluation.overallScore,
+        aiEvaluationScore: evaluation.average_score,
         aiEvaluationFeedback: JSON.stringify({
-          feedback: evaluation.feedback,
-          problemIdentificationScore: evaluation.problemIdentificationScore,
-          solutionQualityScore: evaluation.solutionQualityScore,
-          clarityScore: evaluation.clarityScore,
-          strengths: evaluation.strengths,
-          areasForImprovement: evaluation.areasForImprovement,
+          // 4 criteria with scores and feedback (Flask-compatible)
+          understanding: evaluation.understanding,
+          ingenuity: evaluation.ingenuity,
+          critical_thinking: evaluation.critical_thinking,
+          real_world: evaluation.real_world,
+          // Summary fields
+          what_was_done_well: evaluation.what_was_done_well,
+          what_could_improve: evaluation.what_could_improve,
+          suggestions: evaluation.suggestions,
+          // Metadata
+          average_score: evaluation.average_score,
           processingTimeMs: processingTime,
         }),
         aiEvaluationTimestamp: new Date(),
-        score: evaluation.overallScore,
+        score: evaluation.average_score,
       },
     })
 
     console.log(
       `[ResponseEvaluationWorker] ========== SUCCESS Job ${job.id} ==========\n` +
-        `Rating: ${evaluation.rating}, Score: ${evaluation.overallScore}, Time: ${processingTime}ms`
+        `Average Score: ${evaluation.average_score}, Rating: ${frontendRating}, Time: ${processingTime}ms`
     )
   } catch (error) {
     console.error(`[ResponseEvaluationWorker] ========== FAILED Job ${job.id} ==========`)
