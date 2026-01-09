@@ -126,13 +126,41 @@ export default function Navigation() {
                     </svg>
                   </button>
                   {toolsMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 border">
+                      {/* Flask-style Question Tools */}
+                      <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Questions</div>
+                      <Link
+                        href="/questions/my"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setToolsMenuOpen(false)}
+                      >
+                        <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        My Questions
+                      </Link>
+                      <Link
+                        href="/questions/evaluate"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setToolsMenuOpen(false)}
+                      >
+                        <svg className="w-4 h-4 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Evaluate Questions
+                      </Link>
+
+                      {/* Divider */}
+                      <div className="border-t border-gray-100 my-1" />
+
+                      {/* Results & Progress */}
+                      <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Results</div>
                       <Link
                         href="/my-results"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setToolsMenuOpen(false)}
                       >
-                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-4 h-4 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                         My Results
@@ -142,35 +170,55 @@ export default function Navigation() {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setToolsMenuOpen(false)}
                       >
-                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-4 h-4 mr-2 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                         </svg>
                         Leaderboard
-                      </Link>
-                      <Link
-                        href="/certificates"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setToolsMenuOpen(false)}
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Certificates
                       </Link>
                       <Link
                         href="/achievements"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setToolsMenuOpen(false)}
                       >
-                        <i className="fas fa-trophy w-4 h-4 mr-2 text-yellow-500" />
+                        <svg className="w-4 h-4 mr-2 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
                         Achievements
+                      </Link>
+
+                      {/* Divider */}
+                      <div className="border-t border-gray-100 my-1" />
+
+                      {/* Certificates & Events */}
+                      <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">More</div>
+                      <Link
+                        href="/certificates"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setToolsMenuOpen(false)}
+                      >
+                        <svg className="w-4 h-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Certificates
+                      </Link>
+                      <Link
+                        href="/certificates/create"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setToolsMenuOpen(false)}
+                      >
+                        <svg className="w-4 h-4 mr-2 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Certificate Builder
                       </Link>
                       <Link
                         href="/my-events"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setToolsMenuOpen(false)}
                       >
-                        <i className="fas fa-user-clock w-4 h-4 mr-2 text-blue-500" />
+                        <svg className="w-4 h-4 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
                         My Events
                       </Link>
                     </div>

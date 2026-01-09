@@ -5,6 +5,7 @@ import { formatResponseTime, getAIEvaluationBadgeColor, getAIEvaluationLabel, ca
 import { AIEvaluationRatings } from '@/types/responses'
 import type { ResponseWithCreator } from '@/types/responses'
 import { useResponseEvaluationPolling } from '@/hooks/useResponseEvaluationPolling'
+import { AIFeedbackDisplay } from './AIFeedbackDisplay'
 
 interface ResponseCardProps {
   response: ResponseWithCreator
@@ -200,11 +201,9 @@ export function ResponseCard({
         <p className="text-gray-700 whitespace-pre-wrap text-sm">{response.content}</p>
       )}
 
-      {/* AI Feedback (if expanded) */}
+      {/* AI Feedback (using parsed display component) */}
       {displayFeedback && !isEditing && (
-        <p className="mt-2 text-xs text-gray-500 italic border-t border-gray-200 pt-2">
-          AI Feedback: {displayFeedback}
-        </p>
+        <AIFeedbackDisplay feedbackJson={displayFeedback} compact={true} />
       )}
     </div>
   )
