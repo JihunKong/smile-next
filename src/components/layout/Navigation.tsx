@@ -5,6 +5,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useSession, signOut } from 'next-auth/react'
 
+// Role IDs: 0=Super Admin, 1=Admin, 2=Teacher, 3=Student
+const ROLE_SUPER_ADMIN = 0
+
 export default function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -13,6 +16,9 @@ export default function Navigation() {
   const userMenuRef = useRef<HTMLDivElement>(null)
   const toolsMenuRef = useRef<HTMLDivElement>(null)
   const { data: session, status } = useSession()
+
+  // Check if user is super admin
+  const isSuperAdmin = (session?.user as { roleId?: number })?.roleId === ROLE_SUPER_ADMIN
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -151,24 +157,52 @@ export default function Navigation() {
                         </svg>
                         Certificates
                       </Link>
+                      <Link
+                        href="/achievements"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setToolsMenuOpen(false)}
+                      >
+                        <i className="fas fa-trophy w-4 h-4 mr-2 text-yellow-500" />
+                        Achievements
+                      </Link>
+                      <Link
+                        href="/my-events"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setToolsMenuOpen(false)}
+                      >
+                        <i className="fas fa-user-clock w-4 h-4 mr-2 text-blue-500" />
+                        My Events
+                      </Link>
                     </div>
                   )}
                 </div>
 
-                {/* Notifications Bell */}
+                {/* Messages Icon (Flask style: envelope) */}
                 <Link
                   href="/messages"
                   className="relative text-[var(--stanford-pine)] hover:opacity-80 p-1"
+                  title="Messages"
                 >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
+                  <i
+                    className={`fas fa-envelope text-xl ${unreadCount > 0 ? 'text-red-600' : ''}`}
+                  />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-[var(--stanford-cardinal)] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-pulse">
+                      {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
                 </Link>
+
+                {/* Admin Link (Super Admin only) */}
+                {isSuperAdmin && (
+                  <Link
+                    href="/admin"
+                    className="text-[var(--stanford-cardinal)] hover:opacity-80 font-semibold"
+                    title="Admin Panel"
+                  >
+                    <i className="fas fa-crown mr-1" /> Admin
+                  </Link>
+                )}
 
                 {/* User Dropdown */}
                 <div className="relative" ref={userMenuRef}>
@@ -335,12 +369,44 @@ export default function Navigation() {
                     Certificates
                   </Link>
                   <Link
-                    href="/messages"
+                    href="/achievements"
                     className="block px-3 py-2 text-[var(--stanford-pine)] hover:opacity-80"
                   >
-                    Messages {unreadCount > 0 && `(${unreadCount})`}
+                    <i className="fas fa-trophy text-yellow-500 mr-2" />
+                    Achievements
+                  </Link>
+                  <Link
+                    href="/my-events"
+                    className="block px-3 py-2 text-[var(--stanford-pine)] hover:opacity-80"
+                  >
+                    <i className="fas fa-user-clock text-blue-500 mr-2" />
+                    My Events
+                  </Link>
+                  <Link
+                    href="/messages"
+                    className="flex items-center px-3 py-2 text-[var(--stanford-pine)] hover:opacity-80"
+                  >
+                    <i className={`fas fa-envelope mr-2 ${unreadCount > 0 ? 'text-red-600' : ''}`} />
+                    Messages
+                    {unreadCount > 0 && (
+                      <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-500 text-white animate-pulse">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
                 </div>
+
+                {/* Admin Section (Super Admin only) */}
+                {isSuperAdmin && (
+                  <div className="border-t border-gray-200 pt-2 mt-2">
+                    <Link
+                      href="/admin"
+                      className="block px-3 py-2 text-[var(--stanford-cardinal)] hover:opacity-80 font-semibold"
+                    >
+                      <i className="fas fa-crown mr-2" /> Admin Panel
+                    </Link>
+                  </div>
+                )}
 
                 {/* User Section */}
                 <div className="border-t border-gray-200 pt-2 mt-2">
