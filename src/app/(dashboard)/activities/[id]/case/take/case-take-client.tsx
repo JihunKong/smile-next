@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ExamTimer } from '@/components/modes/ExamTimer'
-import { TabSwitchWarning } from '@/components/modes/TabSwitchWarning'
 import { useAntiCheat, type AntiCheatStats } from '@/hooks/useAntiCheat'
 import { saveCaseResponse, submitCaseAttempt, updateCaseCheatingStats } from '../actions'
 import type { CaseScenario } from '@/types/activities'
@@ -17,43 +15,218 @@ interface ScenarioResponse {
 interface CaseTakeClientProps {
   activityId: string
   activityName: string
+  groupName: string
   attemptId: string
   scenarios: CaseScenario[]
   timePerCase: number
   totalTimeLimit: number
   passThreshold: number
+  maxAttempts: number
+  attemptsUsed: number
   savedResponses: Record<string, ScenarioResponse>
   startedAt: string
+  instructions?: string
+}
+
+// Grading Rubric Component (Flask-style 4 criteria)
+function GradingRubric({ passThreshold }: { passThreshold: number }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  return (
+    <div className="bg-white border border-indigo-200 rounded-lg shadow-sm mt-4">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-indigo-50 transition-colors rounded-lg"
+      >
+        <div className="flex items-center">
+          <svg className="w-5 h-5 text-indigo-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+          <span className="font-semibold text-gray-900">Grading Rubric - How You&apos;ll Be Evaluated</span>
+        </div>
+        <svg
+          className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isExpanded && (
+        <div className="border-t border-indigo-200 p-4">
+          <p className="text-sm text-gray-600 mb-4">
+            Your responses will be scored on these 4 criteria (0-10 points each). Your final score is the average across all criteria.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Understanding */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="w-6 h-6 text-yellow-600 mr-3 mt-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                </svg>
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-1">1. Understanding the Case Issue</h4>
+                  <p className="text-sm text-gray-700">
+                    Did you correctly identify the core problems and flaws in the scenario? Do you understand the implications and underlying issues?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Ingenuity */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="w-6 h-6 text-purple-600 mr-3 mt-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-1">2. Ingenuity in Solution Suggestion</h4>
+                  <p className="text-sm text-gray-700">
+                    How creative and practical are your proposed solutions? Do they address root causes with innovative, well-thought-out approaches?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Critical Thinking */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="w-6 h-6 text-blue-600 mr-3 mt-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                </svg>
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-1">3. Critical Thinking Depth</h4>
+                  <p className="text-sm text-gray-700">
+                    How deeply did you analyze the situation? Did you consider multiple perspectives and show logical, evidence-based reasoning?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Real-World Application */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="w-6 h-6 text-green-600 mr-3 mt-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-1">4. Real-World Application</h4>
+                  <p className="text-sm text-gray-700">
+                    How practical and applicable are your suggestions? Did you consider implementation challenges and real-world contexts?
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+            <p className="text-sm text-indigo-900">
+              <svg className="w-4 h-4 text-indigo-600 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              <strong>Pass Threshold:</strong> You need an average score of <span className="font-semibold">{passThreshold.toFixed(1)}</span> or higher across all 4 criteria to pass this activity.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Auto-Submit Warning Modal
+function AutoSubmitModal({ onContinue }: { onContinue: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-8 max-w-md text-center">
+        <svg className="w-16 h-16 text-yellow-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Time Expired!</h3>
+        <p className="text-gray-600 mb-4">
+          The time limit for this case has been reached. Your current responses will be auto-saved.
+        </p>
+        <button
+          onClick={onContinue}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg"
+          style={{ backgroundColor: '#4f46e5' }}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Evaluating Screen Component
+function EvaluatingScreen({ progress, message }: { progress: number; message: string }) {
+  return (
+    <div className="bg-white rounded-lg shadow-md p-8 text-center">
+      <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mx-auto mb-4"></div>
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Evaluating Your Responses</h2>
+      <p className="text-gray-600 mb-4">{message}</p>
+
+      {/* Progress Bar */}
+      <div className="max-w-md mx-auto mt-6">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-700">Progress</span>
+          <span className="text-sm font-medium text-indigo-600">{Math.floor(progress)}%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-3">
+          <div
+            className="bg-indigo-600 h-3 rounded-full transition-all duration-1000 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          <svg className="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+          </svg>
+          AI evaluation in progress
+        </p>
+      </div>
+    </div>
+  )
 }
 
 export function CaseTakeClient({
   activityId,
   activityName,
+  groupName,
   attemptId,
   scenarios,
   timePerCase,
   totalTimeLimit,
   passThreshold,
+  maxAttempts,
+  attemptsUsed,
   savedResponses: initialResponses,
   startedAt,
+  instructions,
 }: CaseTakeClientProps) {
   const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [responses, setResponses] = useState<Record<string, ScenarioResponse>>(initialResponses)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showResults, setShowResults] = useState(false)
-  const [results, setResults] = useState<{
-    totalScore: number
-    passed: boolean
-    scenarioScores: Array<{ scenarioId: string; title: string; score: number; feedback: string }>
-  } | null>(null)
+  const [showAutoSubmitModal, setShowAutoSubmitModal] = useState(false)
+  const [showEvaluating, setShowEvaluating] = useState(false)
+  const [evaluationProgress, setEvaluationProgress] = useState(0)
+  const [evaluationMessage, setEvaluationMessage] = useState('AI is analyzing your case responses across 4 criteria...')
+
+  // Timer state
+  const [caseTimeRemaining, setCaseTimeRemaining] = useState(timePerCase * 60)
+  const [totalTimeRemaining, setTotalTimeRemaining] = useState(0)
+  const caseTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const totalTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Anti-cheating hook
   const lastSyncedStats = useRef<AntiCheatStats | null>(null)
 
   const handleStatsChange = useCallback(
     async (stats: AntiCheatStats) => {
-      // Only sync if there are new events
       if (
         lastSyncedStats.current &&
         stats.events.length === lastSyncedStats.current.events.length
@@ -61,7 +234,6 @@ export function CaseTakeClient({
         return
       }
 
-      // Get new events since last sync
       const lastEventCount = lastSyncedStats.current?.events.length || 0
       const newEvents = stats.events.slice(lastEventCount)
 
@@ -79,24 +251,69 @@ export function CaseTakeClient({
     [attemptId]
   )
 
-  const { stats: antiCheatStats, isWarningVisible, dismissWarning } = useAntiCheat({
+  const { stats: antiCheatStats } = useAntiCheat({
     enabled: true,
     onStatsChange: handleStatsChange,
-    preventPaste: false, // Allow paste for case study since they're writing solutions
+    preventPaste: false,
     showWarningOnTabSwitch: true,
   })
 
-  // Calculate remaining time based on when attempt started
-  const elapsedSeconds = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
-  const totalSeconds = totalTimeLimit * 60
-  const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds)
+  // Calculate initial time remaining
+  useEffect(() => {
+    const elapsedSeconds = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
+    const totalSeconds = totalTimeLimit * 60
+    const remaining = Math.max(0, totalSeconds - elapsedSeconds)
+    setTotalTimeRemaining(remaining)
+  }, [startedAt, totalTimeLimit])
+
+  // Total timer effect
+  useEffect(() => {
+    if (totalTimeRemaining <= 0) return
+
+    totalTimerRef.current = setInterval(() => {
+      setTotalTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(totalTimerRef.current!)
+          handleSubmit()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => {
+      if (totalTimerRef.current) clearInterval(totalTimerRef.current)
+    }
+  }, [])
+
+  // Case timer effect
+  useEffect(() => {
+    setCaseTimeRemaining(timePerCase * 60)
+
+    caseTimerRef.current = setInterval(() => {
+      setCaseTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(caseTimerRef.current!)
+          setShowAutoSubmitModal(true)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => {
+      if (caseTimerRef.current) clearInterval(caseTimerRef.current)
+    }
+  }, [currentIndex, timePerCase])
 
   const currentScenario = scenarios[currentIndex]
   const currentResponse = responses[currentScenario?.id] || { issues: '', solution: '' }
 
-  const handleTimeUp = useCallback(() => {
-    handleSubmit()
-  }, [])
+  function formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   async function handleSaveResponse() {
     if (!currentScenario) return
@@ -133,96 +350,83 @@ export function CaseTakeClient({
     }
   }
 
+  function handleAutoSubmitContinue() {
+    setShowAutoSubmitModal(false)
+    if (currentIndex < scenarios.length - 1) {
+      handleSaveResponse()
+      setCurrentIndex(currentIndex + 1)
+    } else {
+      handleSubmit()
+    }
+  }
+
+  function startEvaluationProgress() {
+    let progress = 0
+    progressIntervalRef.current = setInterval(() => {
+      if (progress < 90) {
+        const increment = Math.max(0.5, (90 - progress) / 20)
+        progress = Math.min(90, progress + increment)
+        setEvaluationProgress(progress)
+
+        if (progress >= 30 && progress < 60) {
+          setEvaluationMessage('Analyzing critical thinking depth...')
+        } else if (progress >= 60 && progress < 85) {
+          setEvaluationMessage('Evaluating real-world application...')
+        } else if (progress >= 85) {
+          setEvaluationMessage('Finalizing evaluation scores...')
+        }
+      }
+    }, 500)
+  }
+
   async function handleSubmit() {
+    if (isSubmitting) return
     setIsSubmitting(true)
 
     // Save current response first
     await handleSaveResponse()
 
+    // Show evaluating screen
+    setShowEvaluating(true)
+    startEvaluationProgress()
+
+    // Clear timers
+    if (caseTimerRef.current) clearInterval(caseTimerRef.current)
+    if (totalTimerRef.current) clearInterval(totalTimerRef.current)
+
     const result = await submitCaseAttempt(attemptId)
 
-    if (result.success && result.data) {
-      setResults(result.data)
-      setShowResults(true)
+    // Complete progress
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
+    setEvaluationProgress(100)
+    setEvaluationMessage('Evaluation complete! Loading results...')
+
+    if (result.success) {
+      setTimeout(() => {
+        router.push(`/activities/${activityId}/case/results?attempt=${attemptId}`)
+      }, 800)
     } else {
       alert(result.error || 'Failed to submit')
+      setShowEvaluating(false)
+      setIsSubmitting(false)
+    }
+  }
+
+  function confirmSubmit() {
+    const incomplete = scenarios.filter((scenario) => {
+      const resp = responses[scenario.id]
+      return !resp?.issues?.trim() || !resp?.solution?.trim()
+    })
+
+    if (incomplete.length > 0) {
+      if (!confirm(`${incomplete.length} case(s) have incomplete responses. Submit anyway?`)) {
+        return
+      }
     }
 
-    setIsSubmitting(false)
-  }
-
-  function getScoreColor(score: number): string {
-    if (score >= 8) return 'text-green-600'
-    if (score >= 6) return 'text-yellow-600'
-    return 'text-red-600'
-  }
-
-  function getCompletionCount(): number {
-    return Object.values(responses).filter(
-      (r) => r.issues.trim().length > 0 || r.solution.trim().length > 0
-    ).length
-  }
-
-  if (showResults && results) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl w-full">
-          <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
-            results.passed ? 'bg-green-100' : 'bg-yellow-100'
-          }`}>
-            {results.passed ? (
-              <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg className="w-10 h-10 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            )}
-          </div>
-
-          <h1 className={`text-2xl font-bold text-center mb-2 ${results.passed ? 'text-green-600' : 'text-yellow-600'}`}>
-            {results.passed ? 'Excellent Work!' : 'Good Effort!'}
-          </h1>
-
-          <p className="text-gray-600 text-center mb-6">
-            You completed the case study with an average score of {results.totalScore.toFixed(1)}.
-          </p>
-
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
-            <div className="text-4xl font-bold mb-2" style={{ color: results.passed ? '#16a34a' : '#ca8a04' }}>
-              {results.totalScore.toFixed(1)} / 10
-            </div>
-            <div className="text-gray-600">Overall Score</div>
-          </div>
-
-          {/* Scenario Results */}
-          <div className="space-y-4 mb-6">
-            <h2 className="font-semibold text-gray-900">Scenario Scores</h2>
-            {results.scenarioScores.map((scenario, index) => (
-              <div key={scenario.scenarioId} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-gray-800">
-                    {index + 1}. {scenario.title}
-                  </span>
-                  <span className={`text-xl font-bold ${getScoreColor(scenario.score)}`}>
-                    {scenario.score.toFixed(1)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600">{scenario.feedback}</p>
-              </div>
-            ))}
-          </div>
-
-          <Link
-            href={`/activities/${activityId}`}
-            className="block w-full px-4 py-2 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition"
-          >
-            Back to Activity
-          </Link>
-        </div>
-      </div>
-    )
+    if (confirm('Submit all cases for evaluation? You cannot change your responses after submission.')) {
+      handleSubmit()
+    }
   }
 
   if (scenarios.length === 0) {
@@ -243,169 +447,260 @@ export function CaseTakeClient({
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Anti-Cheat Warning Modal */}
-      <TabSwitchWarning
-        isVisible={isWarningVisible}
-        onDismiss={dismissWarning}
-        tabSwitchCount={antiCheatStats.tabSwitchCount}
-        maxWarnings={3}
-      />
+      {/* Anti-cheating CSS */}
+      <style jsx global>{`
+        .case-scenario-content,
+        .scenario-text,
+        .case-content,
+        #caseTitle,
+        #caseDomain,
+        #caseContent {
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+          -webkit-touch-callout: none;
+        }
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Case Study Mode</p>
-            <h1 className="font-semibold text-gray-900">{activityName}</h1>
-          </div>
+        textarea,
+        input[type="text"] {
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+          -ms-user-select: text !important;
+          user-select: text !important;
+        }
+      `}</style>
 
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600">
-              Scenario {currentIndex + 1} of {scenarios.length}
-            </div>
+      {/* Auto-Submit Warning Modal */}
+      {showAutoSubmitModal && <AutoSubmitModal onContinue={handleAutoSubmitContinue} />}
 
-            <ExamTimer
-              totalSeconds={remainingSeconds}
-              onTimeUp={handleTimeUp}
-              size="md"
-            />
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        {/* Progress Bar */}
-        <div className="flex gap-2 mb-6">
-          {scenarios.map((scenario, index) => {
-            const hasResponse = responses[scenario.id]?.issues || responses[scenario.id]?.solution
-            return (
-              <button
-                key={scenario.id}
-                onClick={async () => {
-                  await handleSaveResponse()
-                  setCurrentIndex(index)
-                }}
-                className={`flex-1 h-2 rounded-full transition ${
-                  index === currentIndex
-                    ? 'bg-green-600'
-                    : hasResponse
-                    ? 'bg-green-300'
-                    : 'bg-gray-300'
-                }`}
-                title={`Scenario ${index + 1}: ${scenario.title}`}
-              />
-            )
-          })}
-        </div>
-
-        {/* Scenario Card */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="w-10 h-10 flex items-center justify-center bg-green-100 text-green-700 rounded-full font-bold">
-                {currentIndex + 1}
-              </span>
-              <h2 className="text-xl font-semibold text-gray-900">{currentScenario.title}</h2>
-            </div>
-            <div className="prose prose-sm max-w-none text-gray-700">
-              <p className="whitespace-pre-wrap">{currentScenario.content}</p>
-            </div>
-          </div>
-
-          {/* Response Forms */}
-          <div className="p-6 space-y-6">
-            {/* Issues */}
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Identify the Key Issues
-              </label>
-              <textarea
-                name="issues"
-                value={currentResponse.issues}
-                onChange={(e) => updateResponse('issues', e.target.value)}
-                placeholder="What are the main problems or challenges in this scenario?"
-                rows={5}
-                maxLength={2000}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition resize-none"
-              />
-              <div className="text-xs text-gray-500 text-right mt-1">
-                {currentResponse.issues.length} / 2000 characters
-              </div>
+              <h1 className="text-3xl font-bold text-gray-900">{activityName}</h1>
+              <p className="text-gray-600 mt-2">{groupName}</p>
             </div>
-
-            {/* Solution */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Propose Your Solution
-              </label>
-              <textarea
-                name="solution"
-                value={currentResponse.solution}
-                onChange={(e) => updateResponse('solution', e.target.value)}
-                placeholder="How would you address these issues? What steps would you take?"
-                rows={5}
-                maxLength={2000}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition resize-none"
-              />
-              <div className="text-xs text-gray-500 text-right mt-1">
-                {currentResponse.solution.length} / 2000 characters
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={handlePrevious}
-            disabled={currentIndex === 0}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Previous
-          </button>
-
-          <div className="text-sm text-gray-500">
-            {getCompletionCount()} of {scenarios.length} scenarios started
-          </div>
-
-          {currentIndex < scenarios.length - 1 ? (
-            <button
-              onClick={handleNext}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2"
+            <Link
+              href={`/activities/${activityId}`}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-900 font-semibold py-2 px-4 rounded-lg flex items-center gap-2"
             >
-              Next
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  Submit Case Study
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </>
-              )}
-            </button>
-          )}
+              Back to Activity
+            </Link>
+          </div>
+
+          {/* Instructions Alert */}
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">Case Mode Instructions</h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  {instructions && (
+                    <div className="bg-white border border-blue-200 rounded p-3 mb-3">
+                      <p className="whitespace-pre-wrap">{instructions}</p>
+                    </div>
+                  )}
+                  <p>
+                    You will analyze <span className="font-semibold">{scenarios.length}</span> business case scenarios. For each case:
+                  </p>
+                  <ul className="list-disc ml-5 mt-2 space-y-1">
+                    <li>Identify the key flaws or problems in the scenario</li>
+                    <li>Propose specific, actionable solutions</li>
+                    <li>Each case has a <span className="font-semibold">{timePerCase}</span> minute time limit</li>
+                    <li>Cases auto-submit when time expires</li>
+                  </ul>
+                  <p className="mt-2">
+                    Your responses will be evaluated on 4 criteria: Understanding, Ingenuity, Critical Thinking, and Real-World Application (0-10 scale each).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Grading Rubric */}
+          <GradingRubric passThreshold={passThreshold} />
         </div>
+
+        {/* Evaluating Screen */}
+        {showEvaluating ? (
+          <EvaluatingScreen progress={evaluationProgress} message={evaluationMessage} />
+        ) : (
+          <>
+            {/* Progress Bar */}
+            <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <span className="text-sm font-medium text-gray-700">
+                    Case <span className="text-indigo-600">{currentIndex + 1}</span> of <span>{scenarios.length}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-sm font-medium text-gray-700">
+                    <svg className="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Time:{' '}
+                    <span className={`font-bold ${caseTimeRemaining <= 60 ? 'text-red-600' : 'text-indigo-600'}`}>
+                      {formatTime(caseTimeRemaining)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={confirmSubmit}
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm"
+                    style={{ backgroundColor: '#059669' }}
+                  >
+                    <svg className="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Submit All Cases
+                  </button>
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-indigo-600 h-2 rounded-full transition-all"
+                  style={{ width: `${((currentIndex + 1) / scenarios.length) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Case Content */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6 case-scenario-content">
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 id="caseTitle" className="text-2xl font-bold text-gray-900 scenario-text">
+                    {currentScenario.title}
+                  </h2>
+                  {currentScenario.domain && (
+                    <span id="caseDomain" className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      {currentScenario.domain}
+                    </span>
+                  )}
+                </div>
+                <div
+                  id="caseContent"
+                  className="prose max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap case-content"
+                >
+                  {currentScenario.content}
+                </div>
+              </div>
+
+              {/* Response Form */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Analysis</h3>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    1. What are the key flaws or problems in this scenario?
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={currentResponse.issues}
+                    onChange={(e) => updateResponse('issues', e.target.value)}
+                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    rows={6}
+                    placeholder="Identify and explain the specific problems, ethical issues, or logical flaws in this business case..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Be specific and explain why each is problematic.</p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    2. What solutions do you propose?
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={currentResponse.solution}
+                    onChange={(e) => updateResponse('solution', e.target.value)}
+                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    rows={6}
+                    placeholder="Provide concrete, actionable solutions to address the problems you identified..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Focus on practical, implementable solutions.</p>
+                </div>
+
+                {/* Navigation Buttons */}
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={handlePrevious}
+                    disabled={currentIndex === 0}
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-900 font-semibold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Previous Case
+                  </button>
+                  <div className="text-sm text-gray-600">
+                    <svg className="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Auto-saving responses
+                  </div>
+                  <button
+                    onClick={currentIndex === scenarios.length - 1 ? confirmSubmit : handleNext}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg flex items-center gap-2"
+                    style={{ backgroundColor: '#4f46e5' }}
+                  >
+                    {currentIndex === scenarios.length - 1 ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Review All Cases
+                      </>
+                    ) : (
+                      <>
+                        Next Case
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Case Navigator */}
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Navigator</h3>
+              <div className="flex gap-2 flex-wrap">
+                {scenarios.map((scenario, index) => {
+                  const hasResponse = responses[scenario.id]?.issues || responses[scenario.id]?.solution
+                  return (
+                    <button
+                      key={scenario.id}
+                      onClick={async () => {
+                        await handleSaveResponse()
+                        setCurrentIndex(index)
+                      }}
+                      className={`w-10 h-10 rounded-lg font-semibold transition-all ${
+                        index === currentIndex
+                          ? 'bg-indigo-600 text-white'
+                          : hasResponse
+                          ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {index + 1}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

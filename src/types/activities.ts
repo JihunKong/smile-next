@@ -156,6 +156,8 @@ export interface CaseScenario {
   id: string
   title: string
   content: string
+  domain?: string // e.g., "Technology", "Finance", "Healthcare"
+  innovationName?: string // For Flask compatibility
 }
 
 export interface CaseSettings {
@@ -164,6 +166,7 @@ export interface CaseSettings {
   totalTimeLimit: number // in minutes
   maxAttempts: number
   passThreshold: number // score 0-10
+  instructions?: string // Teacher's custom instructions (Flask compatibility)
 }
 
 export const defaultCaseSettings: CaseSettings = {
@@ -172,6 +175,7 @@ export const defaultCaseSettings: CaseSettings = {
   totalTimeLimit: 60,
   maxAttempts: 1,
   passThreshold: 6.0,
+  instructions: '',
 }
 
 // Mode metadata for UI

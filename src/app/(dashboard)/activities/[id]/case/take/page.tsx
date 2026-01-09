@@ -22,7 +22,7 @@ export default async function CaseTakePage({ params, searchParams }: CaseTakePag
     redirect(`/activities/${activityId}/case`)
   }
 
-  // Get the attempt
+  // Get the attempt with group info
   const attempt = await prisma.caseAttempt.findUnique({
     where: { id: attemptId },
     include: {
@@ -30,7 +30,14 @@ export default async function CaseTakePage({ params, searchParams }: CaseTakePag
         select: {
           id: true,
           name: true,
+          description: true,
           openModeSettings: true,
+          owningGroup: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       },
     },
@@ -49,22 +56,36 @@ export default async function CaseTakePage({ params, searchParams }: CaseTakePag
     timePerCase: 10,
     totalTimeLimit: 60,
     passThreshold: 6.0,
+    maxAttempts: 1,
+    instructions: '',
   }
 
   // Get saved responses
   const savedResponses = (attempt.responses as Record<string, { issues: string; solution: string }>) || {}
 
+  // Count user's attempts
+  const attemptsCount = await prisma.caseAttempt.count({
+    where: {
+      activityId,
+      userId: session.user.id,
+    },
+  })
+
   return (
     <CaseTakeClient
       activityId={activityId}
       activityName={attempt.activity.name}
+      groupName={attempt.activity.owningGroup.name}
       attemptId={attemptId}
       scenarios={caseSettings.scenarios}
       timePerCase={caseSettings.timePerCase}
       totalTimeLimit={caseSettings.totalTimeLimit}
       passThreshold={caseSettings.passThreshold}
+      maxAttempts={caseSettings.maxAttempts || 1}
+      attemptsUsed={attemptsCount}
       savedResponses={savedResponses}
       startedAt={attempt.startedAt.toISOString()}
+      instructions={caseSettings.instructions || attempt.activity.description || ''}
     />
   )
 }
