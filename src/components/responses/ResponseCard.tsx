@@ -43,6 +43,18 @@ export function ResponseCard({
   const displayRating = polledEvaluation?.aiEvaluationRating || response.aiEvaluationRating
   const displayFeedback = polledEvaluation?.aiEvaluationFeedback || response.aiEvaluationFeedback
 
+  // DEBUG: Log AI evaluation values to diagnose badge/spinner not showing
+  console.log('[ResponseCard]', {
+    responseId: response.id,
+    initialStatus: response.aiEvaluationStatus,
+    initialRating: response.aiEvaluationRating,
+    polledStatus,
+    polledRating: polledEvaluation?.aiEvaluationRating,
+    displayStatus,
+    displayRating,
+    isPolling,
+  })
+
   const showAsAnonymous = response.isAnonymous || hideUsernames
   const canEdit = canEditResponse(currentUserId, response.creatorId)
   const canDelete = canDeleteResponse(currentUserId, response.creatorId, questionCreatorId, activityCreatorId, groupCreatorId)
