@@ -1,3 +1,6 @@
+# Production Docker Compose for AWS EC2
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
 services:
   # PostgreSQL Database
   db:
@@ -6,57 +9,70 @@ services:
     environment:
       POSTGRES_DB: smile_db
       POSTGRES_USER: smile_user
-      POSTGRES_PASSWORD: smile_password
-    ports:
-      - "5435:5432"
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U smile_user -d smile_db"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - smile-network
+    restart: unless-stopped
+    # Memory limit for t3.micro
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # Redis for Bull Queue
   redis:
     image: redis:7-alpine
     container_name: smile-redis
-    ports:
-      - "6382:6379"
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - smile-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
 
   # Next.js Application
   app:
+    image: ${DOCKER_IMAGE:-smile-next-app:latest}
     build:
       context: .
       dockerfile: Dockerfile
     container_name: smile-app
     ports:
-      - "3000:3000"
+      - "80:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://smile_user:smile_password@db:5432/smile_db
+      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-change_me_in_production}@db:5432/smile_db
       - REDIS_URL=redis://redis:6379
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXT_PUBLIC_APP_URL=http://localhost:3000
-      # These should be set in .env.local or passed at runtime
-      - AUTH_SECRET=${AUTH_SECRET:-docker-dev-secret-change-in-production}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - AUTH_SECRET=${AUTH_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
     depends_on:
       db:
         condition: service_healthy
@@ -65,6 +81,10 @@ services:
     networks:
       - smile-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
 networks:
   smile-network:
