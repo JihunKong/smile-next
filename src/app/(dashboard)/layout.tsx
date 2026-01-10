@@ -17,11 +17,16 @@ export default async function DashboardLayout({
     console.error('[Dashboard Layout] Auth error:', error)
 
     // Check if it's a database connection error
-    const errorMessage = error instanceof Error ? error.message : ''
-    if (errorMessage.includes('ECONNREFUSED') ||
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : ''
+    const errorString = String(error).toLowerCase()
+    if (errorMessage.includes('econnrefused') ||
         errorMessage.includes('database') ||
         errorMessage.includes('prisma') ||
-        errorMessage.includes('connection')) {
+        errorMessage.includes('connection') ||
+        errorMessage.includes('closed') ||
+        errorMessage.includes('timeout') ||
+        errorString.includes('econnrefused') ||
+        errorString.includes('connection closed')) {
       // Database connection error - show error page
       redirect(`/auth/error?error=DatabaseError&message=${encodeURIComponent('Database connection failed. Please try again later.')}`)
     }
