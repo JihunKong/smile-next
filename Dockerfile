@@ -22,6 +22,8 @@ RUN npx prisma generate
 
 # Next.js collects completely anonymous telemetry data about general usage.
 ENV NEXT_TELEMETRY_DISABLED 1
+# Increase Node.js memory for build
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 
 RUN npm run build
 
