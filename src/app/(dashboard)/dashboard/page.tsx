@@ -42,77 +42,75 @@ async function getUserStats(userId: string) {
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
 
-    const [
-      totalQuestions,
-      questionsThisWeek,
-      questionsLastWeek,
-      totalGroups,
-      qualityScores,
-      dayStreak,
-      recentActivities,
-      userCertificates,
-    ] = await Promise.all([
-      // Total questions
-      prisma.question.count({
-        where: { creatorId: userId, isDeleted: false },
-      }),
-      // Questions this week
-      prisma.question.count({
-        where: {
-          creatorId: userId,
-          isDeleted: false,
-          createdAt: { gte: oneWeekAgo },
+    // Execute queries sequentially to avoid connection pool exhaustion
+    // Basic stats (essential)
+    const totalQuestions = await prisma.question.count({
+      where: { creatorId: userId, isDeleted: false },
+    })
+
+    const questionsThisWeek = await prisma.question.count({
+      where: {
+        creatorId: userId,
+        isDeleted: false,
+        createdAt: { gte: oneWeekAgo },
+      },
+    })
+
+    const questionsLastWeek = await prisma.question.count({
+      where: {
+        creatorId: userId,
+        isDeleted: false,
+        createdAt: { gte: twoWeeksAgo, lt: oneWeekAgo },
+      },
+    })
+
+    const totalGroups = await prisma.groupUser.count({
+      where: { userId, group: { isDeleted: false } },
+    })
+
+    // Quality scores
+    const qualityScores = await prisma.question.aggregate({
+      where: {
+        creatorId: userId,
+        isDeleted: false,
+        questionEvaluationScore: { not: null }
+      },
+      _avg: { questionEvaluationScore: true },
+    })
+
+    // Day streak calculation
+    const dayStreak = await prisma.question.findMany({
+      where: { creatorId: userId, isDeleted: false },
+      select: { createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    })
+
+    // Recent activities
+    const recentActivities = await prisma.question.findMany({
+      where: {
+        creatorId: userId,
+        isDeleted: false,
+        activity: { isDeleted: false },
+      },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        questionEvaluationScore: true,
+        activity: {
+          select: { id: true, name: true },
         },
-      }),
-      // Questions last week (for comparison)
-      prisma.question.count({
-        where: {
-          creatorId: userId,
-          isDeleted: false,
-          createdAt: { gte: twoWeeksAgo, lt: oneWeekAgo },
-        },
-      }),
-      // Total groups
-      prisma.groupUser.count({
-        where: { userId, group: { isDeleted: false } },
-      }),
-      // Average quality score from questions
-      prisma.question.aggregate({
-        where: {
-          creatorId: userId,
-          isDeleted: false,
-          questionEvaluationScore: { not: null }
-        },
-        _avg: { questionEvaluationScore: true },
-      }),
-      // Calculate day streak (simplified - based on consecutive days with questions)
-      prisma.question.findMany({
-        where: { creatorId: userId, isDeleted: false },
-        select: { createdAt: true },
-        orderBy: { createdAt: 'desc' },
-        take: 30,
-      }),
-      // Recent activity feed
-      prisma.question.findMany({
-        where: {
-          creatorId: userId,
-          isDeleted: false,
-          activity: { isDeleted: false },
-        },
-        select: {
-          id: true,
-          content: true,
-          createdAt: true,
-          questionEvaluationScore: true,
-          activity: {
-            select: { id: true, name: true },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      }),
-      // User certificates with progress
-      prisma.studentCertificate.findMany({
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    })
+
+    // User certificates (optional - may fail if no certificates)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let userCertificates: any[] = []
+    try {
+      userCertificates = await prisma.studentCertificate.findMany({
         where: { studentId: userId },
         include: {
           certificate: {
@@ -127,8 +125,11 @@ async function getUserStats(userId: string) {
         },
         orderBy: { enrollmentDate: 'desc' },
         take: 3,
-      }),
-    ])
+      })
+    } catch (certError) {
+      console.error('Failed to load certificates:', certError)
+      // Continue without certificates
+    }
 
     // Calculate week change
     const weekChange = questionsThisWeek - questionsLastWeek
@@ -189,9 +190,10 @@ async function getUserStats(userId: string) {
           enrollment_date: uc.enrollmentDate,
           completion_date: uc.completionDate,
           progress_percentage: progressPercentage,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           activities: activities
-            .filter(ca => ca.activity) // Filter out any activities with missing relations
-            .map(ca => ({
+            .filter((ca: any) => ca.activity) // Filter out any activities with missing relations
+            .map((ca: any) => ({
               activity_id: ca.activityId,
               activity_name: ca.activity?.name || 'Unknown Activity',
               required: ca.required,
@@ -611,7 +613,8 @@ export default async function DashboardPage() {
                         Activities ({cert.activities.length})
                       </h4>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {cert.activities.map((activity) => (
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {cert.activities.map((activity: any) => (
                           <div key={activity.activity_id} className="flex items-center justify-between p-2 rounded hover:bg-gray-50">
                             <div className="flex items-center space-x-3 flex-1 min-w-0">
                               {/* Status Icon */}
