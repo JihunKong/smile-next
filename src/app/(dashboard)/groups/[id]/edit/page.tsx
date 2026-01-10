@@ -53,6 +53,10 @@ export default function GroupEditPage({ params }: { params: Promise<{ id: string
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
 
+  // Image upload
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+
   useEffect(() => {
     if (session) {
       loadGroupData()
@@ -165,6 +169,88 @@ export default function GroupEditPage({ params }: { params: Promise<{ id: string
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete group')
       setDeleting(false)
+    }
+  }
+
+  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setError('Invalid file type. Please upload JPEG, PNG, GIF, or WebP.')
+      return
+    }
+
+    // Validate file size (8MB max)
+    if (file.size > 8 * 1024 * 1024) {
+      setError('File too large. Maximum size is 8MB.')
+      return
+    }
+
+    // Show preview
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setImagePreview(event.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+
+    // Upload
+    setUploadingImage(true)
+    setError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch(`/api/groups/${groupId}/image`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to upload image')
+      }
+
+      const data = await res.json()
+      setGroup((prev) => (prev ? { ...prev, groupImageUrl: data.imageUrl } : null))
+      setImagePreview(null)
+      setSuccess('Image uploaded successfully!')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload image')
+      setImagePreview(null)
+    } finally {
+      setUploadingImage(false)
+      // Reset the file input
+      e.target.value = ''
+    }
+  }
+
+  async function handleImageDelete() {
+    if (!group?.groupImageUrl) return
+
+    setUploadingImage(true)
+    setError(null)
+
+    try {
+      const res = await fetch(`/api/groups/${groupId}/image`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to delete image')
+      }
+
+      setGroup((prev) => (prev ? { ...prev, groupImageUrl: null } : null))
+      setSuccess('Image removed successfully!')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete image')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -412,6 +498,78 @@ export default function GroupEditPage({ params }: { params: Promise<{ id: string
             </button>
           </div>
         </form>
+
+        {/* Group Image Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Group Image</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Upload a custom image for your group. This will be displayed on the group card and header.
+          </p>
+
+          <div className="flex items-start gap-6">
+            {/* Current Image Preview */}
+            <div className="flex-shrink-0">
+              <div
+                className="w-32 h-32 rounded-xl overflow-hidden flex items-center justify-center text-white text-3xl font-bold"
+                style={{
+                  background: imagePreview
+                    ? `url(${imagePreview}) center/cover`
+                    : group.groupImageUrl
+                      ? `url(${group.groupImageUrl}) center/cover`
+                      : `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)`,
+                }}
+              >
+                {!imagePreview && !group.groupImageUrl && initials}
+              </div>
+            </div>
+
+            {/* Upload Controls */}
+            <div className="flex-1">
+              <div className="flex flex-wrap gap-3">
+                <label className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition cursor-pointer flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageSelect}
+                    disabled={uploadingImage}
+                    className="hidden"
+                  />
+                </label>
+
+                {group.groupImageUrl && (
+                  <button
+                    onClick={handleImageDelete}
+                    disabled={uploadingImage}
+                    className="px-4 py-2.5 bg-red-100 hover:bg-red-200 text-red-700 font-medium rounded-lg transition flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-500 mt-3">
+                Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 8MB.
+              </p>
+
+              {uploadingImage && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-indigo-600">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Processing image...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Invite Code Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">

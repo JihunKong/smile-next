@@ -2,7 +2,8 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ActivityCard } from '@/components/activities/ActivityCard'
+import { ActivitiesClient } from './activities-client'
+import type { ActivityWithGroup } from '@/types/activities'
 
 export default async function ActivitiesPage() {
   const session = await auth()
@@ -34,6 +35,20 @@ export default async function ActivitiesPage() {
       },
     },
     orderBy: { createdAt: 'desc' },
+    take: 20, // Initial page limit
+  })
+
+  // Get total count for pagination
+  const totalCount = await prisma.activity.count({
+    where: {
+      isDeleted: false,
+      owningGroup: {
+        isDeleted: false,
+        members: {
+          some: { userId: session.user.id },
+        },
+      },
+    },
   })
 
   // Get groups where user can create activities (admin or higher)
@@ -90,39 +105,12 @@ export default async function ActivitiesPage() {
         </div>
       </section>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        {activities.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-            <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">No activities yet</h3>
-            <p className="text-gray-500 mb-4">Join a group or create your first activity to get started.</p>
-            <div className="flex items-center justify-center gap-3">
-              <Link
-                href="/groups"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--stanford-cardinal)] text-white font-medium rounded-lg hover:opacity-90 transition"
-              >
-                Browse Groups
-              </Link>
-              {groups.length > 0 && (
-                <Link
-                  href={`/groups/${groups[0].id}/activities/create`}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
-                >
-                  Create Activity
-                </Link>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {activities.map((activity) => (
-              <ActivityCard key={activity.id} activity={activity} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Client-side search/filter component */}
+      <ActivitiesClient
+        initialActivities={activities as ActivityWithGroup[]}
+        groups={groups}
+        initialTotalCount={totalCount}
+      />
     </div>
   )
 }

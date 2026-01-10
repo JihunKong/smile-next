@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { getBloomBadgeColor, getBloomLabel, formatScore, getScoreColor, formatRelativeTime } from '@/lib/activities/utils'
+import { getBloomBadgeColor, getBloomLabel, getScoreColor, formatRelativeTime } from '@/lib/activities/utils'
+import { formatAIScore } from '@/lib/responses/utils'
 import { LikeButton } from './LikeButton'
 import type { QuestionWithEvaluation } from '@/types/activities'
 
@@ -113,16 +114,16 @@ export function QuestionCard({
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-gray-500">Score:</span>
               <span className={`text-sm font-medium ${getScoreColor(question.evaluation.overallScore)}`}>
-                {formatScore(question.evaluation.overallScore)}
+                {formatAIScore(question.evaluation.overallScore)}
               </span>
             </div>
 
             {/* Sub-scores */}
             {question.evaluation.clarityScore !== null && (
               <div className="hidden sm:flex items-center gap-1 text-xs text-gray-500">
-                <span>Clarity: {formatScore(question.evaluation.clarityScore)}</span>
+                <span>Clarity: {formatAIScore(question.evaluation.clarityScore)}</span>
                 <span className="text-gray-300">|</span>
-                <span>Relevance: {formatScore(question.evaluation.relevanceScore)}</span>
+                <span>Relevance: {formatAIScore(question.evaluation.relevanceScore)}</span>
               </div>
             )}
           </div>

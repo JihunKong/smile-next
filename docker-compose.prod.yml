@@ -6,6 +6,8 @@ services:
   db:
     image: postgres:15-alpine
     container_name: smile-postgres
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: smile_db
       POSTGRES_USER: smile_user
@@ -62,6 +64,7 @@ services:
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_TRUST_HOST=true
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}

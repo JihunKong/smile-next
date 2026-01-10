@@ -46,6 +46,14 @@ export function useResponseEvaluationPolling(
   const shouldStopRef = useRef(false)
   const startTimeRef = useRef<number>(0)
 
+  // Stop polling immediately when status changes to completed or error
+  useEffect(() => {
+    if (status === 'completed' || status === 'error') {
+      shouldStopRef.current = true
+      setIsPolling(false)
+    }
+  }, [status])
+
   // Memoized fetch function without status dependency
   const fetchStatus = useCallback(async (): Promise<EvaluationData | null> => {
     try {
@@ -64,8 +72,8 @@ export function useResponseEvaluationPolling(
   }, [responseId])
 
   useEffect(() => {
-    // Don't poll if disabled or status is not pending
-    if (!enabled || initialStatus !== 'pending') {
+    // Don't poll if disabled, status is not pending, or already completed
+    if (!enabled || initialStatus !== 'pending' || status === 'completed' || status === 'error') {
       setIsPolling(false)
       return
     }
@@ -124,7 +132,7 @@ export function useResponseEvaluationPolling(
       if (intervalId) clearInterval(intervalId)
       setIsPolling(false)
     }
-  }, [enabled, initialStatus, interval, maxDuration, fetchStatus])
+  }, [enabled, initialStatus, status, interval, maxDuration, fetchStatus])
 
   return {
     status,

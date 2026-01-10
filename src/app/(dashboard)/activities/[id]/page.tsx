@@ -6,6 +6,7 @@ import { QuestionList } from '@/components/activities/QuestionList'
 import { DeleteActivityButton, QRCodeSection, ActionButtons } from './actions-client'
 import { getModeLabel, getModeBadgeColor, canManageActivity } from '@/lib/activities/utils'
 import { ActivityModes, type ActivityMode } from '@/types/activities'
+import { StudentProgressWidget } from '@/components/activities/StudentProgressWidget'
 
 // Helper to get education level label
 function getEducationLevelLabel(level: string | null): string {
@@ -302,10 +303,15 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                   Instructions
                 </h2>
                 <p className="text-sm text-blue-700">
-                  {(activity.openModeSettings as { customInstructions?: string })?.customInstructions ||
+                  {(activity.openModeSettings as { instructions?: string })?.instructions ||
                    'Ask thoughtful questions related to the topic.'}
                 </p>
               </section>
+            )}
+
+            {/* Student Progress Widget (Open Mode Pass/Fail) */}
+            {mode === ActivityModes.OPEN && (
+              <StudentProgressWidget activityId={activity.id} />
             )}
 
             {/* QR Code Invite Section */}

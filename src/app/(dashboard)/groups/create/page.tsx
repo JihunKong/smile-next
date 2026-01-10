@@ -9,7 +9,7 @@ export default function CreateGroupPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [isPrivate, setIsPrivate] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(true)
   const [requirePasscode, setRequirePasscode] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -85,6 +85,22 @@ export default function CreateGroupPage() {
               placeholder="Describe what this group is about..."
             />
             <p className="text-xs text-gray-500 mt-1">Optional. Maximum 500 characters.</p>
+          </div>
+
+          {/* Contact Information */}
+          <div>
+            <label htmlFor="contacts" className="block text-sm font-medium text-gray-700 mb-1">
+              Contact Information
+            </label>
+            <input
+              id="contacts"
+              name="contacts"
+              type="text"
+              maxLength={200}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-transparent outline-none transition"
+              placeholder="Email or phone for group inquiries"
+            />
+            <p className="text-xs text-gray-500 mt-1">Optional. How members can contact you about this group.</p>
           </div>
 
           {/* Privacy Setting */}

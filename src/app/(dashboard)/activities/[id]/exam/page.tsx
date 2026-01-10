@@ -12,6 +12,11 @@ interface ExamPageProps {
   params: Promise<{ id: string }>
 }
 
+interface ExamSettingsWithPublish extends ExamSettings {
+  is_published?: boolean
+  instructions?: string
+}
+
 export default async function ExamPage({ params }: ExamPageProps) {
   const { id: activityId } = await params
   const session = await auth()
@@ -30,9 +35,10 @@ export default async function ExamPage({ params }: ExamPageProps) {
         select: {
           id: true,
           name: true,
+          creatorId: true,
           members: {
             where: { userId: session.user.id },
-            select: { userId: true },
+            select: { userId: true, role: true },
           },
         },
       },
@@ -50,12 +56,22 @@ export default async function ExamPage({ params }: ExamPageProps) {
     notFound()
   }
 
-  const examSettings = (activity.examSettings as unknown as ExamSettings) || {
+  // Check if user is admin/creator
+  const membership = activity.owningGroup.members[0]
+  const isCreator = activity.creatorId === session.user.id
+  const isGroupOwner = activity.owningGroup.creatorId === session.user.id
+  const isAdmin = membership?.role && membership.role >= 2
+  const canManage = isCreator || isGroupOwner || isAdmin
+
+  const examSettings = (activity.examSettings as unknown as ExamSettingsWithPublish) || {
     timeLimit: 30,
     questionsToShow: 10,
     passThreshold: 60,
     maxAttempts: 1,
   }
+
+  // Check if exam is published (default to true for backwards compatibility)
+  const isPublished = examSettings.is_published !== false
 
   const attemptStatus = await getExamAttemptStatus(activityId)
   const remainingAttempts = examSettings.maxAttempts - (attemptStatus?.attemptCount || 0)
@@ -64,8 +80,63 @@ export default async function ExamPage({ params }: ExamPageProps) {
     ? Math.max(...attemptStatus.completed.map((a) => a.score || 0))
     : null
 
+  // If not published and not admin, show unavailable message
+  if (!isPublished && !canManage) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <section className="bg-gradient-to-r from-red-600 to-red-800 text-white py-8 px-4">
+          <div className="max-w-3xl mx-auto">
+            <Link
+              href={`/activities/${activityId}`}
+              className="inline-flex items-center gap-1 text-white/80 hover:text-white mb-4"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Activity
+            </Link>
+            <h1 className="text-2xl font-bold">Exam Mode</h1>
+            <p className="text-white/80">{activity.name}</p>
+          </div>
+        </section>
+        <div className="max-w-3xl mx-auto px-4 py-8">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+            <svg className="w-12 h-12 text-yellow-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m4-6a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <h2 className="text-lg font-semibold text-yellow-800 mb-2">Exam Not Available</h2>
+            <p className="text-yellow-700">
+              This exam has not been published yet. Please check back later or contact your instructor.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Unpublished Banner (for admins) */}
+      {!isPublished && canManage && (
+        <div className="bg-yellow-100 border-b border-yellow-200 px-4 py-3">
+          <div className="max-w-3xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <span className="text-yellow-800 font-medium">This exam is not published yet</span>
+            </div>
+            <Link
+              href={`/activities/${activityId}/edit`}
+              className="text-sm text-yellow-700 hover:text-yellow-900 underline"
+            >
+              Edit Settings
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <section className="bg-gradient-to-r from-red-600 to-red-800 text-white py-8 px-4">
         <div className="max-w-3xl mx-auto">

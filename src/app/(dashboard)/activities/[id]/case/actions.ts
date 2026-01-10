@@ -1,8 +1,10 @@
 'use server'
 
+import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
-import type { ActionResult, CaseSettings } from '@/types/activities'
+import type { ActionResult, CaseSettings, CaseScenario } from '@/types/activities'
+import { evaluateCaseAttempt } from '@/lib/services/caseEvaluationService'
 
 // Start a case attempt
 export async function startCaseAttempt(
@@ -157,6 +159,8 @@ export async function submitCaseAttempt(
         activity: {
           select: {
             openModeSettings: true,
+            schoolSubject: true,
+            educationLevel: true,
           },
         },
       },
@@ -177,66 +181,58 @@ export async function submitCaseAttempt(
 
     const responses = (attempt.responses as Record<string, { issues: string; solution: string }>) || {}
 
-    // Simulated AI evaluation for each scenario
-    const scenarioScores: Array<{ scenarioId: string; title: string; score: number; feedback: string }> = []
-
-    for (const scenario of caseSettings.scenarios) {
-      const response = responses[scenario.id]
-      let score = 0
-      let feedback = ''
-
-      if (response) {
-        // Simulated scoring based on response length and keywords
-        const issuesLength = response.issues?.length || 0
-        const solutionLength = response.solution?.length || 0
-
-        if (issuesLength > 200 && solutionLength > 200) {
-          score = 7 + Math.random() * 3 // 7-10
-          feedback = 'Excellent analysis with comprehensive problem identification and detailed solution.'
-        } else if (issuesLength > 100 && solutionLength > 100) {
-          score = 5 + Math.random() * 2 // 5-7
-          feedback = 'Good analysis with reasonable problem identification and solution approach.'
-        } else if (issuesLength > 50 || solutionLength > 50) {
-          score = 3 + Math.random() * 2 // 3-5
-          feedback = 'Basic analysis provided. Consider more detailed problem identification.'
-        } else {
-          score = 1 + Math.random() * 2 // 1-3
-          feedback = 'Response is too brief. More detailed analysis is required.'
-        }
-      } else {
-        score = 0
-        feedback = 'No response provided for this scenario.'
+    // Use AI evaluation service for comprehensive 4-dimensional scoring
+    const evaluationResult = await evaluateCaseAttempt(
+      caseSettings.scenarios,
+      responses,
+      {
+        subject: attempt.activity.schoolSubject || undefined,
+        educationLevel: attempt.activity.educationLevel || undefined,
       }
+    )
 
-      scenarioScores.push({
-        scenarioId: scenario.id,
-        title: scenario.title,
-        score: Math.round(score * 10) / 10,
-        feedback,
-      })
-    }
+    // Format scenario scores for response
+    const scenarioScores = evaluationResult.scenarioResults.map((r) => ({
+      scenarioId: r.scenarioId,
+      title: r.title,
+      score: r.evaluation.overallScore,
+      feedback: r.evaluation.feedback,
+      // Include 4-dimensional scores
+      understanding: r.evaluation.understanding,
+      ingenuity: r.evaluation.ingenuity,
+      criticalThinking: r.evaluation.criticalThinking,
+      realWorldApplication: r.evaluation.realWorldApplication,
+      strengths: r.evaluation.strengths,
+      improvements: r.evaluation.improvements,
+    }))
 
-    // Calculate total score (average of scenario scores)
-    const totalScore = scenarioScores.length > 0
-      ? scenarioScores.reduce((sum, s) => sum + s.score, 0) / scenarioScores.length
-      : 0
-    const passed = totalScore >= caseSettings.passThreshold
+    const totalScore = evaluationResult.overallScore
+    const passed = evaluationResult.passed
 
     // Calculate time spent
     const timeSpentSeconds = Math.floor((Date.now() - attempt.startedAt.getTime()) / 1000)
 
-    // Update attempt
+    // Update attempt with detailed evaluation results
     await prisma.caseAttempt.update({
       where: { id: attemptId },
       data: {
         status: 'completed',
         completedAt: new Date(),
         timeSpentSeconds,
-        totalScore: Math.round(totalScore * 10) / 10,
+        totalScore,
         scenarioScores: scenarioScores.reduce((acc, s) => {
-          acc[s.scenarioId] = { score: s.score, feedback: s.feedback }
+          acc[s.scenarioId] = {
+            score: s.score,
+            feedback: s.feedback,
+            understanding: s.understanding,
+            ingenuity: s.ingenuity,
+            criticalThinking: s.criticalThinking,
+            realWorldApplication: s.realWorldApplication,
+            strengths: s.strengths,
+            improvements: s.improvements,
+          }
           return acc
-        }, {} as Record<string, { score: number; feedback: string }>),
+        }, {} as Record<string, unknown>) as Prisma.InputJsonValue,
         passed,
       },
     })
@@ -244,9 +240,14 @@ export async function submitCaseAttempt(
     return {
       success: true,
       data: {
-        totalScore: Math.round(totalScore * 10) / 10,
+        totalScore,
         passed,
-        scenarioScores,
+        scenarioScores: scenarioScores.map((s) => ({
+          scenarioId: s.scenarioId,
+          title: s.title,
+          score: s.score,
+          feedback: s.feedback,
+        })),
       },
     }
   } catch (error) {

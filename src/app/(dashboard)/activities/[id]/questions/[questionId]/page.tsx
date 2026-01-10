@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { ResponseList } from '@/components/responses/ResponseList'
 import { ResponseForm } from '@/components/responses/ResponseForm'
 import { LikeButton } from '@/components/activities/LikeButton'
-import { getBloomBadgeColor, getBloomLabel, formatScore, getScoreColor, formatRelativeTime } from '@/lib/activities/utils'
+import { getBloomBadgeColor, getBloomLabel, getScoreColor, formatRelativeTime } from '@/lib/activities/utils'
+import { formatAIScore } from '@/lib/responses/utils'
 
 interface QuestionDetailPageProps {
   params: Promise<{ id: string; questionId: string }>
@@ -187,16 +188,16 @@ export default async function QuestionDetailPage({ params }: QuestionDetailPageP
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-gray-500">Score:</span>
                   <span className={`text-sm font-medium ${getScoreColor(question.evaluation.overallScore)}`}>
-                    {formatScore(question.evaluation.overallScore)}
+                    {formatAIScore(question.evaluation.overallScore)}
                   </span>
                 </div>
 
                 {/* Sub-scores */}
                 {question.evaluation.clarityScore !== null && (
                   <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <span>Clarity: {formatScore(question.evaluation.clarityScore)}</span>
+                    <span>Clarity: {formatAIScore(question.evaluation.clarityScore)}</span>
                     <span className="text-gray-300">|</span>
-                    <span>Relevance: {formatScore(question.evaluation.relevanceScore)}</span>
+                    <span>Relevance: {formatAIScore(question.evaluation.relevanceScore)}</span>
                   </div>
                 )}
               </div>

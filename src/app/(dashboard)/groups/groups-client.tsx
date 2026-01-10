@@ -10,7 +10,9 @@ interface Group {
   name: string
   description: string | null
   isPrivate: boolean
-  coverImage: string | null
+  groupImageUrl?: string | null
+  autoIconGradient?: string | null
+  coverImage?: string | null  // Legacy field
   inviteCode: string | null
   createdAt: Date
   creator: {
@@ -148,8 +150,11 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back to Dashboard */}
         <div className="mb-8">
-          <Link href="/dashboard" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-            <i className="fas fa-arrow-left mr-2"></i>Back to Dashboard
+          <Link href="/dashboard" className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Dashboard
           </Link>
         </div>
 
@@ -165,9 +170,12 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
           </div>
           <Link
             href="/groups/create"
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
           >
-            <i className="fas fa-plus mr-2"></i>Create Group
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Create Group
           </Link>
         </div>
 
@@ -188,7 +196,9 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <svg className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
             </div>
             <div>
@@ -230,15 +240,21 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
             <div className="flex space-x-2">
               <button
                 onClick={handleSearch}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
               >
-                <i className="fas fa-search mr-2"></i>Search
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Search
               </button>
               <button
                 onClick={handleClear}
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors inline-flex items-center gap-2"
               >
-                <i className="fas fa-times mr-2"></i>Clear
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Clear
               </button>
             </div>
             <div className="flex items-center space-x-4">
@@ -248,13 +264,17 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
                   onClick={() => handleViewModeChange('grid')}
                   className={`p-2 border border-gray-300 rounded-l-md ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                 >
-                  <i className="fas fa-th-large"></i>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
                 </button>
                 <button
                   onClick={() => handleViewModeChange('list')}
                   className={`p-2 border border-gray-300 rounded-r-md border-l-0 ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                 >
-                  <i className="fas fa-list"></i>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
                 </button>
               </div>
               <span className="text-sm text-gray-600">{totalGroups} groups</span>
@@ -265,7 +285,10 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <i className="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+            <svg className="animate-spin w-10 h-10 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
             <p className="text-gray-600">Loading groups...</p>
           </div>
         )}
@@ -274,8 +297,10 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
         {!loading && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                <i className="fas fa-users mr-2 text-blue-600"></i>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
                 {isAdmin ? 'All Groups' : 'My Groups'}
               </h2>
               <span className="text-sm text-gray-600">
@@ -300,14 +325,19 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
               </div>
             ) : (
               <div className="text-center py-8 bg-blue-50 rounded-lg border-2 border-dashed border-blue-200">
-                <i className="fas fa-users text-4xl text-blue-300 mb-4"></i>
+                <svg className="w-16 h-16 text-blue-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No groups yet</h3>
                 <p className="text-gray-600 mb-4">Create your first group or join public groups to get started!</p>
                 <Link
                   href="/groups/create"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-block"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
                 >
-                  <i className="fas fa-plus mr-2"></i>Create Group
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Create Group
                 </Link>
               </div>
             )}
@@ -318,8 +348,11 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
         {!loading && !isAdmin && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                <i className="fas fa-globe mr-2 text-green-600"></i>Public Groups
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Public Groups
               </h2>
               <span className="text-sm text-gray-600">
                 {filteredPublicGroups.length} group{filteredPublicGroups.length !== 1 ? 's' : ''} available
@@ -343,7 +376,9 @@ export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: 
               </div>
             ) : (
               <div className="text-center py-8 bg-green-50 rounded-lg border-2 border-dashed border-green-200">
-                <i className="fas fa-globe text-4xl text-green-300 mb-4"></i>
+                <svg className="w-16 h-16 text-green-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No public groups available</h3>
                 <p className="text-gray-600">All available public groups have been joined or there are no public groups yet.</p>
               </div>

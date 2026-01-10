@@ -115,6 +115,34 @@ export interface CreateQuestionFormData {
 // Learning Mode Settings
 // ============================================================================
 
+// Open Mode Settings (Pass/Fail Requirements)
+export interface OpenModeSettings {
+  // Pass/Fail toggle
+  isPassFailEnabled: boolean
+  // Required number of questions (1-100)
+  requiredQuestionCount: number
+  // Required average Bloom's level (1.0-6.0)
+  requiredAvgLevel: number
+  // Required average AI score (1.0-10.0)
+  requiredAvgScore: number
+  // Required peer ratings to give (0-100)
+  peerRatingsRequired: number
+  // Required peer responses to give (0-100)
+  peerResponsesRequired: number
+  // Custom instructions for students
+  customInstructions: string
+}
+
+export const defaultOpenModeSettings: OpenModeSettings = {
+  isPassFailEnabled: false,
+  requiredQuestionCount: 1,
+  requiredAvgLevel: 2.0,
+  requiredAvgScore: 5.0,
+  peerRatingsRequired: 0,
+  peerResponsesRequired: 0,
+  customInstructions: '',
+}
+
 // Exam Mode Settings
 export interface ExamSettings {
   timeLimit: number // in minutes
@@ -167,6 +195,7 @@ export interface CaseSettings {
   maxAttempts: number
   passThreshold: number // score 0-10
   instructions?: string // Teacher's custom instructions (Flask compatibility)
+  is_published?: boolean // Whether the case study is visible to students
 }
 
 export const defaultCaseSettings: CaseSettings = {

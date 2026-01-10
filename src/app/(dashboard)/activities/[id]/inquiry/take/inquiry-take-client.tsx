@@ -195,6 +195,12 @@ export function InquiryTakeClient({
 
           <div className="space-y-3">
             <Link
+              href={`/activities/${activityId}/inquiry/${attemptId}/results`}
+              className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              View Detailed Results
+            </Link>
+            <Link
               href={`/activities/${activityId}`}
               className="block w-full px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition"
             >

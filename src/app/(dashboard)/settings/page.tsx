@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useDisplaySettings, Theme, Language, ItemsPerPage } from '@/hooks/useDisplaySettings'
 
 interface UserProfile {
   firstName: string | null
@@ -15,6 +16,7 @@ export default function SettingsPage() {
   const { data: session, update } = useSession()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('account')
+  const { settings: displaySettings, setTheme, setLanguage, setItemsPerPage, isLoaded: displaySettingsLoaded } = useDisplaySettings()
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -172,6 +174,7 @@ export default function SettingsPage() {
     { id: 'password', label: 'Password', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
     { id: 'notifications', label: 'Notifications', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
     { id: 'privacy', label: 'Privacy', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+    { id: 'display', label: 'Display', icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' },
     { id: 'danger', label: 'Danger Zone', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' },
   ]
 
@@ -398,6 +401,96 @@ export default function SettingsPage() {
                   <button
                     className="mt-6 px-6 py-2 bg-[#8C1515] text-white rounded-lg hover:opacity-90"
                     onClick={() => setMessage({ type: 'success', text: 'Privacy settings saved!' })}
+                  >
+                    Save Settings
+                  </button>
+                </div>
+              )}
+
+              {/* Display Tab */}
+              {activeTab === 'display' && (
+                <div>
+                  <h2 className="text-lg font-semibold text-[#2E2D29] mb-6">Display Settings</h2>
+                  <div className="space-y-6">
+                    {/* Color Theme */}
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Color Theme
+                      </label>
+                      <div className="flex flex-wrap gap-3">
+                        {[
+                          { value: 'light' as Theme, label: 'Light' },
+                          { value: 'dark' as Theme, label: 'Dark' },
+                          { value: 'auto' as Theme, label: 'Auto' },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => setTheme(option.value)}
+                            className={`px-4 py-2 rounded-lg border transition-colors ${
+                              displaySettings.theme === option.value
+                                ? 'bg-[#8C1515] text-white border-[#8C1515]'
+                                : 'bg-white text-gray-700 border-gray-300 hover:border-[#8C1515]'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-sm text-gray-500">
+                        {displaySettings.theme === 'auto'
+                          ? 'Theme will match your system preferences'
+                          : `Using ${displaySettings.theme} theme`}
+                      </p>
+                    </div>
+
+                    {/* Language */}
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Language
+                      </label>
+                      <select
+                        value={displaySettings.language}
+                        onChange={(e) => setLanguage(e.target.value as Language)}
+                        className="w-full md:w-64 px-4 py-2 text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8C1515] focus:border-transparent bg-white"
+                      >
+                        <option value="en">English</option>
+                        <option value="es">Espanol</option>
+                        <option value="fr">Francais</option>
+                        <option value="de">Deutsch</option>
+                      </select>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Select your preferred language for the interface
+                      </p>
+                    </div>
+
+                    {/* Items Per Page */}
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Items Per Page
+                      </label>
+                      <div className="flex flex-wrap gap-3">
+                        {[10, 25, 50, 100].map((count) => (
+                          <button
+                            key={count}
+                            onClick={() => setItemsPerPage(count as ItemsPerPage)}
+                            className={`px-4 py-2 rounded-lg border transition-colors ${
+                              displaySettings.itemsPerPage === count
+                                ? 'bg-[#8C1515] text-white border-[#8C1515]'
+                                : 'bg-white text-gray-700 border-gray-300 hover:border-[#8C1515]'
+                            }`}
+                          >
+                            {count}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Number of items to show in lists and tables
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    className="mt-6 px-6 py-2 bg-[#8C1515] text-white rounded-lg hover:opacity-90"
+                    onClick={() => setMessage({ type: 'success', text: 'Display settings saved!' })}
                   >
                     Save Settings
                   </button>

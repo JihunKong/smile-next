@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { QRCodeCanvas } from 'qrcode.react'
 import { getRoleLabel } from '@/lib/groups/utils'
 import { GroupRoles, type GroupRole } from '@/types/groups'
+import { ActivityCard } from '@/components/activities/ActivityCard'
+import type { ActivityWithGroup } from '@/types/activities'
 
 interface GroupMember {
   id: string
@@ -47,9 +49,10 @@ interface GroupData {
 
 interface ActivityData {
   id: string
-  title: string
+  name: string
   description: string | null
   mode: number
+  aiRatingEnabled: boolean
   createdAt: string
   creator: {
     id: string
@@ -57,6 +60,11 @@ interface ActivityData {
     lastName: string | null
     username: string | null
     avatarUrl: string | null
+  }
+  owningGroup: {
+    id: string
+    name: string
+    creatorId: string
   }
   _count: {
     questions: number
@@ -100,7 +108,7 @@ export function GroupDetailClient({
   const sortedActivities = [...activities].sort((a, b) => {
     if (sortOrder === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     if (sortOrder === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    if (sortOrder === 'name') return a.title.localeCompare(b.title)
+    if (sortOrder === 'name') return a.name.localeCompare(b.name)
     return 0 // default order
   })
 
@@ -388,7 +396,7 @@ export function GroupDetailClient({
               {/* Create Activity Button */}
               {canManage && (
                 <Link
-                  href={`/activities/create?groupId=${group.id}`}
+                  href={`/groups/${group.id}/activities/create`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--stanford-cardinal)] text-white rounded-lg hover:bg-[var(--stanford-cardinal-dark)] transition-colors text-sm font-medium"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -412,78 +420,11 @@ export function GroupDetailClient({
           ) : (
             <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4'}>
               {sortedActivities.map((activity) => (
-                <div
+                <ActivityCard
                   key={activity.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-gray-900">{activity.title}</h3>
-                    <span className="text-sm text-blue-600 flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {activity._count.questions}
-                    </span>
-                  </div>
-                  {activity.description && (
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{activity.description}</p>
-                  )}
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mb-4">
-                    <span className="flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      0 responses
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                      0 ratings
-                    </span>
-                    <span className="capitalize px-2 py-0.5 bg-gray-100 rounded">
-                      {activity.mode === 0 ? 'Open' : activity.mode === 1 ? 'Exam' : activity.mode === 2 ? 'Inquiry' : 'Case'} Mode
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>
-                      <svg className="inline w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Created {new Date(activity.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  {/* Flask-style View + Edit Buttons */}
-                  <div className="flex gap-2 mt-4">
-                    <Link
-                      href={`/activities/${activity.id}`}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      View
-                    </Link>
-                    {canManage && (
-                      <Link
-                        href={`/activities/${activity.id}/edit`}
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        Edit
-                      </Link>
-                    )}
-                    <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                      <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+                  activity={activity as unknown as ActivityWithGroup}
+                  showGroup={false}
+                />
               ))}
             </div>
           )}

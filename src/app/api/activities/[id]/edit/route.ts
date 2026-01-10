@@ -29,6 +29,7 @@ export async function GET(
         topic: true,
         hideUsernames: true,
         isAnonymousAuthorAllowed: true,
+        openModeSettings: true,
         examSettings: true,
         inquirySettings: true,
         creatorId: true,
@@ -85,6 +86,7 @@ export async function GET(
       topic: activity.topic,
       hideUsernames: activity.hideUsernames,
       isAnonymousAuthorAllowed: activity.isAnonymousAuthorAllowed,
+      openModeSettings: activity.openModeSettings,
       examSettings: activity.examSettings,
       inquirySettings: activity.inquirySettings,
       owningGroup: {
@@ -163,6 +165,9 @@ export async function PATCH(
     }
 
     // Mode-specific settings
+    if (activity.mode === 0 && body.openModeSettings) {
+      updateData.openModeSettings = body.openModeSettings
+    }
     if (activity.mode === 1 && body.examSettings) {
       updateData.examSettings = body.examSettings
     }

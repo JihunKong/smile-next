@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface Message {
   id: string
@@ -15,6 +16,7 @@ interface Message {
 }
 
 export default function MessagesPage() {
+  const router = useRouter()
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -150,7 +152,10 @@ export default function MessagesPage() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  onClick={() => !message.isRead && markAsRead(message.id)}
+                  onClick={() => {
+                    if (!message.isRead) markAsRead(message.id)
+                    router.push(`/messages/${message.id}`)
+                  }}
                   className={`p-4 hover:bg-gray-50 cursor-pointer ${
                     !message.isRead ? 'bg-blue-50' : ''
                   }`}

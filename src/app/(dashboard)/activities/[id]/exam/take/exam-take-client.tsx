@@ -230,7 +230,16 @@ export function ExamTakeClient({
     }
   }, [])
 
-  const currentQuestion = questions[currentIndex]
+  // Ensure currentIndex is within valid range
+  const safeCurrentIndex = Math.min(currentIndex, questions.length - 1)
+  const currentQuestion = questions.length > 0 ? questions[safeCurrentIndex] : null
+
+  // Auto-correct currentIndex if out of bounds
+  useEffect(() => {
+    if (questions.length > 0 && currentIndex >= questions.length) {
+      setCurrentIndex(questions.length - 1)
+    }
+  }, [currentIndex, questions.length])
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return
@@ -255,8 +264,9 @@ export function ExamTakeClient({
   }
 
   async function handleAnswerChange(choiceIndex: number) {
+    if (!currentQuestion) return
+
     const newAnswers = { ...answers }
-    const choice = currentQuestion.choices[choiceIndex]
 
     // Single choice selection - store the index as string
     newAnswers[currentQuestion.id] = [choiceIndex.toString()]
@@ -284,6 +294,8 @@ export function ExamTakeClient({
   }
 
   function toggleFlag() {
+    if (!currentQuestion) return
+
     const newFlagged = new Set(flaggedQuestions)
     if (newFlagged.has(currentQuestion.id)) {
       newFlagged.delete(currentQuestion.id)
@@ -338,6 +350,43 @@ export function ExamTakeClient({
               {results.correctAnswers} / {results.totalQuestions} correct
             </div>
           </div>
+
+          <div className="space-y-3">
+            <Link
+              href={`/activities/${activityId}/exam`}
+              className="block w-full px-4 py-2 text-white rounded-lg hover:opacity-90 transition"
+              style={{ backgroundColor: '#8C1515' }}
+            >
+              Back to Exam Overview
+            </Link>
+            <Link
+              href={`/activities/${activityId}`}
+              className="block w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+            >
+              Back to Activity
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Handle case when no questions are available
+  if (questions.length === 0 || !currentQuestion) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 bg-red-100">
+            <svg className="w-10 h-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+
+          <h1 className="text-2xl font-bold text-red-600 mb-2">No Questions Available</h1>
+
+          <p className="text-gray-600 mb-6">
+            This exam has no questions available. Please contact your instructor.
+          </p>
 
           <div className="space-y-3">
             <Link

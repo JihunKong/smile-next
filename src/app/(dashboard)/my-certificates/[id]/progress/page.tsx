@@ -53,6 +53,8 @@ export default function CertificateProgressPage() {
   const [progress, setProgress] = useState<CertificateProgress | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
 
   const fetchProgress = async () => {
     try {
@@ -80,6 +82,85 @@ export default function CertificateProgressPage() {
   const handleRefresh = () => {
     setIsRefreshing(true)
     fetchProgress()
+  }
+
+  const handleDownloadCertificate = async () => {
+    setIsDownloading(true)
+    setDownloadError(null)
+
+    try {
+      const response = await fetch(`/api/my-certificates/${enrollmentId}/download-pdf`)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to download certificate')
+      }
+
+      // Check content type
+      const contentType = response.headers.get('content-type')
+
+      if (contentType?.includes('application/pdf')) {
+        // Download as PDF
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = response.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] ||
+          `Certificate_${progress?.verificationCode || 'download'}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else if (contentType?.includes('text/html')) {
+        // Fallback: Open HTML in new tab for manual printing
+        const html = await response.text()
+        const blob = new Blob([html], { type: 'text/html' })
+        const url = window.URL.createObjectURL(blob)
+        window.open(url, '_blank')
+        // Note: URL will be revoked when tab is closed by browser
+      } else {
+        throw new Error('Unexpected response format')
+      }
+    } catch (error) {
+      console.error('Failed to download certificate:', error)
+      setDownloadError(error instanceof Error ? error.message : 'Failed to download certificate')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const handleShare = async () => {
+    if (!progress) return
+
+    const shareUrl = `${window.location.origin}/verify/${progress.verificationCode}`
+    const shareText = `I completed the ${progress.certificate.name} certificate program!`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: progress.certificate.name,
+          text: shareText,
+          url: shareUrl,
+        })
+      } catch (err) {
+        // User cancelled or share failed, fall back to clipboard
+        if ((err as Error).name !== 'AbortError') {
+          await copyToClipboard(shareUrl)
+        }
+      }
+    } else {
+      await copyToClipboard(shareUrl)
+    }
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      alert('Verification link copied to clipboard!')
+    } catch (err) {
+      console.error('Failed to copy:', err)
+      alert(`Copy this link to share: ${text}`)
+    }
   }
 
   if (!session) {
@@ -134,13 +215,32 @@ export default function CertificateProgressPage() {
                 </div>
               </div>
               <div className="flex space-x-3">
-                <button className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download Certificate
+                <button
+                  onClick={handleDownloadCertificate}
+                  disabled={isDownloading}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isDownloading ? (
+                    <>
+                      <svg className="w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download Certificate
+                    </>
+                  )}
                 </button>
-                <button className="inline-flex items-center px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50">
+                <button
+                  onClick={handleShare}
+                  className="inline-flex items-center px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50"
+                >
                   <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                   </svg>
@@ -148,6 +248,13 @@ export default function CertificateProgressPage() {
                 </button>
               </div>
             </div>
+            {downloadError && (
+              <div className="mt-4 p-3 bg-red-50 rounded border border-red-200">
+                <p className="text-sm text-red-600">
+                  <strong>Download Error:</strong> {downloadError}
+                </p>
+              </div>
+            )}
             <div className="mt-4 p-3 bg-white rounded border border-green-200">
               <p className="text-sm text-gray-600">
                 <strong>Verification Code:</strong>{' '}

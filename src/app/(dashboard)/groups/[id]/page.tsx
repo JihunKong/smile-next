@@ -50,7 +50,13 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
       owningGroupId: id,
       isDeleted: false,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      mode: true,
+      aiRatingEnabled: true,
+      createdAt: true,
       creator: {
         select: { id: true, firstName: true, lastName: true, username: true, avatarUrl: true },
       },
@@ -120,11 +126,13 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
 
   const activitiesData = activities.map((a) => ({
     id: a.id,
-    title: a.name,
+    name: a.name,
     description: a.description,
     mode: a.mode,
+    aiRatingEnabled: a.aiRatingEnabled,
     createdAt: a.createdAt.toISOString(),
     creator: a.creator,
+    owningGroup: a.owningGroup,
     _count: a._count,
   }))
 

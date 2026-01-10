@@ -95,19 +95,25 @@ export function GroupCard({ group, userRole, isMember = false, onJoin, showQuest
           <p className="text-sm text-gray-600 mt-1 line-clamp-2">{group.description}</p>
         )}
 
-        {/* Stats - Flask style */}
+        {/* Stats */}
         <div className="flex justify-between items-center mt-3 bg-gray-50 rounded-lg p-3 text-sm">
-          <div className="flex items-center gap-1">
-            <i className="fas fa-users text-blue-500"></i>
+          <div className="flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
             <span className="font-medium">{group._count.members}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <i className="fas fa-clipboard-list text-green-500"></i>
+          <div className="flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
             <span className="font-medium">{group._count.activities}</span>
           </div>
           {showQuestionsCount && (
-            <div className="flex items-center gap-1">
-              <i className="fas fa-question-circle text-purple-500"></i>
+            <div className="flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <span className="font-medium">{group._count.questions ?? 0}</span>
             </div>
           )}

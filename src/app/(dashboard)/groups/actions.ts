@@ -12,7 +12,8 @@ import { GroupRoles, type ActionResult, type CreateGroupResult, type GroupRole }
 const createGroupSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
   description: z.string().max(500, 'Description is too long').optional(),
-  isPrivate: z.boolean().default(false),
+  contacts: z.string().max(200, 'Contact information is too long').optional(),
+  isPrivate: z.boolean().default(true),
   requirePasscode: z.boolean().default(false),
   passcode: z.string().min(4, 'Passcode must be at least 4 characters').max(20).optional(),
   groupType: z.enum(['StudentPaced', 'InstructorPaced']).default('StudentPaced'),
@@ -30,6 +31,7 @@ export async function createGroup(formData: FormData): Promise<CreateGroupResult
   const rawData = {
     name: formData.get('name')?.toString() ?? '',
     description: formData.get('description')?.toString() || undefined,
+    contacts: formData.get('contacts')?.toString() || undefined,
     isPrivate: formData.get('isPrivate') === 'true',
     requirePasscode: formData.get('requirePasscode') === 'true',
     passcode: formData.get('passcode')?.toString() || undefined,
@@ -56,6 +58,7 @@ export async function createGroup(formData: FormData): Promise<CreateGroupResult
       data: {
         name: data.name,
         description: data.description || null,
+        contacts: data.contacts || null,
         isPrivate: data.isPrivate,
         requirePasscode: data.requirePasscode,
         passcode: data.passcode || null,
