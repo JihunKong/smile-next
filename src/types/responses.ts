@@ -12,6 +12,7 @@ export type AIEvaluationStatus = (typeof AIEvaluationStatuses)[keyof typeof AIEv
 export const AIEvaluationRatings = {
   THUMBS_UP: 'thumbs_up',
   THUMBS_SIDEWAYS: 'thumbs_sideways',
+  THUMBS_DOWN: 'thumbs_down',
 } as const
 
 export type AIEvaluationRating = (typeof AIEvaluationRatings)[keyof typeof AIEvaluationRatings]

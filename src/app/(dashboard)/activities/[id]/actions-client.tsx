@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { QRCodeCanvas } from 'qrcode.react'
 import { deleteActivity, duplicateActivity } from '../actions'
 
 interface DeleteActivityButtonProps {
@@ -37,26 +38,14 @@ export function QRCodeSection({ activityId, inviteUrl }: QRCodeSectionProps) {
   }
 
   const handleDownloadQR = () => {
-    const svg = qrRef.current?.querySelector('svg')
-    if (!svg) return
+    const canvas = qrRef.current?.querySelector('canvas')
+    if (!canvas) return
 
-    const svgData = new XMLSerializer().serializeToString(svg)
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    const img = new Image()
-
-    img.onload = () => {
-      canvas.width = img.width
-      canvas.height = img.height
-      ctx?.drawImage(img, 0, 0)
-      const pngFile = canvas.toDataURL('image/png')
-      const downloadLink = document.createElement('a')
-      downloadLink.download = `activity-${activityId}-qr.png`
-      downloadLink.href = pngFile
-      downloadLink.click()
-    }
-
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)))
+    const pngFile = canvas.toDataURL('image/png')
+    const downloadLink = document.createElement('a')
+    downloadLink.download = `activity-${activityId}-qr.png`
+    downloadLink.href = pngFile
+    downloadLink.click()
   }
 
   return (
@@ -68,23 +57,14 @@ export function QRCodeSection({ activityId, inviteUrl }: QRCodeSectionProps) {
 
       {/* QR Code Display */}
       <div ref={qrRef} className="flex justify-center mb-4 bg-white p-4 rounded-lg border">
-        <svg viewBox="0 0 128 128" className="w-32 h-32">
-          {/* Simple QR code placeholder - in production, use react-qr-code */}
-          <rect x="0" y="0" width="128" height="128" fill="white" />
-          <rect x="8" y="8" width="32" height="32" fill="black" />
-          <rect x="16" y="16" width="16" height="16" fill="white" />
-          <rect x="20" y="20" width="8" height="8" fill="black" />
-          <rect x="88" y="8" width="32" height="32" fill="black" />
-          <rect x="96" y="16" width="16" height="16" fill="white" />
-          <rect x="100" y="20" width="8" height="8" fill="black" />
-          <rect x="8" y="88" width="32" height="32" fill="black" />
-          <rect x="16" y="96" width="16" height="16" fill="white" />
-          <rect x="20" y="100" width="8" height="8" fill="black" />
-          {/* Center pattern */}
-          <rect x="48" y="48" width="32" height="32" fill="black" />
-          <rect x="56" y="56" width="16" height="16" fill="white" />
-          <rect x="60" y="60" width="8" height="8" fill="black" />
-        </svg>
+        <QRCodeCanvas
+          value={inviteUrl}
+          size={128}
+          level="M"
+          includeMargin={true}
+          bgColor="#ffffff"
+          fgColor="#000000"
+        />
       </div>
 
       {/* Invite URL */}

@@ -71,8 +71,8 @@ export async function createActivity(formData: FormData): Promise<CreateActivity
       return { success: false, error: 'You are not a member of this group' }
     }
 
-    // Only admins and above can create activities (role >= 2)
-    if (membership.role < 2) {
+    // Only admins and above can create activities (role >= 1: Admin, Co-Owner, Owner)
+    if (membership.role < 1) {
       return { success: false, error: 'You do not have permission to create activities in this group' }
     }
 
@@ -351,9 +351,9 @@ export async function duplicateActivity(activityId: string): Promise<{ success: 
       return { success: false, error: 'Activity not found' }
     }
 
-    // Check if user is a member with permission
+    // Check if user is a member with permission (role >= 1: Admin, Co-Owner, Owner)
     const membership = activity.owningGroup.members[0]
-    if (!membership || membership.role < 2) {
+    if (!membership || membership.role < 1) {
       return { success: false, error: 'You do not have permission to duplicate this activity' }
     }
 

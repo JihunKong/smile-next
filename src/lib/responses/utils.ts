@@ -2,17 +2,23 @@ import { AIEvaluationRatings, type AIEvaluationRating, type AIEvaluationStatus }
 
 /**
  * Get badge color classes for AI evaluation rating
+ * - thumbs_up (Excellent): Green - High quality response
+ * - thumbs_sideways (Good): Yellow - Acceptable, room for improvement
+ * - thumbs_down (Try Again): Red - Needs significant improvement
  */
 export function getAIEvaluationBadgeColor(rating: AIEvaluationRating | string | null): string {
   switch (rating) {
     case AIEvaluationRatings.THUMBS_UP:
     case 'excellent':
-    case 'good':
       return 'bg-green-100 text-green-700'
     case AIEvaluationRatings.THUMBS_SIDEWAYS:
+    case 'good':
     case 'average':
-    case 'needs_improvement':
       return 'bg-yellow-100 text-yellow-700'
+    case AIEvaluationRatings.THUMBS_DOWN:
+    case 'needs_improvement':
+    case 'poor':
+      return 'bg-red-100 text-red-700'
     default:
       return 'bg-gray-100 text-gray-600'
   }
@@ -20,17 +26,23 @@ export function getAIEvaluationBadgeColor(rating: AIEvaluationRating | string | 
 
 /**
  * Get label for AI evaluation rating
+ * - thumbs_up: Excellent (score >= 8)
+ * - thumbs_sideways: Good (score 5-7.9)
+ * - thumbs_down: Try Again (score < 5)
  */
 export function getAIEvaluationLabel(rating: AIEvaluationRating | string | null): string {
   switch (rating) {
     case AIEvaluationRatings.THUMBS_UP:
     case 'excellent':
-    case 'good':
       return 'Excellent'
     case AIEvaluationRatings.THUMBS_SIDEWAYS:
+    case 'good':
     case 'average':
-    case 'needs_improvement':
       return 'Good'
+    case AIEvaluationRatings.THUMBS_DOWN:
+    case 'needs_improvement':
+    case 'poor':
+      return 'Try Again'
     default:
       return 'Pending'
   }

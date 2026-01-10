@@ -370,12 +370,15 @@ async function evaluateResponse(job: ResponseEvaluationJob): Promise<CaseEvaluat
 
 /**
  * Convert average score to rating
- * Flask doesn't have ratings, but frontend expects them
+ * Rating system (0-10 scale):
+ * - 8+: thumbs_up (Excellent) - High quality, well-thought response
+ * - 5-7.9: thumbs_sideways (Good) - Acceptable, room for improvement
+ * - <5: thumbs_down (Try Again) - Needs significant improvement or nonsensical
  */
 function scoreToRating(avgScore: number): string {
   if (avgScore >= 8) return 'thumbs_up'
-  if (avgScore >= 6) return 'thumbs_up'
-  return 'thumbs_sideways'
+  if (avgScore >= 5) return 'thumbs_sideways'
+  return 'thumbs_down'
 }
 
 /**
