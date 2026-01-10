@@ -170,30 +170,35 @@ async function getUserStats(userId: string) {
     // Get tier info
     const levelInfo = getTierInfo(totalBadgePoints)
 
-    // Process certificates with activity status
-    const processedCertificates = userCertificates.map(uc => {
-      const totalActivities = uc.certificate.activities.length
-      // For now, simplified progress calculation
-      const completedActivities = 0 // Would need to check actual completion status
-      const progressPercentage = totalActivities > 0
-        ? (completedActivities / totalActivities) * 100
-        : 0
+    // Process certificates with activity status (with null safety)
+    const processedCertificates = userCertificates
+      .filter(uc => uc.certificate) // Filter out any with missing certificate relation
+      .map(uc => {
+        const activities = uc.certificate?.activities || []
+        const totalActivities = activities.length
+        // For now, simplified progress calculation
+        const completedActivities = 0 // Would need to check actual completion status
+        const progressPercentage = totalActivities > 0
+          ? (completedActivities / totalActivities) * 100
+          : 0
 
-      return {
-        id: uc.id,
-        name: uc.certificate.name,
-        status: uc.completionDate ? 'completed' : 'in_progress',
-        enrollment_date: uc.enrollmentDate,
-        completion_date: uc.completionDate,
-        progress_percentage: progressPercentage,
-        activities: uc.certificate.activities.map(ca => ({
-          activity_id: ca.activityId,
-          activity_name: ca.activity.name,
-          required: ca.required,
-          status: 'not_started' as 'not_started' | 'in_progress' | 'passed' | 'failed', // Would need actual status check
-        })),
-      }
-    })
+        return {
+          id: uc.id,
+          name: uc.certificate?.name || 'Unknown Certificate',
+          status: uc.completionDate ? 'completed' : 'in_progress',
+          enrollment_date: uc.enrollmentDate,
+          completion_date: uc.completionDate,
+          progress_percentage: progressPercentage,
+          activities: activities
+            .filter(ca => ca.activity) // Filter out any activities with missing relations
+            .map(ca => ({
+              activity_id: ca.activityId,
+              activity_name: ca.activity?.name || 'Unknown Activity',
+              required: ca.required,
+              status: 'not_started' as 'not_started' | 'in_progress' | 'passed' | 'failed', // Would need actual status check
+            })),
+        }
+      })
 
     // Process recent activities for feed
     const processedActivities = recentActivities
