@@ -7,6 +7,7 @@ import { DeleteActivityButton, QRCodeSection, ActionButtons } from './actions-cl
 import { getModeLabel, getModeBadgeColor, canManageActivity } from '@/lib/activities/utils'
 import { ActivityModes, type ActivityMode } from '@/types/activities'
 import { StudentProgressWidget } from '@/components/activities/StudentProgressWidget'
+import { ExamModeCard, InquiryModeCard, CaseModeCard } from '@/components/activities/ModeInfoCards'
 
 // Helper to get education level label
 function getEducationLevelLabel(level: string | null): string {
@@ -111,6 +112,166 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
 
   const mode = activity.mode as ActivityMode
   const isManager = canManageActivity(session.user.id, activity.creatorId, activity.owningGroup.creatorId)
+
+  // Fetch mode-specific user attempts and data
+  let userExamAttempt: {
+    id: string
+    passed: boolean
+    score_percentage: number
+    submitted_at: string
+  } | null = null
+  let allExamAttempts: Array<{
+    id: string
+    passed: boolean
+    score_percentage: number
+    submitted_at: string
+    student_id: string
+    student_name: string
+    student_email: string
+  }> = []
+  let userInquiryAttempt: {
+    id: string
+    passed: boolean
+    submitted_at: string
+  } | null = null
+  let userCaseAttempt: {
+    id: string
+    passed: boolean
+    submitted_at: string
+  } | null = null
+  let caseConfig: {
+    num_cases_to_show?: number
+    time_per_case?: number
+    pass_threshold?: number
+    difficulty_level?: string
+    is_finalized?: boolean
+    max_attempts?: number
+  } | null = null
+  let caseAttemptsRemaining = 0
+  let canRetakeCase = false
+
+  if (mode === ActivityModes.EXAM) {
+    // Fetch user's exam attempt
+    const examAttempt = await prisma.examAttempt.findFirst({
+      where: {
+        activityId: activity.id,
+        userId: session.user.id,
+        completedAt: { not: null },
+      },
+      orderBy: { completedAt: 'desc' },
+    })
+    if (examAttempt) {
+      // Calculate score percentage from correctAnswers / totalQuestions
+      const scorePercentage = examAttempt.totalQuestions > 0
+        ? (examAttempt.correctAnswers / examAttempt.totalQuestions) * 100
+        : (examAttempt.score ?? 0)
+      userExamAttempt = {
+        id: examAttempt.id,
+        passed: examAttempt.passed ?? false,
+        score_percentage: scorePercentage,
+        submitted_at: examAttempt.completedAt?.toISOString() || '',
+      }
+    }
+
+    // Fetch all exam attempts for managers
+    if (isManager) {
+      const attempts = await prisma.examAttempt.findMany({
+        where: {
+          activityId: activity.id,
+          completedAt: { not: null },
+        },
+        include: {
+          user: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+        },
+        orderBy: { completedAt: 'desc' },
+      })
+      allExamAttempts = attempts.map((a) => {
+        const scorePercentage = a.totalQuestions > 0
+          ? (a.correctAnswers / a.totalQuestions) * 100
+          : (a.score ?? 0)
+        return {
+          id: a.id,
+          passed: a.passed ?? false,
+          score_percentage: scorePercentage,
+          submitted_at: a.completedAt?.toISOString() || '',
+          student_id: a.user.id,
+          student_name: `${a.user.firstName || ''} ${a.user.lastName || ''}`.trim() || 'Unknown',
+          student_email: a.user.email || '',
+        }
+      })
+    }
+  }
+
+  if (mode === ActivityModes.INQUIRY) {
+    // Fetch user's inquiry attempt
+    const inquiryAttempt = await prisma.inquiryAttempt.findFirst({
+      where: {
+        activityId: activity.id,
+        userId: session.user.id,
+        completedAt: { not: null },
+      },
+      orderBy: { completedAt: 'desc' },
+    })
+    if (inquiryAttempt) {
+      // Determine pass status based on questionsGenerated vs questionsRequired
+      const passed = inquiryAttempt.questionsGenerated >= inquiryAttempt.questionsRequired
+      userInquiryAttempt = {
+        id: inquiryAttempt.id,
+        passed,
+        submitted_at: inquiryAttempt.completedAt?.toISOString() || '',
+      }
+    }
+  }
+
+  if (mode === ActivityModes.CASE) {
+    // Case settings are stored in activity.openModeSettings or a separate JSON structure
+    // Check if there's case-specific settings in the activity
+    const activityCaseSettings = activity.openModeSettings as Record<string, unknown> | null
+    if (activityCaseSettings) {
+      caseConfig = {
+        num_cases_to_show: activityCaseSettings.num_cases_to_show as number | undefined,
+        time_per_case: activityCaseSettings.time_per_case as number | undefined,
+        pass_threshold: activityCaseSettings.pass_threshold as number | undefined,
+        difficulty_level: activityCaseSettings.difficulty_level as string | undefined,
+        is_finalized: activityCaseSettings.is_finalized as boolean | undefined ?? true,
+        max_attempts: activityCaseSettings.max_attempts as number | undefined,
+      }
+    } else {
+      // Default case config
+      caseConfig = {
+        num_cases_to_show: 3,
+        pass_threshold: 7,
+        is_finalized: true,
+        max_attempts: 3,
+      }
+    }
+
+    // Fetch user's case attempts
+    const caseAttempts = await prisma.caseAttempt.findMany({
+      where: {
+        activityId: activity.id,
+        userId: session.user.id,
+      },
+      orderBy: { completedAt: 'desc' },
+    })
+
+    const completedAttempt = caseAttempts.find((a) => a.completedAt)
+    if (completedAttempt) {
+      userCaseAttempt = {
+        id: completedAttempt.id,
+        passed: completedAttempt.passed ?? false,
+        submitted_at: completedAttempt.completedAt?.toISOString() || '',
+      }
+    }
+
+    // Calculate remaining attempts
+    const maxAttempts = caseConfig?.max_attempts || 1
+    const attemptCount = caseAttempts.filter((a) => a.completedAt).length
+    caseAttemptsRemaining = Math.max(0, maxAttempts - attemptCount)
+    canRetakeCase = caseAttemptsRemaining > 0 && !!completedAttempt
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -274,23 +435,120 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
       </section>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Mode-specific Info Card (Full Width) */}
+        {mode === ActivityModes.EXAM && (
+          <div className="mb-8">
+            <ExamModeCard
+              activityId={activity.id}
+              activityName={activity.name}
+              examSettings={activity.examSettings as Record<string, unknown> | undefined}
+              userAttempt={userExamAttempt}
+              isCreatorOrAdmin={isManager}
+              isPublished={true}
+              examAttempts={allExamAttempts}
+            />
+          </div>
+        )}
+
+        {mode === ActivityModes.INQUIRY && (
+          <div className="mb-8">
+            <InquiryModeCard
+              activityId={activity.id}
+              activityName={activity.name}
+              inquirySettings={activity.inquirySettings as Record<string, unknown> | undefined}
+              userAttempt={userInquiryAttempt}
+              isCreatorOrAdmin={isManager}
+            />
+          </div>
+        )}
+
+        {mode === ActivityModes.CASE && (
+          <div className="mb-8">
+            <CaseModeCard
+              activityId={activity.id}
+              activityName={activity.name}
+              caseConfig={caseConfig ?? undefined}
+              userAttempt={userCaseAttempt}
+              isCreatorOrAdmin={isManager}
+              attemptsRemaining={caseAttemptsRemaining}
+              canRetake={canRetakeCase}
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content - Questions */}
+          {/* Main Content - Questions (Open Mode only shows questions) */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Questions ({activity.questions.length})
-              </h2>
-              <QuestionList
-                questions={activity.questions}
-                activityId={activity.id}
-                currentUserId={session.user.id}
-                activityCreatorId={activity.creatorId}
-                groupCreatorId={activity.owningGroup.creatorId}
-                showActions={true}
-                likedQuestionIds={likedQuestionIds}
-              />
-            </div>
+            {mode === ActivityModes.OPEN ? (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Questions ({activity.questions.length})
+                </h2>
+                <QuestionList
+                  questions={activity.questions}
+                  activityId={activity.id}
+                  currentUserId={session.user.id}
+                  activityCreatorId={activity.creatorId}
+                  groupCreatorId={activity.owningGroup.creatorId}
+                  showActions={true}
+                  likedQuestionIds={likedQuestionIds}
+                />
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  <i className="fas fa-info-circle mr-2 text-blue-500"></i>
+                  About This Activity
+                </h2>
+                <div className="prose prose-sm max-w-none">
+                  {activity.description ? (
+                    <p className="text-gray-600 whitespace-pre-wrap">{activity.description}</p>
+                  ) : (
+                    <p className="text-gray-500 italic">No description provided.</p>
+                  )}
+                </div>
+
+                {/* Show custom instructions if available */}
+                {mode === ActivityModes.EXAM && activity.examSettings && (
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h3 className="font-medium text-blue-900 mb-2">
+                      <i className="fas fa-clipboard-list mr-2"></i>Exam Instructions
+                    </h3>
+                    <ul className="text-sm text-blue-800 space-y-1">
+                      <li>Answer all questions to the best of your ability</li>
+                      <li>You can navigate between questions during the exam</li>
+                      <li>Make sure to submit before time runs out</li>
+                    </ul>
+                  </div>
+                )}
+
+                {mode === ActivityModes.INQUIRY && activity.inquirySettings && (
+                  <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <h3 className="font-medium text-purple-900 mb-2">
+                      <i className="fas fa-lightbulb mr-2"></i>Inquiry Guidelines
+                    </h3>
+                    <ul className="text-sm text-purple-800 space-y-1">
+                      <li>Use the provided keywords to generate questions</li>
+                      <li>Focus on higher-order thinking (Bloom&apos;s Taxonomy)</li>
+                      <li>Quality is more important than quantity</li>
+                    </ul>
+                  </div>
+                )}
+
+                {mode === ActivityModes.CASE && caseConfig && (
+                  <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                    <h3 className="font-medium text-green-900 mb-2">
+                      <i className="fas fa-briefcase mr-2"></i>Case Study Guidelines
+                    </h3>
+                    <ul className="text-sm text-green-800 space-y-1">
+                      <li>Read each scenario carefully before answering</li>
+                      <li>Identify the key issues and propose solutions</li>
+                      <li>Consider real-world implications of your answers</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
