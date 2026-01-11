@@ -67,6 +67,23 @@ export function getBloomLabel(level: BloomLevel | string | null): string {
 }
 
 /**
+ * Get Bloom's level number (L1-L6) from level name
+ * Flask-compatible format
+ */
+export function getBloomLevelNumber(level: BloomLevel | string | null): number {
+  if (!level) return 0
+  const levels: Record<string, number> = {
+    'remember': 1,
+    'understand': 2,
+    'apply': 3,
+    'analyze': 4,
+    'evaluate': 5,
+    'create': 6,
+  }
+  return levels[level.toLowerCase()] || 0
+}
+
+/**
  * Check if a user can manage an activity
  */
 export function canManageActivity(

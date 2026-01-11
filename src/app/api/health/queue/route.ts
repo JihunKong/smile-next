@@ -23,7 +23,6 @@ export async function GET() {
         completed: counts.completed,
         failed: counts.failed,
         delayed: counts.delayed,
-        paused: counts.paused,
       })).catch(() => null),
       evaluationQueue.getJobCounts().then(counts => ({
         waiting: counts.waiting,
@@ -31,7 +30,6 @@ export async function GET() {
         completed: counts.completed,
         failed: counts.failed,
         delayed: counts.delayed,
-        paused: counts.paused,
       })).catch(() => null),
     ])
 

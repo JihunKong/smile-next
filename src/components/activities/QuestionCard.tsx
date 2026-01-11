@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { getBloomBadgeColor, getBloomLabel, getScoreColor, formatRelativeTime } from '@/lib/activities/utils'
+import { getBloomBadgeColor, getBloomLabel, getScoreColor, formatRelativeTime, getBloomLevelNumber } from '@/lib/activities/utils'
 import { formatAIScore } from '@/lib/responses/utils'
 import { LikeButton } from './LikeButton'
 import { PeerRating } from './PeerRating'
@@ -123,44 +123,40 @@ export function QuestionCard({
           </p>
         </Link>
 
-        {/* Footer: Stats */}
+        {/* Footer: Stats - Flask style */}
         <div className="mt-3 pt-3 border-t border-gray-100">
-          <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-            {/* Responses */}
+          <div className="flex items-center gap-3 flex-wrap text-xs">
+            {/* Responses - Green */}
             <button
               onClick={() => setShowQuickResponse(!showQuickResponse)}
-              className="flex items-center gap-1 text-gray-500 hover:text-[var(--stanford-cardinal)] transition"
+              className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 transition"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
-              {question._count.responses}
+              <span>💬</span>
+              <span>{question._count.responses}</span>
             </button>
 
-            {/* Likes */}
-            <LikeButton
-              questionId={question.id}
-              initialLiked={isLiked}
-              initialCount={question._count.likes}
-              compact
-            />
+            {/* Likes - Pink */}
+            <span className="flex items-center gap-1 text-pink-500">
+              <span>♥</span>
+              <span>{question._count.likes}</span>
+            </span>
 
-            {/* Peer Rating */}
-            <PeerRating
-              questionId={question.id}
-              initialRating={peerRating}
-              compact
-            />
+            {/* Peer Rating - Yellow */}
+            <span className="flex items-center gap-1 text-yellow-600">
+              <span>⭐</span>
+              <span>{(peerRating ?? 0).toFixed(1)}</span>
+            </span>
 
-            {/* AI Score with Tooltip */}
+            {/* AI Score - Purple (only show when evaluation exists) */}
             {question.evaluation && (
               <div
-                className="relative"
+                className="relative flex items-center gap-1"
                 onMouseEnter={() => setShowScoreTooltip(true)}
                 onMouseLeave={() => setShowScoreTooltip(false)}
               >
-                <span className={`font-medium ${getScoreColor(question.evaluation.overallScore)}`}>
-                  AI: {formatAIScore(question.evaluation.overallScore)}
+                <span className="text-purple-600">🤖</span>
+                <span className="text-purple-600 font-medium">
+                  {question.evaluation.overallScore?.toFixed(1) ?? '-'}
                 </span>
                 {showScoreTooltip && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-10">
@@ -184,23 +180,13 @@ export function QuestionCard({
               </div>
             )}
 
-            {/* Bloom's Level */}
+            {/* Bloom's Level - Indigo (L1-L6 format) */}
             {question.evaluation?.bloomsLevel && (
-              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getBloomBadgeColor(question.evaluation.bloomsLevel)}`}>
-                {getBloomLabel(question.evaluation.bloomsLevel).slice(0, 3)}
+              <span className="flex items-center gap-1 text-indigo-600 font-medium">
+                <span>≋</span>
+                <span>L{getBloomLevelNumber(question.evaluation.bloomsLevel)}</span>
               </span>
             )}
-
-            {/* Total Score */}
-            <div
-              className="relative"
-              onMouseEnter={() => setShowScoreTooltip(true)}
-              onMouseLeave={() => setShowScoreTooltip(false)}
-            >
-              <span className="font-bold text-[var(--stanford-cardinal)]">
-                {totalScore.toFixed(1)}
-              </span>
-            </div>
           </div>
         </div>
 
