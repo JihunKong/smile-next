@@ -161,6 +161,17 @@ export function AttemptHistoryList({
                   Resume
                 </Link>
               )}
+
+              {/* View Details Button for Completed */}
+              {isCompleted && (
+                <Link
+                  href={`/activities/${activityId}/${mode}/${attempt.id}/results`}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                  style={{ backgroundColor: '#4f46e5' }}
+                >
+                  View Details
+                </Link>
+              )}
             </div>
           </div>
         )

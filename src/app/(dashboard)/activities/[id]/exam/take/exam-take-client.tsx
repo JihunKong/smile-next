@@ -248,13 +248,13 @@ export function ExamTakeClient({
     const result = await submitExamAttempt(attemptId)
 
     if (result.success && result.data) {
-      setResults(result.data)
-      setShowResults(true)
+      // Redirect to the detailed results page
+      router.push(`/activities/${activityId}/exam/${attemptId}/results`)
     } else {
       alert(result.error || 'Failed to submit exam')
       setIsSubmitting(false)
     }
-  }, [attemptId, isSubmitting])
+  }, [attemptId, activityId, isSubmitting, router])
 
   function confirmSubmit() {
     if (confirm('Are you absolutely sure you want to submit your exam? This action cannot be undone.')) {

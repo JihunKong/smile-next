@@ -305,7 +305,7 @@ export default function CaseAttemptsPage() {
                         </span>
                       </div>
                       <Link
-                        href={`/activities/${activityId}/case/results?attempt=${attempt.id}`}
+                        href={`/activities/${activityId}/case/${attempt.id}/results`}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg"
                         style={{ backgroundColor: '#4f46e5', color: '#ffffff' }}
                       >

@@ -196,6 +196,11 @@ export interface CaseSettings {
   passThreshold: number // score 0-10
   instructions?: string // Teacher's custom instructions (Flask compatibility)
   is_published?: boolean // Whether the case study is visible to students
+  // Flask-compatible configuration fields
+  source_material?: string // Source chapter/article text for AI generation
+  num_cases_to_show?: number // Number of cases shown to students (from pool)
+  difficulty_level?: string // "basic", "intermediate", "professional"
+  anonymize_leaderboard?: boolean // Whether to anonymize student names on leaderboard
 }
 
 export const defaultCaseSettings: CaseSettings = {

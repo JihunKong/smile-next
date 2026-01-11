@@ -2,8 +2,8 @@
   "cookies": [
     {
       "name": "authjs.csrf-token",
-      "value": "061559f78ae912474519463e6c7c46195b15307aaab7945d5137fad244eb857e%7C2072b16f84eee22f3b08c64ead35943dc24df6bda6ccbc30d7ad9a838702ff47",
-      "domain": "localhost",
+      "value": "997e5d2acb3c67415ab9abb2238f7beae23a20a22f00432c153375b73a74cb9d%7Cb8fc7a5eecbe3544faf3ed96934acd7e5a83a0fff2877ba94ae005eb75358c8d",
+      "domain": "13.209.198.95",
       "path": "/",
       "expires": -1,
       "httpOnly": true,
@@ -12,8 +12,8 @@
     },
     {
       "name": "authjs.callback-url",
-      "value": "http%3A%2F%2Flocalhost%3A3000%2Fauth%2Flogin",
-      "domain": "localhost",
+      "value": "http%3A%2F%2F13.209.198.95%2Fauth%2Flogin",
+      "domain": "13.209.198.95",
       "path": "/",
       "expires": -1,
       "httpOnly": true,
@@ -22,10 +22,10 @@
     },
     {
       "name": "authjs.session-token",
-      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoicWgwVDNrWHBkdnc1LUM0c0wyR1BuTXZudGtOYk9HN25LajFmb2N6Z3loaGZvTHY0T1RoSV9iUWo5am11cnQ3NW9IOHpPNEtnck80YUFHc0Q5aFd5MHcifQ..2eXo5fxB6ZosqbY_Wa0AGw.omjuWWkt3Yw2X1qmnPuTnJiE72ygxTDsOcdrdGpYlYzozEB9sMs8IqZn0vm42LlEkxhE00piCbmMBBULvcLnE_kvoqpdLQ8SHe8ZCOoQhG8__2-ZtmlKreDnP7baYC3DVLG_6j9OXZp2QAjMYDVYXvJiPJfKfPDZWO-dKFtdeCke2VRt9DiC-3gc3ei9OlbWEI5zSxIkT7-HGLWVyypF2voSFNIMp7YPTXBF2HbGegCSgkK-PPIRzXcQ8UC1FJYm_z4II51Hgx9ey17KI8sPQD2ltmzKmz1t-W_lNgGsc_0oReXEYNXLQrTXFVAY6i3w-lEPCs7PlOSlSpO_yHMPeA.DgGFBA0H5yKodwiE9LeqjeZZtqEZRSttN8ZAbgGNB0M",
-      "domain": "localhost",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiVDZKVTdGUGVtellsak1YcnRIV1JMc1JPc1dnMF9peVlsQUFBWnNSX1JzTlk4RTZJRTJzYlJvaWNMSjNpQVVpd1ZkRzBXOHp0Rkd4T0lhaGduWFJWN3cifQ..fO1kGQLqL5NpW4VCyeStEA.TU7K8FBcUQGiR7G1oXjA1QqdWf2yVkTS1Uk65EVFlKtCy33D_5exvAdwv6qu3c7sa65v1phPtLQ2eDnG9BQQgPnVA6ShJut9fSsQdafcFdHRCnruFZS6no_kN1It9mFhkP4KOYBAIGcoMZs1c7vDkgVbi8MGYo3XA7T9z1Fky1dvqkVmFcxMkQbaerDxnetCRk1bvkubm9qRZeoT9E2YOrMNboWKdg1QSPri77R53SWedf1fGoCPpD2-qkd7lzZYTEgf_szcClKyS-SUVfjK3vFTPCgcCJUwClG-osibztzE_-Qmp0-XrlOocDbe_jTywUi9RAa0AmHPSnYR-KAgSw.lcGQgrBjDASydWqm8syyelDMVyddHYwLdtbY9aQfRxU",
+      "domain": "13.209.198.95",
       "path": "/",
-      "expires": 1770285302.808606,
+      "expires": 1770623803.206691,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
