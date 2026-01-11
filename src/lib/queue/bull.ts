@@ -126,9 +126,17 @@ export interface LeaderboardJob {
  * Add a question evaluation job
  */
 export async function queueQuestionEvaluation(data: EvaluationJob) {
-  return evaluationQueue.add('evaluate-question', data, {
-    priority: 1,
-  })
+  console.log(`[Bull Queue] Adding question evaluation job for question ${data.questionId}`)
+  try {
+    const job = await evaluationQueue.add('evaluate-question', data, {
+      priority: 1,
+    })
+    console.log(`[Bull Queue] Job ${job.id} added successfully for question ${data.questionId}`)
+    return job
+  } catch (error) {
+    console.error(`[Bull Queue] Failed to add job for question ${data.questionId}:`, error)
+    throw error
+  }
 }
 
 /**
