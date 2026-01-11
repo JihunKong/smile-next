@@ -9,16 +9,30 @@ export const runtime = 'nodejs'
  */
 export async function GET() {
   try {
-    // Check queue readiness
+    // Check queue readiness - isReady() returns the queue on success, so check truthiness
     const [responseQueueReady, evalQueueReady] = await Promise.all([
-      responseEvaluationQueue.isReady().catch(() => false),
-      evaluationQueue.isReady().catch(() => false),
+      responseEvaluationQueue.isReady().then(() => true).catch(() => false),
+      evaluationQueue.isReady().then(() => true).catch(() => false),
     ])
 
-    // Get job counts
+    // Get job counts - extract only the counts
     const [responseJobCounts, evalJobCounts] = await Promise.all([
-      responseEvaluationQueue.getJobCounts().catch(() => null),
-      evaluationQueue.getJobCounts().catch(() => null),
+      responseEvaluationQueue.getJobCounts().then(counts => ({
+        waiting: counts.waiting,
+        active: counts.active,
+        completed: counts.completed,
+        failed: counts.failed,
+        delayed: counts.delayed,
+        paused: counts.paused,
+      })).catch(() => null),
+      evaluationQueue.getJobCounts().then(counts => ({
+        waiting: counts.waiting,
+        active: counts.active,
+        completed: counts.completed,
+        failed: counts.failed,
+        delayed: counts.delayed,
+        paused: counts.paused,
+      })).catch(() => null),
     ])
 
     return NextResponse.json({
