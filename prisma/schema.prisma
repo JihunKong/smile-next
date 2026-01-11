@@ -72,6 +72,8 @@ model User {
   inquiryAttempts         InquiryAttempt[]
   caseAttempts            CaseAttempt[]
   likes                   Like[]
+  responseLikes           ResponseLike[]
+  comments                Comment[]     @relation("CommentCreator")
   createdCertificates     Certificate[] @relation("CertificateCreator")
 
   @@index([email])
@@ -340,6 +342,7 @@ model Question {
   // Relations
   responses               Response[]
   likes                   Like[]
+  comments                Comment[]
   evaluation              QuestionEvaluation? @relation(fields: [questionEvaluationId], references: [id])
 
   @@index([creatorId])
@@ -386,6 +389,9 @@ model Response {
   // Timestamps
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  likes                 ResponseLike[]
 
   @@index([creatorId])
   @@index([questionId])
@@ -600,6 +606,42 @@ model Like {
   @@map("likes")
 }
 
+model ResponseLike {
+  id          String   @id @default(uuid())
+  userId      String   @map("user")
+  responseId  String   @map("response")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  response    Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, responseId])
+  @@map("response_likes")
+}
+
+model Comment {
+  id          String    @id @default(uuid())
+  content     String
+  creatorId   String    @map("creator")
+  creator     User      @relation("CommentCreator", fields: [creatorId], references: [id])
+  questionId  String    @map("question")
+  question    Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  parentId    String?   @map("parent")
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[] @relation("CommentReplies")
+  isAnonymous Boolean   @default(false) @map("is_anonymous")
+  isDeleted   Boolean   @default(false) @map("is_deleted")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([questionId])
+  @@index([creatorId])
+  @@index([parentId])
+  @@index([isDeleted])
+  @@map("comments")
+}
+
 model Leaderboard {
   id              String   @id @default(uuid())
   activityId      String   @map("activity")
@@ -778,6 +820,31 @@ model MessagePreference {
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("message_preferences")
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  type        String   // question_liked, question_responded, response_liked, comment_added, badge_earned, evaluation_completed
+  title       String
+  message     String
+  isRead      Boolean  @default(false) @map("is_read")
+
+  // Reference to related entity
+  entityType  String?  @map("entity_type") // question, response, comment, badge
+  entityId    String?  @map("entity_id")
+
+  // Additional data (JSON)
+  data        Json?    @default("{}")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 // ============================================================================
