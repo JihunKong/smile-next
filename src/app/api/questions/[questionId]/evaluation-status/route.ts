@@ -22,7 +22,7 @@ export async function GET(
     const question = await prisma.question.findUnique({
       where: { id: questionId, isDeleted: false },
       include: {
-        questionEvaluation: true,
+        evaluation: true,
         activity: {
           include: {
             owningGroup: {
@@ -49,7 +49,7 @@ export async function GET(
       )
     }
 
-    const evaluation = question.questionEvaluation
+    const evaluation = question.evaluation
 
     // If no evaluation exists or still pending
     if (!evaluation) {
@@ -113,7 +113,7 @@ export async function POST(
     const question = await prisma.question.findUnique({
       where: { id: questionId, isDeleted: false },
       include: {
-        questionEvaluation: true,
+        evaluation: true,
       },
     })
 
@@ -121,7 +121,7 @@ export async function POST(
       return NextResponse.json({ error: 'Question not found' }, { status: 404 })
     }
 
-    const evaluation = question.questionEvaluation
+    const evaluation = question.evaluation
     if (!evaluation || evaluation.evaluationStatus !== 'completed') {
       return NextResponse.json(
         { error: 'Evaluation not yet completed' },
