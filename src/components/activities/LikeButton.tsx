@@ -8,6 +8,7 @@ interface LikeButtonProps {
   initialLiked: boolean
   initialCount: number
   size?: 'sm' | 'md'
+  compact?: boolean
 }
 
 export function LikeButton({
@@ -15,6 +16,7 @@ export function LikeButton({
   initialLiked,
   initialCount,
   size = 'sm',
+  compact = false,
 }: LikeButtonProps) {
   const [liked, setLiked] = useState(initialLiked)
   const [count, setCount] = useState(initialCount)
@@ -45,11 +47,13 @@ export function LikeButton({
     })
   }
 
-  const sizeClasses = size === 'sm'
-    ? 'text-xs gap-1'
-    : 'text-sm gap-1.5'
+  const sizeClasses = compact
+    ? 'text-xs gap-0.5'
+    : size === 'sm'
+      ? 'text-xs gap-1'
+      : 'text-sm gap-1.5'
 
-  const iconSize = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'
+  const iconSize = compact ? 'w-3.5 h-3.5' : size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'
 
   return (
     <button

@@ -8,6 +8,7 @@ import { getModeLabel, getModeBadgeColor, canManageActivity } from '@/lib/activi
 import { ActivityModes, type ActivityMode } from '@/types/activities'
 import { StudentProgressWidget } from '@/components/activities/StudentProgressWidget'
 import { ExamModeCard, InquiryModeCard, CaseModeCard } from '@/components/activities/ModeInfoCards'
+import { ActivityStatsCard } from '@/components/activities/ActivityStatsCard'
 
 // Helper to get education level label
 function getEducationLevelLabel(level: string | null): string {
@@ -54,9 +55,13 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
           name: true,
           creatorId: true,
           inviteCode: true,
+          isPrivate: true,
           members: {
             where: { userId: session.user.id },
             select: { userId: true, role: true },
+          },
+          _count: {
+            select: { members: true },
           },
         },
       },
@@ -435,6 +440,16 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
       </section>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Activity Stats Card */}
+        <div className="mb-8">
+          <ActivityStatsCard
+            questionCount={activity._count.questions}
+            memberCount={activity.owningGroup._count.members}
+            likeCount={activity.numberOfLikes}
+            isPrivate={activity.owningGroup.isPrivate}
+          />
+        </div>
+
         {/* Mode-specific Info Card (Full Width) */}
         {mode === ActivityModes.EXAM && (
           <div className="mb-8">

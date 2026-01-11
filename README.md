@@ -80,8 +80,7 @@ smile-next/
 ├── docs/                  # 프로젝트 문서
 ├── workers/               # 백그라운드 워커
 ├── .env.example           # 환경 변수 템플릿
-├── Dockerfile             # Docker 빌드 설정
-└── railway.json           # Railway 배포 설정
+└── Dockerfile             # Docker 빌드 설정
 ```
 
 ## 스크립트
@@ -124,7 +123,7 @@ REDIS_URL="redis://localhost:6379"
 
 - [아키텍처](docs/ARCHITECTURE.md) - 시스템 구조 및 설계
 - [개발 가이드](docs/DEVELOPMENT.md) - 개발 환경 및 가이드라인
-- [배포 가이드](docs/DEPLOYMENT.md) - Railway 배포 방법
+- [배포 가이드](docs/DEPLOYMENT.md) - AWS Docker 배포 방법
 - [데이터베이스](docs/DATABASE.md) - Prisma 스키마 설명
 - [AI 서비스](docs/AI_SERVICES.md) - OpenAI/Claude 통합
 

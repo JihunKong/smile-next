@@ -1,195 +1,210 @@
-# SMILE Next.js - 배포 가이드
+# SMILE Next.js - AWS 배포 가이드
 
-## Railway 배포
+## AWS EC2 Docker Compose 배포
 
 ### 개요
 
-Railway는 PostgreSQL, Redis를 포함한 풀스택 배포를 지원하는 플랫폼입니다.
+Docker Compose를 사용하여 AWS EC2에 Next.js, PostgreSQL, Redis를 함께 배포합니다.
 
-### 예상 비용
+### 요구 사항
 
-| 서비스 | 월 비용 |
-|--------|---------|
-| Next.js App | ~$10-15 |
-| Bull Worker | ~$5-10 |
-| PostgreSQL | ~$5 |
-| Redis | ~$3 |
-| **Total** | **~$30-40** |
+- AWS EC2 인스턴스 (Ubuntu 22.04+)
+- Docker 및 Docker Compose 설치
+- 포트 80, 443, 3000 열림
+- 최소 2GB RAM 권장
 
-### 배포 단계
+## 배포 단계
 
-#### 1. Railway 프로젝트 생성
+### 1. EC2 인스턴스 준비
 
 ```bash
-# Railway CLI 설치
-npm install -g @railway/cli
+# Docker 설치
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-plugin
 
-# 로그인
-railway login
+# Docker 권한 설정
+sudo usermod -aG docker $USER
+newgrp docker
 
-# 프로젝트 연결 (GitHub 연동)
-railway link
+# Docker 서비스 시작
+sudo systemctl start docker
+sudo systemctl enable docker
 ```
 
-#### 2. 서비스 추가
+### 2. 프로젝트 클론
 
-Railway 대시보드에서:
+```bash
+cd /home/ubuntu
+git clone https://github.com/JihunKong/smile-next.git smile-next-repo
+cd smile-next-repo
+```
 
-1. **PostgreSQL 추가**
-   - "New" → "Database" → "PostgreSQL"
-   - 자동으로 `DATABASE_URL` 환경 변수 생성
+### 3. 환경 변수 설정
 
-2. **Redis 추가**
-   - "New" → "Database" → "Redis"
-   - 자동으로 `REDIS_URL` 환경 변수 생성
+```bash
+cp .env.example .env
+```
 
-#### 3. 환경 변수 설정
-
-Railway 대시보드 → Variables:
+`.env` 파일 수정:
 
 ```env
-# 자동 설정됨
-DATABASE_URL=...
-REDIS_URL=...
+# Database (Docker 내부 네트워크)
+DATABASE_URL="postgresql://smile_user:your_secure_password@db:5432/smile_db"
 
-# 수동 설정 필요
-NEXTAUTH_URL=https://your-app.railway.app
-NEXTAUTH_SECRET=your-secret-key
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
+# Redis (Docker 내부 네트워크)
+REDIS_URL="redis://redis:6379"
+
+# Auth
+NEXTAUTH_URL="http://your-ec2-ip:3000"
+NEXTAUTH_SECRET="your-secret-key-here"
+
+# Google OAuth (선택)
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
+
+# AI Services
+OPENAI_API_KEY="sk-..."
+ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
-#### 4. 배포
+### 4. Docker Compose 배포
 
 ```bash
-# 수동 배포
-railway up
+# 이미지 빌드 및 실행
+docker compose up -d --build
 
-# 또는 GitHub 푸시로 자동 배포
-git push origin main
+# 로그 확인
+docker compose logs -f
 ```
 
-### Dockerfile 설정
+### 5. 데이터베이스 초기화
 
-프로젝트에 포함된 `Dockerfile`:
+```bash
+# 스키마 동기화 (Docker 네트워크 내에서 실행)
+docker run --rm --network smile-net \
+  -v $(pwd):/app \
+  -w /app \
+  -e DATABASE_URL="postgresql://smile_user:your_password@db:5432/smile_db" \
+  node:20-alpine sh -c "npm install prisma@6.19.1 && npx prisma db push"
 
-```dockerfile
-FROM node:20-alpine AS base
-
-# 의존성 설치
-FROM base AS deps
-WORKDIR /app
-COPY package.json package-lock.json* ./
-COPY prisma ./prisma/
-RUN npm ci
-
-# 빌드
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npx prisma generate
-RUN npm run build
-
-# 실행
-FROM base AS runner
-WORKDIR /app
-ENV NODE_ENV production
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-CMD ["node", "server.js"]
+# 또는 localhost 포트로 실행 (PostgreSQL 포트가 호스트에 매핑된 경우)
+export DATABASE_URL="postgresql://smile_user:your_password@localhost:5432/smile_db"
+npx prisma@6.19.1 db push
 ```
 
-### railway.json 설정
+### 6. 시드 데이터 (선택)
 
-```json
-{
-  "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "NIXPACKS"
-  },
-  "deploy": {
-    "startCommand": "npm run start",
-    "healthcheckPath": "/api/health",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3
-  }
-}
+```bash
+# 테스트 사용자 생성
+docker run --rm --network smile-net \
+  -v $(pwd):/app \
+  -w /app \
+  -e DATABASE_URL="postgresql://smile_user:your_password@db:5432/smile_db" \
+  node:20-alpine sh -c "npm install && npx prisma db seed"
+```
+
+## docker-compose.yml 설정
+
+```yaml
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smile-app
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://smile_user:your_password@db:5432/smile_db
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    networks:
+      - smile-net
+
+  db:
+    image: postgres:16-alpine
+    container_name: smile-postgres
+    environment:
+      POSTGRES_USER: smile_user
+      POSTGRES_PASSWORD: your_password
+      POSTGRES_DB: smile_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"  # 호스트에서 접근 필요시
+    restart: unless-stopped
+    networks:
+      - smile-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: smile-redis
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - smile-net
+
+networks:
+  smile-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
 ```
 
 ## 도메인 설정
 
-### Railway 도메인
-
-1. Railway 대시보드 → Settings → Domains
-2. "Generate Domain" 클릭
-3. `xxx.railway.app` 형식의 도메인 생성
-
-### 커스텀 도메인
-
-1. Settings → Domains → "Add Custom Domain"
-2. 도메인 입력 (예: `smile-next.example.com`)
-3. DNS 레코드 설정:
-   ```
-   CNAME smile-next -> xxx.railway.app
-   ```
-
-### HTTPS
-
-Railway에서 자동으로 SSL 인증서 발급 및 갱신
-
-## 데이터베이스 마이그레이션
-
-### 초기 마이그레이션
+### Nginx 리버스 프록시 (선택)
 
 ```bash
-# 로컬에서 마이그레이션 파일 생성
-npx prisma migrate dev --name init
-
-# Railway에서 마이그레이션 적용
-railway run npx prisma migrate deploy
+sudo apt-get install -y nginx
 ```
 
-### 스키마 변경 시
+`/etc/nginx/sites-available/smile`:
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
 
 ```bash
-# 1. 로컬에서 스키마 수정
-# 2. 마이그레이션 생성
-npx prisma migrate dev --name add_new_field
+sudo ln -s /etc/nginx/sites-available/smile /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
 
-# 3. 커밋 & 푸시
-git add .
-git commit -m "feat(db): add new field"
-git push origin main
+### SSL (Let's Encrypt)
 
-# 4. Railway에서 마이그레이션 (자동 또는 수동)
-railway run npx prisma migrate deploy
+```bash
+sudo apt-get install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
 ```
 
 ## 모니터링
 
-### Railway Metrics
-
-- CPU 사용량
-- 메모리 사용량
-- 네트워크 트래픽
-
-### 로그 확인
-
-```bash
-# 실시간 로그
-railway logs
-
-# 또는 대시보드에서 확인
-```
-
 ### 헬스 체크
 
 ```bash
-curl https://your-app.railway.app/api/health
+curl http://localhost:3000/api/health
 ```
 
 응답:
@@ -201,60 +216,96 @@ curl https://your-app.railway.app/api/health
 }
 ```
 
+### 로그 확인
+
+```bash
+# 모든 서비스 로그
+docker compose logs -f
+
+# 특정 서비스 로그
+docker compose logs -f app
+
+# 최근 100줄
+docker compose logs --tail=100 app
+```
+
+### 컨테이너 상태
+
+```bash
+docker compose ps
+docker stats
+```
+
+## 업데이트 배포
+
+```bash
+cd /home/ubuntu/smile-next-repo
+
+# 최신 코드 가져오기
+git pull origin main
+
+# 이미지 재빌드 및 재시작
+docker compose up -d --build
+
+# 이전 이미지 정리
+docker image prune -f
+```
+
 ## 롤백
-
-### Railway 대시보드
-
-1. Deployments 탭
-2. 이전 배포 선택
-3. "Redeploy" 클릭
-
-### Git 기반
 
 ```bash
 # 이전 커밋으로 되돌리기
-git revert HEAD
-git push origin main
-# 자동 재배포
-```
+git log --oneline -5  # 커밋 확인
+git checkout <commit-hash>
 
-## CI/CD (예정)
-
-### GitHub Actions
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy to Railway
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: railwayapp/railway-action@v1
-        with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
+# 재빌드
+docker compose up -d --build
 ```
 
 ## 문제 해결
 
-### 빌드 실패
-
-1. 로그 확인: `railway logs`
-2. 로컬 빌드 테스트: `npm run build`
-3. Dockerfile 확인
-
 ### 데이터베이스 연결 오류
 
-1. DATABASE_URL 환경 변수 확인
-2. Prisma 클라이언트 생성 확인
-3. 네트워크 정책 확인
+```bash
+# PostgreSQL 컨테이너 상태 확인
+docker compose ps db
+
+# 로그 확인
+docker compose logs db
+
+# 수동 연결 테스트
+docker exec -it smile-postgres psql -U smile_user -d smile_db -c '\dt'
+```
 
 ### 메모리 부족
 
-1. Railway 플랜 업그레이드
-2. 메모리 최적화 (예: 이미지 압축)
+```bash
+# 메모리 사용량 확인
+free -h
+docker stats
+
+# 불필요한 이미지 정리
+docker system prune -a
+```
+
+### 빌드 실패
+
+```bash
+# 로컬에서 빌드 테스트
+npm run build
+
+# Docker 빌드 로그 확인
+docker compose build --no-cache 2>&1 | tee build.log
+```
+
+### 포트 충돌
+
+```bash
+# 사용 중인 포트 확인
+sudo lsof -i :3000
+sudo lsof -i :5432
+
+# 기존 컨테이너 정리
+docker compose down
+docker rm -f smile-app smile-postgres smile-redis
+```
