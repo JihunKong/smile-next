@@ -8,13 +8,27 @@
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+// Lazy initialization to avoid build-time errors
+let anthropicClient: Anthropic | null = null
+let openaiClient: OpenAI | null = null
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+function getAnthropicClient(): Anthropic {
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY || '',
+    })
+  }
+  return anthropicClient
+}
+
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || '',
+    })
+  }
+  return openaiClient
+}
 
 export interface KeywordExtractionResult {
   pool1: string[] // Concepts, theories, definitions
@@ -100,7 +114,7 @@ Return ${pool1Count} concept keywords in pool1 and ${pool2Count} action keywords
 
   try {
     // Try Claude first
-    const response = await anthropic.messages.create({
+    const response = await getAnthropicClient().messages.create({
       model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
       system: systemPrompt,
@@ -125,7 +139,7 @@ Return ${pool1Count} concept keywords in pool1 and ${pool2Count} action keywords
 
     // Fallback to OpenAI
     try {
-      const response = await openai.chat.completions.create({
+      const response = await getOpenAIClient().chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },

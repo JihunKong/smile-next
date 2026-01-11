@@ -1,8 +1,16 @@
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Lazy initialization to avoid build-time errors
+let openaiClient: OpenAI | null = null
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || '',
+    })
+  }
+  return openaiClient
+}
 
 export interface EvaluationResult {
   overallScore: number
@@ -36,7 +44,7 @@ export async function evaluateQuestion(
 ): Promise<EvaluationResult> {
   const systemPrompt = buildEvaluationPrompt(context)
 
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: process.env.OPENAI_MODEL || 'gpt-4o',
     messages: [
       { role: 'system', content: systemPrompt },
@@ -62,7 +70,7 @@ export async function generateEnhancedQuestions(
   targetBloomsLevel: string,
   context: EvaluationContext
 ): Promise<string[]> {
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: process.env.OPENAI_MODEL || 'gpt-4o',
     messages: [
       {
@@ -137,4 +145,4 @@ Be encouraging but honest in your evaluation.`
   return prompt
 }
 
-export default openai
+export default getOpenAI

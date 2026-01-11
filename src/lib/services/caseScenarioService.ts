@@ -11,13 +11,27 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import type { CaseScenario } from '@/types/activities'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+// Lazy initialization to avoid build-time errors
+let anthropicClient: Anthropic | null = null
+let openaiClient: OpenAI | null = null
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+function getAnthropicClient(): Anthropic {
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY || '',
+    })
+  }
+  return anthropicClient
+}
+
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || '',
+    })
+  }
+  return openaiClient
+}
 
 export interface GeneratedScenario extends CaseScenario {
   embeddedFlaw: string
@@ -126,7 +140,7 @@ Ensure scenarios cover different aspects of the content.`
 
   try {
     // Try Claude first
-    const claudeResponse = await anthropic.messages.create({
+    const claudeResponse = await getAnthropicClient().messages.create({
       model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
       max_tokens: 8192,
       system: systemPrompt,
@@ -150,7 +164,7 @@ Ensure scenarios cover different aspects of the content.`
     console.warn('[generateScenarios] Claude failed, trying OpenAI:', claudeError)
 
     try {
-      const openaiResponse = await openai.chat.completions.create({
+      const openaiResponse = await getOpenAIClient().chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
