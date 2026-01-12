@@ -4,9 +4,12 @@ import { useState, useEffect, type ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import SmileScoreTab from './components/SmileScoreTab'
+import InquiryJourneyTab from './components/InquiryJourneyTab'
+import CareerDirectionsTab from './components/CareerDirectionsTab'
+import StrengthSummaryTab from './components/StrengthSummaryTab'
 import AchievementsTab from './components/AchievementsTab'
-import ActivityTimelineTab from './components/ActivityTimelineTab'
 import ContributionStatsTab from './components/ContributionStatsTab'
+import ActivityTimelineTab from './components/ActivityTimelineTab'
 
 interface UserStats {
   totalQuestions: number
@@ -316,17 +319,11 @@ export default function ProfilePage() {
           <div className="p-8">
             {activeTab === 'smile-score' && <SmileScoreTab />}
 
-            {activeTab === 'inquiry-journey' && (
-              <InquiryJourneyPlaceholder />
-            )}
+            {activeTab === 'inquiry-journey' && <InquiryJourneyTab />}
 
-            {activeTab === 'career-directions' && (
-              <CareerDirectionsPlaceholder />
-            )}
+            {activeTab === 'career-directions' && <CareerDirectionsTab />}
 
-            {activeTab === 'strength-summary' && (
-              <StrengthSummaryPlaceholder />
-            )}
+            {activeTab === 'strength-summary' && <StrengthSummaryTab />}
 
             {activeTab === 'achievements' && <AchievementsTab />}
 
@@ -339,97 +336,6 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
-
-// Placeholder components for tabs that need AI integration
-function InquiryJourneyPlaceholder() {
-  return (
-    <div className="space-y-8">
-      {/* Journey Header */}
-      <div className="text-center py-8 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl border border-blue-200">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-500 rounded-full mb-4">
-          <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-          </svg>
-        </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Your Learning Journey</h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Explore your intellectual growth through questions, discoveries, and achievements over time
-        </p>
-      </div>
-
-      <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-        <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-        <p className="text-gray-600 max-w-md mx-auto">
-          The Inquiry Journey feature uses AI to analyze your questions and track your learning progression over time.
-          This feature will be available in a future update.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function CareerDirectionsPlaceholder() {
-  return (
-    <div className="space-y-8">
-      {/* Career Header */}
-      <div className="text-center py-8 bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl border border-green-200">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500 rounded-full mb-4">
-          <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-          </svg>
-        </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Career Possibilities</h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          AI-powered insights based on your inquiry patterns, interests, and learning trajectory
-        </p>
-      </div>
-
-      <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-        <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-        <p className="text-gray-600 max-w-md mx-auto">
-          The Career Directions feature uses AI to analyze your authentic questions and suggest potential career paths
-          aligned with your interests. This feature will be available in a future update.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function StrengthSummaryPlaceholder() {
-  return (
-    <div className="space-y-8">
-      {/* Summary Header */}
-      <div className="text-center py-8 bg-gradient-to-br from-purple-50 to-indigo-100 rounded-xl border border-purple-200">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-purple-500 rounded-full mb-4">
-          <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Academic Strength Profile</h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Comprehensive competency assessment based on your inquiry practices and learning engagement
-        </p>
-      </div>
-
-      <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-        <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-        </svg>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-        <p className="text-gray-600 max-w-md mx-auto">
-          The Strength Summary feature provides an AI-generated assessment of your academic competencies based on
-          question quality and learning patterns. This feature will be available in a future update.
-        </p>
       </div>
     </div>
   )

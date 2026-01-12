@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createGroup } from '../actions'
 
 export default function CreateGroupPage() {
@@ -11,6 +12,35 @@ export default function CreateGroupPage() {
   const [error, setError] = useState('')
   const [isPrivate, setIsPrivate] = useState(true)
   const [requirePasscode, setRequirePasscode] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file size (max 8MB)
+      if (file.size > 8 * 1024 * 1024) {
+        setError('Image must be less than 8MB')
+        return
+      }
+      // Validate file type
+      if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+        setError('Image must be JPEG, PNG, GIF, or WebP')
+        return
+      }
+      setSelectedImage(file)
+      setImagePreview(URL.createObjectURL(file))
+      setError('')
+    }
+  }
+
+  function handleRemoveImage() {
+    setSelectedImage(null)
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview)
+    }
+    setImagePreview(null)
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -24,6 +54,21 @@ export default function CreateGroupPage() {
     const result = await createGroup(formData)
 
     if (result.success && result.data?.groupId) {
+      // Upload image if selected
+      if (selectedImage) {
+        const imageFormData = new FormData()
+        imageFormData.append('file', selectedImage)
+
+        try {
+          await fetch(`/api/groups/${result.data.groupId}/image`, {
+            method: 'POST',
+            body: imageFormData,
+          })
+        } catch {
+          // Image upload failed, but group was created - continue
+          console.error('Failed to upload group image')
+        }
+      }
       router.push(`/groups/${result.data.groupId}`)
     } else {
       setError(result.error || 'Failed to create group')
@@ -101,6 +146,53 @@ export default function CreateGroupPage() {
               placeholder="Email or phone for group inquiries"
             />
             <p className="text-xs text-gray-500 mt-1">Optional. How members can contact you about this group.</p>
+          </div>
+
+          {/* Group Image */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Group Image
+            </label>
+            <div className="flex items-start gap-4">
+              {imagePreview ? (
+                <div className="relative">
+                  <Image
+                    src={imagePreview}
+                    alt="Group preview"
+                    width={128}
+                    height={128}
+                    className="w-32 h-32 object-cover rounded-lg border border-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <label className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-xs text-gray-500 mt-1">Upload</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+              <div className="text-sm text-gray-500">
+                <p>Optional. Upload a group cover image.</p>
+                <p className="mt-1">Supported formats: JPEG, PNG, GIF, WebP</p>
+                <p>Maximum size: 8MB</p>
+              </div>
+            </div>
           </div>
 
           {/* Privacy Setting */}

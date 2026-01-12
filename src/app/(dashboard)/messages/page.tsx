@@ -21,6 +21,8 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'inbox' | 'sent'>('inbox')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -39,6 +41,7 @@ export default function MessagesPage() {
 
     if (session) {
       setIsLoading(true)
+      setSelectedIds(new Set())
       fetchMessages()
     }
   }, [session, activeTab])
@@ -51,6 +54,60 @@ export default function MessagesPage() {
       )
     } catch (error) {
       console.error('Failed to mark as read:', error)
+    }
+  }
+
+  const toggleSelect = (messageId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId)
+      } else {
+        newSet.add(messageId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === messages.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(messages.map((m) => m.id)))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} message(s)?`)) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch('/api/messages/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messageIds: Array.from(selectedIds),
+          type: activeTab,
+        }),
+      })
+
+      if (response.ok) {
+        setMessages((prev) => prev.filter((m) => !selectedIds.has(m.id)))
+        setSelectedIds(new Set())
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to delete messages')
+      }
+    } catch (error) {
+      console.error('Failed to delete messages:', error)
+      alert('Failed to delete messages')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -121,6 +178,59 @@ export default function MessagesPage() {
           </div>
         </div>
 
+        {/* Bulk Actions Bar */}
+        {messages.length > 0 && (
+          <div className="bg-white rounded-lg shadow mb-4 p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              >
+                <div
+                  className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
+                    selectedIds.size === messages.length && messages.length > 0
+                      ? 'bg-[#8C1515] border-[#8C1515]'
+                      : selectedIds.size > 0
+                      ? 'bg-[#8C1515]/50 border-[#8C1515]'
+                      : 'border-gray-300'
+                  }`}
+                >
+                  {selectedIds.size > 0 && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                {selectedIds.size === 0
+                  ? 'Select all'
+                  : selectedIds.size === messages.length
+                  ? 'Deselect all'
+                  : `${selectedIds.size} selected`}
+              </button>
+            </div>
+
+            {selectedIds.size > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                )}
+                Delete
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Messages List */}
         <div className="bg-white rounded-lg shadow">
           {isLoading ? (
@@ -152,15 +262,38 @@ export default function MessagesPage() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  onClick={() => {
-                    if (!message.isRead) markAsRead(message.id)
-                    router.push(`/messages/${message.id}`)
-                  }}
-                  className={`p-4 hover:bg-gray-50 cursor-pointer ${
+                  className={`p-4 hover:bg-gray-50 cursor-pointer flex items-start gap-3 ${
                     !message.isRead ? 'bg-blue-50' : ''
-                  }`}
+                  } ${selectedIds.has(message.id) ? 'bg-[#8C1515]/5' : ''}`}
                 >
-                  <div className="flex items-start space-x-4">
+                  {/* Checkbox */}
+                  <button
+                    onClick={(e) => toggleSelect(message.id, e)}
+                    className="mt-2 flex-shrink-0"
+                  >
+                    <div
+                      className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${
+                        selectedIds.has(message.id)
+                          ? 'bg-[#8C1515] border-[#8C1515]'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      {selectedIds.has(message.id) && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Message Content */}
+                  <div
+                    className="flex-1 flex items-start space-x-4"
+                    onClick={() => {
+                      if (!message.isRead) markAsRead(message.id)
+                      router.push(`/messages/${message.id}`)
+                    }}
+                  >
                     <div className="w-10 h-10 rounded-full bg-[#8C1515] flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
                       {message.isAnonymous
                         ? '?'

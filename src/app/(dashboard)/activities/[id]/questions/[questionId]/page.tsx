@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { ResponseList } from '@/components/responses/ResponseList'
 import { ResponseForm } from '@/components/responses/ResponseForm'
 import { LikeButton } from '@/components/activities/LikeButton'
-import { getBloomBadgeColor, getBloomLabel, getScoreColor, formatRelativeTime } from '@/lib/activities/utils'
+import { PeerRating } from '@/components/activities/PeerRating'
+import { getBloomBadgeColor, getBloomLabel, getBloomLevelNumber, getScoreColor, formatRelativeTime } from '@/lib/activities/utils'
 import { formatAIScore } from '@/lib/responses/utils'
 
 interface QuestionDetailPageProps {
@@ -77,6 +78,14 @@ export default async function QuestionDetailPage({ params }: QuestionDetailPageP
     },
   })
 
+  // Increment view count (fire and forget)
+  if (question) {
+    prisma.question.update({
+      where: { id: questionId },
+      data: { viewCount: { increment: 1 } },
+    }).catch(() => {}) // Ignore errors
+  }
+
   if (!question) {
     notFound()
   }
@@ -92,6 +101,7 @@ export default async function QuestionDetailPage({ params }: QuestionDetailPageP
   }
 
   const isLiked = question.likes.length > 0
+  const isOwnQuestion = session.user.id === question.creatorId
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -174,13 +184,24 @@ export default async function QuestionDetailPage({ params }: QuestionDetailPageP
           {/* AI Evaluation */}
           {question.evaluation && (
             <div className="border-t border-gray-100 pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">AI Evaluation</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-gray-700">AI Evaluation</h3>
+                <Link
+                  href={`/questions/${question.id}/evaluation`}
+                  className="text-xs text-[var(--stanford-cardinal)] hover:underline flex items-center gap-1"
+                >
+                  View Detailed Analysis
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
               <div className="flex flex-wrap items-center gap-3">
                 {/* Bloom's Level */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-gray-500">Bloom&apos;s:</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getBloomBadgeColor(question.evaluation.bloomsLevel)}`}>
-                    {getBloomLabel(question.evaluation.bloomsLevel)}
+                    L{getBloomLevelNumber(question.evaluation.bloomsLevel)} - {getBloomLabel(question.evaluation.bloomsLevel)}
                   </span>
                 </div>
 
@@ -198,6 +219,8 @@ export default async function QuestionDetailPage({ params }: QuestionDetailPageP
                     <span>Clarity: {formatAIScore(question.evaluation.clarityScore)}</span>
                     <span className="text-gray-300">|</span>
                     <span>Relevance: {formatAIScore(question.evaluation.relevanceScore)}</span>
+                    <span className="text-gray-300">|</span>
+                    <span>Creativity: {formatAIScore(question.evaluation.creativityScore)}</span>
                   </div>
                 )}
               </div>
@@ -211,13 +234,50 @@ export default async function QuestionDetailPage({ params }: QuestionDetailPageP
             </div>
           )}
 
+          {/* Peer Rating Section */}
+          <div className="border-t border-gray-100 pt-4 mt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Rate this question:</span>
+                  <PeerRating
+                    questionId={question.id}
+                    initialRating={question.averageRating}
+                    isOwnQuestion={isOwnQuestion}
+                  />
+                </div>
+                {question.numberOfRatings > 0 && (
+                  <span className="text-xs text-gray-500">
+                    ({question.numberOfRatings} {question.numberOfRatings === 1 ? 'rating' : 'ratings'})
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Stats */}
           <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100 text-sm text-gray-500">
+            {/* View Count */}
+            <span className="flex items-center gap-1">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              {question.viewCount} views
+            </span>
+            {/* Responses */}
             <span className="flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
               </svg>
               {question.responses.length} responses
+            </span>
+            {/* Likes */}
+            <span className="flex items-center gap-1">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              {question._count.likes} likes
             </span>
           </div>
         </div>

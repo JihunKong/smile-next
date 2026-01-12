@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { GroupDetailClient } from './group-detail-client'
-import { getRoleLabel, getGradientColors, getGroupInitials } from '@/lib/groups/utils'
+import { getRoleLabel, getGradientColors, getGroupInitials, generateInviteCode } from '@/lib/groups/utils'
 import { GroupRoles, type GroupRole } from '@/types/groups'
 
 interface GroupDetailPageProps {
@@ -103,13 +103,24 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
 
   const canManage = userRole === GroupRoles.OWNER || userRole === GroupRoles.CO_OWNER || userRole === GroupRoles.ADMIN
 
+  // Auto-generate invite code if missing and user can manage
+  let inviteCode = group.inviteCode
+  if (!inviteCode && canManage) {
+    const newCode = generateInviteCode()
+    await prisma.group.update({
+      where: { id },
+      data: { inviteCode: newCode },
+    })
+    inviteCode = newCode
+  }
+
   // Prepare data for client component
   const groupData = {
     id: group.id,
     name: group.name,
     description: group.description,
     isPrivate: group.isPrivate,
-    inviteCode: group.inviteCode,
+    inviteCode: inviteCode,
     createdAt: group.createdAt.toISOString(),
     groupImageUrl: group.groupImageUrl,
     autoIconGradient: group.autoIconGradient,

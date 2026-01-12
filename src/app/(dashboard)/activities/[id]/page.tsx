@@ -439,7 +439,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
         </div>
       </section>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Activity Stats Card */}
         <div className="mb-8">
           <ActivityStatsCard
