@@ -14,9 +14,14 @@ export const runtime = 'nodejs'
  * - limit: Optional - max number of questions to queue (default: 50)
  */
 export async function POST(request: NextRequest) {
+  // Allow both session auth and admin API key
   const session = await auth()
+  const adminKey = request.headers.get('x-admin-key')
+  const validAdminKey = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
 
-  if (!session?.user?.id) {
+  const isAuthenticated = session?.user?.id || (adminKey && adminKey === validAdminKey)
+
+  if (!isAuthenticated) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -69,7 +74,7 @@ export async function POST(request: NextRequest) {
         const job = await queueQuestionEvaluation({
           questionId: question.id,
           activityId: question.activityId,
-          userId: question.creator?.id || session.user.id,
+          userId: question.creator?.id || session?.user?.id || 'admin-bulk-eval',
           questionContent: question.content,
           context: {
             activityName: question.activity.name,
