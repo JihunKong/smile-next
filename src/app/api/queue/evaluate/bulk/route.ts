@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
             },
           },
         },
-        user: {
+        creator: {
           select: { id: true },
         },
       },
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         const job = await queueQuestionEvaluation({
           questionId: question.id,
           activityId: question.activityId,
-          userId: question.user?.id || session.user.id,
+          userId: question.creator?.id || session.user.id,
           questionContent: question.content,
           context: {
             activityName: question.activity.name,
