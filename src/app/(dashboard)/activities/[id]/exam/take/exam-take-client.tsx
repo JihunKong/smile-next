@@ -24,6 +24,7 @@ interface ExamTakeClientProps {
   timeLimitMinutes: number
   instructions?: string
   description?: string
+  choiceShuffles?: Record<string, number[]>
 }
 
 // Submit Confirmation Modal Component
@@ -159,6 +160,7 @@ export function ExamTakeClient({
   timeLimitMinutes,
   instructions,
   description,
+  choiceShuffles = {},
 }: ExamTakeClientProps) {
   const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -623,38 +625,46 @@ export function ExamTakeClient({
 
           {/* Answer Choices */}
           <div className="space-y-3" id="choices-container">
-            {currentQuestion.choices.map((choice, choiceIndex) => {
-              const isSelected = answers[currentQuestion.id]?.includes(choiceIndex.toString())
-              const letter = String.fromCharCode(65 + choiceIndex)
+            {(() => {
+              // Get shuffle map for this question, or create default order
+              const shuffleMap = choiceShuffles[currentQuestion.id] ||
+                Array.from({ length: currentQuestion.choices.length }, (_, i) => i)
 
-              return (
-                <button
-                  key={choiceIndex}
-                  onClick={() => handleAnswerChange(choiceIndex)}
-                  className={`answer-choice w-full text-left border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                    isSelected
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                      isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                    }`}>
-                      {isSelected ? (
-                        <svg className="w-4 h-4 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      ) : null}
+              return shuffleMap.map((originalIndex, displayIndex) => {
+                const choice = currentQuestion.choices[originalIndex]
+                // Check if this original index is in the answers
+                const isSelected = answers[currentQuestion.id]?.includes(originalIndex.toString())
+                const letter = String.fromCharCode(65 + displayIndex)
+
+                return (
+                  <button
+                    key={displayIndex}
+                    onClick={() => handleAnswerChange(originalIndex)}
+                    className={`answer-choice w-full text-left border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected ? (
+                          <svg className="w-4 h-4 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        ) : null}
+                      </div>
+                      <div className="flex-1 choice-text">
+                        <span className="font-medium text-gray-900">{letter}.</span>
+                        <span className="text-gray-800 ml-2">{choice}</span>
+                      </div>
                     </div>
-                    <div className="flex-1 choice-text">
-                      <span className="font-medium text-gray-900">{letter}.</span>
-                      <span className="text-gray-800 ml-2">{choice}</span>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
+                  </button>
+                )
+              })
+            })()}
           </div>
         </div>
 

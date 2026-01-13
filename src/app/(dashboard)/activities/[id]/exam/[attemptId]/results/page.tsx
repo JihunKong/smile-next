@@ -109,6 +109,7 @@ export default async function ExamResultsPage({ params }: ExamResultsPageProps) 
       content: true,
       choices: true,
       correctAnswers: true,
+      explanation: true,
     },
   })
 
@@ -152,7 +153,7 @@ export default async function ExamResultsPage({ params }: ExamResultsPageProps) 
       studentAnswerIndex,
       correctAnswerIndex,
       isCorrect: response?.isCorrect === true,
-      explanation: null, // Can be added if questions have explanations
+      explanation: question.explanation || null,
       shuffleMap,
     }
   })

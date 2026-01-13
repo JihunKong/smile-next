@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useDisplaySettings, Theme, Language, ItemsPerPage } from '@/hooks/useDisplaySettings'
@@ -12,6 +12,25 @@ interface UserProfile {
   email: string
 }
 
+interface UserPreferences {
+  theme: 'light' | 'dark' | 'system'
+  language: 'ko' | 'en'
+  emailDigest: boolean
+  emailFrequency: 'daily' | 'weekly' | 'never'
+  showOnlineStatus: boolean
+  showActivityStatus: boolean
+  fontSize: 'small' | 'medium' | 'large'
+  reduceMotion: boolean
+  additionalSettings?: {
+    groupUpdates?: boolean
+    activityReminders?: boolean
+    questionResponses?: boolean
+    showRealName?: boolean
+    allowDirectMessages?: boolean
+    itemsPerPage?: number
+  }
+}
+
 export default function SettingsPage() {
   const { data: session, update } = useSession()
   const router = useRouter()
@@ -19,8 +38,10 @@ export default function SettingsPage() {
   const { settings: displaySettings, setTheme, setLanguage, setItemsPerPage, isLoaded: displaySettingsLoaded } = useDisplaySettings()
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null)
 
   // Account form state
   const [accountForm, setAccountForm] = useState({
@@ -51,6 +72,36 @@ export default function SettingsPage() {
     allowDirectMessages: true,
   })
 
+  // Fetch preferences from API
+  const fetchPreferences = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/preferences')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data) {
+          const prefs = data.data as UserPreferences
+          setPreferences(prefs)
+          // Sync with local state
+          setNotifications({
+            emailNotifications: prefs.emailDigest,
+            groupUpdates: prefs.additionalSettings?.groupUpdates ?? true,
+            activityReminders: prefs.additionalSettings?.activityReminders ?? true,
+            questionResponses: prefs.additionalSettings?.questionResponses ?? true,
+          })
+          setPrivacy({
+            profileVisible: prefs.showOnlineStatus,
+            showRealName: prefs.additionalSettings?.showRealName ?? true,
+            allowDirectMessages: prefs.additionalSettings?.allowDirectMessages ?? true,
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch preferences:', error)
+    } finally {
+      setIsLoadingPreferences(false)
+    }
+  }, [])
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -73,8 +124,9 @@ export default function SettingsPage() {
 
     if (session?.user) {
       fetchProfile()
+      fetchPreferences()
     }
-  }, [session])
+  }, [session, fetchPreferences])
 
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -371,10 +423,36 @@ export default function SettingsPage() {
                     ))}
                   </div>
                   <button
-                    className="mt-6 px-6 py-2 bg-[#8C1515] text-white rounded-lg hover:opacity-90"
-                    onClick={() => setMessage({ type: 'success', text: 'Notification preferences saved!' })}
+                    className="mt-6 px-6 py-2 bg-[#8C1515] text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+                    disabled={isLoading}
+                    onClick={async () => {
+                      setIsLoading(true)
+                      try {
+                        const response = await fetch('/api/user/preferences', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            emailDigest: notifications.emailNotifications,
+                            additionalSettings: {
+                              groupUpdates: notifications.groupUpdates,
+                              activityReminders: notifications.activityReminders,
+                              questionResponses: notifications.questionResponses,
+                            },
+                          }),
+                        })
+                        if (response.ok) {
+                          setMessage({ type: 'success', text: 'Notification preferences saved!' })
+                        } else {
+                          setMessage({ type: 'error', text: 'Failed to save preferences' })
+                        }
+                      } catch {
+                        setMessage({ type: 'error', text: 'An error occurred' })
+                      } finally {
+                        setIsLoading(false)
+                      }
+                    }}
                   >
-                    Save Preferences
+                    {isLoading ? 'Saving...' : 'Save Preferences'}
                   </button>
                 </div>
               )}
@@ -399,10 +477,36 @@ export default function SettingsPage() {
                     ))}
                   </div>
                   <button
-                    className="mt-6 px-6 py-2 bg-[#8C1515] text-white rounded-lg hover:opacity-90"
-                    onClick={() => setMessage({ type: 'success', text: 'Privacy settings saved!' })}
+                    className="mt-6 px-6 py-2 bg-[#8C1515] text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+                    disabled={isLoading}
+                    onClick={async () => {
+                      setIsLoading(true)
+                      try {
+                        const response = await fetch('/api/user/preferences', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            showOnlineStatus: privacy.profileVisible,
+                            showActivityStatus: privacy.profileVisible,
+                            additionalSettings: {
+                              showRealName: privacy.showRealName,
+                              allowDirectMessages: privacy.allowDirectMessages,
+                            },
+                          }),
+                        })
+                        if (response.ok) {
+                          setMessage({ type: 'success', text: 'Privacy settings saved!' })
+                        } else {
+                          setMessage({ type: 'error', text: 'Failed to save settings' })
+                        }
+                      } catch {
+                        setMessage({ type: 'error', text: 'An error occurred' })
+                      } finally {
+                        setIsLoading(false)
+                      }
+                    }}
                   >
-                    Save Settings
+                    {isLoading ? 'Saving...' : 'Save Settings'}
                   </button>
                 </div>
               )}
@@ -489,10 +593,40 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <button
-                    className="mt-6 px-6 py-2 bg-[#8C1515] text-white rounded-lg hover:opacity-90"
-                    onClick={() => setMessage({ type: 'success', text: 'Display settings saved!' })}
+                    className="mt-6 px-6 py-2 bg-[#8C1515] text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+                    disabled={isLoading}
+                    onClick={async () => {
+                      setIsLoading(true)
+                      try {
+                        // Map 'auto' to 'system' for API compatibility
+                        const themeValue = displaySettings.theme === 'auto' ? 'system' : displaySettings.theme
+                        // Map language to ko/en
+                        const langValue = displaySettings.language === 'en' ? 'en' : 'ko'
+
+                        const response = await fetch('/api/user/preferences', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            theme: themeValue,
+                            language: langValue,
+                            additionalSettings: {
+                              itemsPerPage: displaySettings.itemsPerPage,
+                            },
+                          }),
+                        })
+                        if (response.ok) {
+                          setMessage({ type: 'success', text: 'Display settings saved!' })
+                        } else {
+                          setMessage({ type: 'error', text: 'Failed to save settings' })
+                        }
+                      } catch {
+                        setMessage({ type: 'error', text: 'An error occurred' })
+                      } finally {
+                        setIsLoading(false)
+                      }
+                    }}
                   >
-                    Save Settings
+                    {isLoading ? 'Saving...' : 'Save Settings'}
                   </button>
                 </div>
               )}

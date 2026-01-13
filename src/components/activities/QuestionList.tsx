@@ -7,6 +7,7 @@ import type { QuestionWithEvaluation } from '@/types/activities'
 
 type ViewMode = 'cards' | 'list'
 type SortOption = 'likes' | 'newest' | 'oldest' | 'peer_rating' | 'ai_score' | 'blooms' | 'total'
+type BloomsFilter = 'all' | 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create'
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'newest', label: 'Newest First' },
@@ -16,6 +17,16 @@ const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'blooms', label: "Highest Bloom's Level" },
   { value: 'peer_rating', label: 'Highest Peer Rating' },
   { value: 'total', label: 'Highest Total Score' },
+]
+
+const bloomsFilterOptions: { value: BloomsFilter; label: string; color: string }[] = [
+  { value: 'all', label: 'All Levels', color: 'gray' },
+  { value: 'remember', label: 'Remember', color: 'gray' },
+  { value: 'understand', label: 'Understand', color: 'blue' },
+  { value: 'apply', label: 'Apply', color: 'green' },
+  { value: 'analyze', label: 'Analyze', color: 'yellow' },
+  { value: 'evaluate', label: 'Evaluate', color: 'orange' },
+  { value: 'create', label: 'Create', color: 'red' },
 ]
 
 // Bloom's level order for sorting
@@ -50,10 +61,39 @@ export function QuestionList({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const [sortBy, setSortBy] = useState<SortOption>('newest')
+  const [bloomsFilter, setBloomsFilter] = useState<BloomsFilter>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // Sort questions based on selected option
+  // Filter and sort questions
   const sortedQuestions = useMemo(() => {
-    const sorted = [...questions]
+    // First, filter by Bloom's level
+    let filtered = [...questions]
+
+    if (bloomsFilter !== 'all') {
+      filtered = filtered.filter((q) => {
+        const level = q.evaluation?.bloomsLevel?.toLowerCase() || ''
+        return level === bloomsFilter
+      })
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter((q) => {
+        const creatorName = [q.creator?.firstName, q.creator?.lastName]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        const username = q.creator?.username?.toLowerCase() || ''
+        return (
+          q.content.toLowerCase().includes(query) ||
+          creatorName.includes(query) ||
+          username.includes(query)
+        )
+      })
+    }
+
+    const sorted = filtered
 
     switch (sortBy) {
       case 'likes':
@@ -104,7 +144,7 @@ export function QuestionList({
     }
 
     return sorted
-  }, [questions, sortBy])
+  }, [questions, sortBy, bloomsFilter, searchQuery])
 
   async function handleDelete(questionId: string) {
     if (!confirm('Are you sure you want to delete this question?')) {
@@ -136,60 +176,144 @@ export function QuestionList({
   return (
     <div>
       {/* Controls Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        {/* View Toggle */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">View:</span>
-          <div className="inline-flex rounded-lg border border-gray-200 p-1 bg-gray-50">
+      <div className="space-y-4 mb-6">
+        {/* Search Bar */}
+        <div className="relative">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search questions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-transparent"
+          />
+          {searchQuery && (
             <button
-              onClick={() => setViewMode('cards')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                viewMode === 'cards'
-                  ? 'bg-white text-[var(--stanford-cardinal)] shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Cards
             </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                viewMode === 'list'
-                  ? 'bg-white text-[var(--stanford-cardinal)] shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-              List
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* Sort Dropdown */}
-        <div className="flex items-center gap-2">
-          <label htmlFor="sort-select" className="text-sm text-gray-500">Sort by:</label>
-          <select
-            id="sort-select"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-transparent"
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
+        {/* Bloom's Level Filter */}
+        <div className="flex flex-wrap gap-2">
+          {bloomsFilterOptions.map((option) => {
+            const colorClasses: Record<string, string> = {
+              gray: bloomsFilter === option.value ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+              blue: bloomsFilter === option.value ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+              green: bloomsFilter === option.value ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200',
+              yellow: bloomsFilter === option.value ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
+              orange: bloomsFilter === option.value ? 'bg-orange-600 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200',
+              red: bloomsFilter === option.value ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200',
+            }
+            return (
+              <button
+                key={option.value}
+                onClick={() => setBloomsFilter(option.value)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-full transition ${colorClasses[option.color]}`}
+              >
                 {option.label}
-              </option>
-            ))}
-          </select>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* View Toggle and Sort */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* View Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">View:</span>
+            <div className="inline-flex rounded-lg border border-gray-200 p-1 bg-gray-50">
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                  viewMode === 'cards'
+                    ? 'bg-white text-[var(--stanford-cardinal)] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                Cards
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                  viewMode === 'list'
+                    ? 'bg-white text-[var(--stanford-cardinal)] shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                List
+              </button>
+            </div>
+          </div>
+
+          {/* Sort Dropdown and Results Count */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">
+              {sortedQuestions.length} of {questions.length} questions
+            </span>
+            <div className="flex items-center gap-2">
+              <label htmlFor="sort-select" className="text-sm text-gray-500">Sort by:</label>
+              <select
+                id="sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-transparent"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* No Results Message */}
+      {sortedQuestions.length === 0 && questions.length > 0 && (
+        <div className="text-center py-8 bg-gray-50 rounded-lg">
+          <svg className="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <p className="text-gray-500 mb-2">No questions match your filters.</p>
+          <button
+            onClick={() => {
+              setBloomsFilter('all')
+              setSearchQuery('')
+            }}
+            className="text-sm text-[var(--stanford-cardinal)] hover:underline"
+          >
+            Clear all filters
+          </button>
+        </div>
+      )}
+
       {/* Questions Grid/List */}
-      {viewMode === 'cards' ? (
+      {sortedQuestions.length > 0 && viewMode === 'cards' && (
         // Padlet-style 4-column grid
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {sortedQuestions.map((question) => (
@@ -208,7 +332,9 @@ export function QuestionList({
             </div>
           ))}
         </div>
-      ) : (
+      )}
+
+      {sortedQuestions.length > 0 && viewMode === 'list' && (
         // List view
         <div className="space-y-4">
           {sortedQuestions.map((question) => (

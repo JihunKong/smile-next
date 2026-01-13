@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import Link from 'next/link'
+import { getUserStreak, BADGE_DEFINITIONS } from '@/lib/services/streakService'
 
 // Tier system matching Flask
 const TIERS = [
@@ -134,39 +135,52 @@ async function getUserStats(userId: string) {
     // Calculate week change
     const weekChange = questionsThisWeek - questionsLastWeek
 
-    // Calculate day streak
+    // Get streak and badges from streakService
     let streak = 0
-    if (dayStreak.length > 0) {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+    let badgesEarned = 0
+    let badgeNames: string[] = []
+    let totalBadgePoints = 0
 
-      const uniqueDays = new Set<string>()
-      dayStreak.forEach(q => {
-        const date = new Date(q.createdAt)
-        date.setHours(0, 0, 0, 0)
-        uniqueDays.add(date.toISOString())
+    try {
+      const streakData = await getUserStreak(userId)
+      streak = streakData.currentStreak
+      badgesEarned = streakData.badges.length
+      badgeNames = streakData.badges.map(b => {
+        const def = BADGE_DEFINITIONS[b.badgeId as keyof typeof BADGE_DEFINITIONS]
+        return def ? `${def.icon} ${def.name}` : b.badgeName || b.badgeId
       })
+      // Calculate points based on badges (10 points per badge for now)
+      totalBadgePoints = badgesEarned * 10
+    } catch (streakError) {
+      console.error('Failed to load streak data:', streakError)
+      // Fallback to local calculation if streak service fails
+      if (dayStreak.length > 0) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
 
-      const sortedDays = Array.from(uniqueDays).sort((a, b) =>
-        new Date(b).getTime() - new Date(a).getTime()
-      )
+        const uniqueDays = new Set<string>()
+        dayStreak.forEach(q => {
+          const date = new Date(q.createdAt)
+          date.setHours(0, 0, 0, 0)
+          uniqueDays.add(date.toISOString())
+        })
 
-      for (let i = 0; i < sortedDays.length; i++) {
-        const expectedDate = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
-        expectedDate.setHours(0, 0, 0, 0)
+        const sortedDays = Array.from(uniqueDays).sort((a, b) =>
+          new Date(b).getTime() - new Date(a).getTime()
+        )
 
-        if (sortedDays[i] === expectedDate.toISOString()) {
-          streak++
-        } else {
-          break
+        for (let i = 0; i < sortedDays.length; i++) {
+          const expectedDate = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
+          expectedDate.setHours(0, 0, 0, 0)
+
+          if (sortedDays[i] === expectedDate.toISOString()) {
+            streak++
+          } else {
+            break
+          }
         }
       }
     }
-
-    // Badge system placeholder (TODO: Add Badge model to schema)
-    const totalBadgePoints = 0
-    const badgesEarned = 0
-    const badgeNames: string[] = []
 
     // Get tier info
     const levelInfo = getTierInfo(totalBadgePoints)

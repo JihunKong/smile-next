@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db/prisma'
 import { revalidatePath } from 'next/cache'
 import type { ActionResult } from '@/types/activities'
 
-interface StartExamResult extends ActionResult<{ attemptId: string; questionOrder: string[] }> {}
+interface StartExamResult extends ActionResult<{ attemptId: string; questionOrder: string[]; choiceShuffles: Record<string, number[]> }> {}
 interface SaveAnswerResult extends ActionResult {}
 interface SubmitExamResult extends ActionResult<{ score: number; passed: boolean; correctAnswers: number; totalQuestions: number }> {}
 
@@ -60,6 +60,7 @@ export async function startExamAttempt(activityId: string): Promise<StartExamRes
         data: {
           attemptId: existingAttempt.id,
           questionOrder: (existingAttempt.questionOrder as string[]) || [],
+          choiceShuffles: (existingAttempt.choiceShuffles as Record<string, number[]>) || {},
         },
       }
     }
@@ -83,6 +84,7 @@ export async function startExamAttempt(activityId: string): Promise<StartExamRes
     // Get questions and shuffle if needed
     let questionIds = activity.questions.map((q) => q.id)
     const shuffleQuestions = (examSettings as { shuffleQuestions?: boolean } | null)?.shuffleQuestions ?? true
+    const shuffleChoices = (examSettings as { shuffleChoices?: boolean } | null)?.shuffleChoices ?? true
 
     if (shuffleQuestions) {
       questionIds = shuffleArray(questionIds)
@@ -92,6 +94,25 @@ export async function startExamAttempt(activityId: string): Promise<StartExamRes
     const questionsToShow = (examSettings as { questionsToShow?: number } | null)?.questionsToShow || questionIds.length
     questionIds = questionIds.slice(0, questionsToShow)
 
+    // Generate choice shuffle maps if shuffleChoices is enabled
+    let choiceShuffles: Record<string, number[]> = {}
+    if (shuffleChoices) {
+      // Fetch questions with choices
+      const questionsWithChoices = await prisma.question.findMany({
+        where: { id: { in: questionIds } },
+        select: { id: true, choices: true },
+      })
+
+      questionsWithChoices.forEach((q) => {
+        const choices = (q.choices as string[]) || []
+        if (choices.length > 0) {
+          // Create an array of original indices [0, 1, 2, ...] and shuffle it
+          const indices = Array.from({ length: choices.length }, (_, i) => i)
+          choiceShuffles[q.id] = shuffleArray(indices)
+        }
+      })
+    }
+
     // Create attempt
     const attempt = await prisma.examAttempt.create({
       data: {
@@ -99,6 +120,7 @@ export async function startExamAttempt(activityId: string): Promise<StartExamRes
         activityId,
         totalQuestions: questionIds.length,
         questionOrder: questionIds,
+        choiceShuffles: choiceShuffles,
         status: 'in_progress',
       },
     })
@@ -108,6 +130,7 @@ export async function startExamAttempt(activityId: string): Promise<StartExamRes
       data: {
         attemptId: attempt.id,
         questionOrder: questionIds,
+        choiceShuffles: choiceShuffles,
       },
     }
   } catch (error) {

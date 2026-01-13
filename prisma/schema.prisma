@@ -302,6 +302,7 @@ model Question {
   // Multiple choice (JSON)
   choices                 Json?     @default("[]")
   correctAnswers          Json?     @default("[]") @map("correct_answers")
+  explanation             String?   @map("explanation")  // Explanation shown after answering
 
   // Media
   questionImagePublicId   String?   @map("question_image_public_id")

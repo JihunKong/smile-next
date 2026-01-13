@@ -112,6 +112,7 @@ export default async function ExamTakePage({ params, searchParams }: ExamTakePag
       timeLimitMinutes={examSettings.timeLimit}
       instructions={attempt.activity.description || undefined}
       description={attempt.activity.description || undefined}
+      choiceShuffles={(attempt.choiceShuffles as Record<string, number[]>) || {}}
     />
   )
 }
