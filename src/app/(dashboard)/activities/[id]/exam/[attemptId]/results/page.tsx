@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { ExamShareButtons } from '@/components/activities/ExamShareButtons'
 
 interface ExamResultsPageProps {
   params: Promise<{ id: string; attemptId: string }>
@@ -558,26 +559,12 @@ export default async function ExamResultsPage({ params }: ExamResultsPageProps) 
           {passed && (
             <div className="mt-6 pt-6 border-t text-center">
               <p className="text-sm text-gray-600 mb-3">Share your achievement!</p>
-              <div className="flex gap-2 justify-center">
-                <button
-                  onClick={() => {}}
-                  className="bg-blue-400 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Twitter
-                </button>
-                <button
-                  onClick={() => {}}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Facebook
-                </button>
-                <button
-                  onClick={() => {}}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Copy Link
-                </button>
-              </div>
+              <ExamShareButtons
+                examName={attempt.activity.name}
+                score={score}
+                activityId={activityId}
+                attemptId={attemptId}
+              />
             </div>
           )}
         </div>

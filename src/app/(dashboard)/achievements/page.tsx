@@ -100,13 +100,51 @@ export default function AchievementsPage() {
   async function loadBadgeStats() {
     try {
       setLoading(true)
-      // TODO: Fetch actual badge data from API when Badge model is implemented
-      // For now, use placeholder data
 
-      // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Fetch actual badge data from API
+      const response = await fetch('/api/user/badges')
+      if (!response.ok) {
+        throw new Error('Failed to fetch badges')
+      }
 
-      // Placeholder stats - in production, fetch from /api/user/badges
+      const data = await response.json()
+
+      // Map API response to local BadgeStats format
+      const earnedBadgeIds = data.earnedBadges?.map((b: { id: string }) => b.id) || []
+      const totalPoints = data.userStats?.totalPoints || 0
+      const level = data.userStats?.level || 1
+
+      // Calculate tier based on level
+      const tiers = [
+        { name: 'Newcomer', icon: '🌱', color: '#6b7280', minLevel: 1 },
+        { name: 'Explorer', icon: '🧭', color: '#3b82f6', minLevel: 5 },
+        { name: 'Contributor', icon: '⭐', color: '#22c55e', minLevel: 10 },
+        { name: 'Expert', icon: '💎', color: '#a855f7', minLevel: 20 },
+        { name: 'Master', icon: '👑', color: '#f59e0b', minLevel: 30 },
+        { name: 'Legend', icon: '🏆', color: '#ef4444', minLevel: 50 },
+      ]
+
+      const currentTier = tiers.filter(t => t.minLevel <= level).pop() || tiers[0]
+      const nextTier = tiers.find(t => t.minLevel > level)
+      const pointsToNext = nextTier ? (nextTier.minLevel - level) * 100 : 0
+
+      setStats({
+        totalEarned: earnedBadgeIds.length,
+        totalAvailable: data.allBadges?.length || BADGE_DEFINITIONS.length,
+        totalPoints,
+        totalPossiblePoints: BADGE_DEFINITIONS.reduce((sum, b) => sum + b.points, 0),
+        earnedBadges: earnedBadgeIds,
+        levelInfo: {
+          current: {
+            tier: currentTier,
+          },
+          pointsToNext,
+          isMaxTier: !nextTier,
+        },
+      })
+    } catch (error) {
+      console.error('Failed to load badge stats:', error)
+      // Fallback to empty state
       setStats({
         totalEarned: 0,
         totalAvailable: BADGE_DEFINITIONS.length,
@@ -115,18 +153,12 @@ export default function AchievementsPage() {
         earnedBadges: [],
         levelInfo: {
           current: {
-            tier: {
-              name: 'Newcomer',
-              icon: '🌱',
-              color: '#6b7280',
-            },
+            tier: { name: 'Newcomer', icon: '🌱', color: '#6b7280' },
           },
           pointsToNext: 100,
           isMaxTier: false,
         },
       })
-    } catch (error) {
-      console.error('Failed to load badge stats:', error)
     } finally {
       setLoading(false)
     }

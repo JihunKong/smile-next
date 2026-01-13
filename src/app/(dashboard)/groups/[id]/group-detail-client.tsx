@@ -118,9 +118,26 @@ export function GroupDetailClient({
   }
 
   const handleDuplicate = async () => {
-    if (!confirm('Are you sure you want to duplicate this group?')) return
-    // TODO: Implement duplicate API
-    alert('Duplicate functionality coming soon')
+    if (!confirm('Are you sure you want to duplicate this group? This will create a copy with all activities.')) return
+
+    try {
+      const response = await fetch(`/api/groups/${group.id}/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to duplicate group')
+      }
+
+      const data = await response.json()
+      alert(`Group duplicated successfully! ${data.activitiesCopied} activities were copied.`)
+      router.push(`/groups/${data.group.id}`)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to duplicate group')
+    }
   }
 
   return (

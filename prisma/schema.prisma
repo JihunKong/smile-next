@@ -223,6 +223,7 @@ model Activity {
   examSettings          Json?     @map("exam_settings")
   inquirySettings       Json?     @map("inquiry_settings")
   openModeSettings      Json?     @map("open_mode_settings")
+  caseSettings          Json?     @map("case_settings")  // { scenarios: [], configuration: {}, is_finalized: boolean }
 
   // School-related
   schoolGrade           Int       @default(-1) @map("school_grade")
