@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid'
 const PUBLIC_DIR = path.join(process.cwd(), 'public')
 const GROUPS_UPLOAD_DIR = path.join(PUBLIC_DIR, 'uploads', 'groups')
 const CERTIFICATES_UPLOAD_DIR = path.join(PUBLIC_DIR, 'uploads', 'certificates')
+const AVATARS_UPLOAD_DIR = path.join(PUBLIC_DIR, 'uploads', 'avatars')
 
 /**
  * Ensure upload directory exists
@@ -192,6 +193,51 @@ export async function deleteCertificateImage(imageUrl: string): Promise<void> {
 
   const relativePath = imageUrl.replace('/uploads/certificates/', '')
   const filepath = path.join(CERTIFICATES_UPLOAD_DIR, relativePath)
+
+  if (existsSync(filepath)) {
+    await unlink(filepath)
+  }
+}
+
+// ============================================================================
+// User Avatar Upload Functions
+// ============================================================================
+
+/**
+ * Upload a user avatar image to local storage
+ * @param file - The file buffer to save
+ * @param originalName - Original filename (for extension)
+ * @param mimeType - Optional mime type
+ * @returns The public URL path for the uploaded image
+ */
+export async function uploadAvatarImage(
+  file: Buffer,
+  originalName: string,
+  mimeType?: string
+): Promise<string> {
+  await ensureUploadDir(AVATARS_UPLOAD_DIR)
+
+  const ext = getExtension(originalName, mimeType)
+  const filename = `avatar_${uuidv4()}${ext}`
+  const filepath = path.join(AVATARS_UPLOAD_DIR, filename)
+
+  await writeFile(filepath, file)
+
+  return `/uploads/avatars/${filename}`
+}
+
+/**
+ * Delete a user avatar image from local storage
+ * @param imageUrl - The public URL path of the image to delete
+ */
+export async function deleteAvatarImage(imageUrl: string): Promise<void> {
+  // Only handle local avatar uploads
+  if (!imageUrl.startsWith('/uploads/avatars/')) {
+    return
+  }
+
+  const filename = imageUrl.replace('/uploads/avatars/', '')
+  const filepath = path.join(AVATARS_UPLOAD_DIR, filename)
 
   if (existsSync(filepath)) {
     await unlink(filepath)

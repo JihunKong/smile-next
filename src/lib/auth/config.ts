@@ -54,12 +54,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
+        // Check if user is blocked or deleted
+        if (user.isBlocked || user.isDeleted) {
+          console.log('[Auth] User is blocked or deleted')
+          return null
+        }
+
+        // Check email verification - throw specific error for unverified users
+        if (!user.emailVerified) {
+          console.log('[Auth] Email not verified for user:', user.email)
+          throw new Error('EMAIL_NOT_VERIFIED')
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
           image: user.avatarUrl,
           roleId: user.roleId,
+          isEmailVerified: user.emailVerified,
         }
       },
     }),
@@ -150,15 +163,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id
         token.roleId = (user as { roleId?: number }).roleId
+        token.isEmailVerified = (user as { isEmailVerified?: boolean }).isEmailVerified
       }
       // For OAuth, fetch roleId from database if not present
       if (account?.provider === 'google' && !token.roleId && token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { roleId: true },
+          select: { roleId: true, emailVerified: true },
         })
         if (dbUser) {
           token.roleId = dbUser.roleId
+          token.isEmailVerified = dbUser.emailVerified
         }
       }
       return token
@@ -167,6 +182,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token && session.user) {
         session.user.id = token.id as string
         session.user.roleId = token.roleId as number
+        session.user.isEmailVerified = token.isEmailVerified as boolean
       }
       return session
     },
@@ -177,11 +193,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 declare module 'next-auth' {
   interface User {
     roleId?: number
+    isEmailVerified?: boolean
   }
   interface Session {
     user: {
       id: string
       roleId?: number
+      isEmailVerified?: boolean
       email?: string | null
       name?: string | null
       image?: string | null
@@ -190,5 +208,6 @@ declare module 'next-auth' {
   interface JWT {
     id?: string
     roleId?: number
+    isEmailVerified?: boolean
   }
 }
