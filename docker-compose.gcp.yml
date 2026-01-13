@@ -1,0 +1,47 @@
+# GCP Docker Compose - Next.js App Only
+# Uses host network to access native PostgreSQL and Redis
+# Usage: docker-compose -f docker-compose.gcp.yml up -d
+
+services:
+  # Next.js Application (host network mode)
+  app:
+    image: ${DOCKER_IMAGE:-smile-next:dev}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smile-next
+    # Host network mode to access localhost-bound services (PostgreSQL, Redis)
+    network_mode: host
+    environment:
+      - NODE_ENV=production
+      # PostgreSQL on host (localhost:5432)
+      - DATABASE_URL=postgresql://smile_user:simple_pass@localhost:5432/smile_next_db
+      # Redis on host (localhost:6379)
+      - REDIS_URL=redis://localhost:6379
+      # Authentication
+      - AUTH_SECRET=${AUTH_SECRET:-gcp-dev-blue-secret-key-change-in-production}
+      - AUTH_TRUST_HOST=true
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://newsmile-dev-blue.seedsofempowerment.org}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://newsmile-dev-blue.seedsofempowerment.org}
+      # Google OAuth (optional)
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      # AI Services
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}
+      # SMTP
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      # Override port (default 3000 -> 5002 for nginx)
+      - PORT=5002
+    restart: unless-stopped
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
