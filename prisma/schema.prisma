@@ -851,6 +851,96 @@ model Notification {
 }
 
 // ============================================================================
+// User Streak & Badge Models
+// ============================================================================
+
+model UserStreak {
+  id              String    @id @default(uuid())
+  userId          String    @unique @map("user_id")
+
+  // Streak tracking
+  currentStreak   Int       @default(0) @map("current_streak")
+  longestStreak   Int       @default(0) @map("longest_streak")
+  lastActivityDate DateTime? @map("last_activity_date")
+
+  // Weekly/Monthly tracking
+  weeklyActivityDays Int    @default(0) @map("weekly_activity_days")
+  monthlyActivityDays Int   @default(0) @map("monthly_activity_days")
+  lastWeekReset    DateTime? @map("last_week_reset")
+  lastMonthReset   DateTime? @map("last_month_reset")
+
+  // Timestamps
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("user_streaks")
+}
+
+model BadgeEarned {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+
+  // Badge identification
+  badgeId   String   @map("badge_id")  // e.g., "week_warrior", "month_master", "first_question"
+  badgeType String   @default("achievement") @map("badge_type")  // achievement, streak, milestone
+
+  // Badge metadata at time of earning
+  badgeName String?  @map("badge_name")
+  badgeIcon String?  @map("badge_icon")
+
+  // Context (what triggered the badge)
+  context   Json?    @default("{}")  // { triggerValue: 7, activityId: "...", etc. }
+
+  // Earned timestamp
+  earnedAt  DateTime @default(now()) @map("earned_at")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@index([badgeId])
+  @@index([earnedAt])
+  @@map("badges_earned")
+}
+
+// ============================================================================
+// User Preferences Model
+// ============================================================================
+
+model UserPreference {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+
+  // Display settings
+  theme             String   @default("system")  // light, dark, system
+  language          String   @default("ko")      // ko, en
+  timezone          String   @default("Asia/Seoul")
+
+  // Notification preferences (beyond message notifications)
+  emailDigest       Boolean  @default(true) @map("email_digest")
+  emailFrequency    String   @default("daily") @map("email_frequency")  // daily, weekly, never
+
+  // Privacy settings
+  showOnlineStatus  Boolean  @default(true) @map("show_online_status")
+  showActivityStatus Boolean @default(true) @map("show_activity_status")
+
+  // Accessibility
+  fontSize          String   @default("medium") @map("font_size")  // small, medium, large
+  reduceMotion      Boolean  @default(false) @map("reduce_motion")
+
+  // Additional preferences (JSON)
+  additionalSettings Json?   @default("{}") @map("additional_settings")
+
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("user_preferences")
+}
+
+// ============================================================================
 // NextAuth.js Models (Required for Auth.js)
 // ============================================================================
 

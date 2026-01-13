@@ -191,6 +191,19 @@ function EvaluatingScreen({ progress, message }: { progress: number; message: st
   )
 }
 
+// Save Toast Component
+function SaveToast({ show }: { show: boolean }) {
+  if (!show) return null
+  return (
+    <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in z-50">
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+      자동 저장됨
+    </div>
+  )
+}
+
 export function CaseTakeClient({
   activityId,
   activityName,
@@ -213,7 +226,8 @@ export function CaseTakeClient({
   const [showAutoSubmitModal, setShowAutoSubmitModal] = useState(false)
   const [showEvaluating, setShowEvaluating] = useState(false)
   const [evaluationProgress, setEvaluationProgress] = useState(0)
-  const [evaluationMessage, setEvaluationMessage] = useState('AI is analyzing your case responses across 4 criteria...')
+  const [evaluationMessage, setEvaluationMessage] = useState('AI가 4가지 기준으로 응답을 분석하고 있습니다...')
+  const [showSaveToast, setShowSaveToast] = useState(false)
 
   // Timer state
   const [caseTimeRemaining, setCaseTimeRemaining] = useState(timePerCase * 60)
@@ -319,8 +333,11 @@ export function CaseTakeClient({
     if (!currentScenario) return
 
     const response = responses[currentScenario.id]
-    if (response) {
+    if (response && (response.issues || response.solution)) {
       await saveCaseResponse(attemptId, currentScenario.id, response)
+      // Show save toast
+      setShowSaveToast(true)
+      setTimeout(() => setShowSaveToast(false), 2000)
     }
   }
 
@@ -369,11 +386,11 @@ export function CaseTakeClient({
         setEvaluationProgress(progress)
 
         if (progress >= 30 && progress < 60) {
-          setEvaluationMessage('Analyzing critical thinking depth...')
+          setEvaluationMessage('비판적 사고 깊이를 분석하고 있습니다...')
         } else if (progress >= 60 && progress < 85) {
-          setEvaluationMessage('Evaluating real-world application...')
+          setEvaluationMessage('실제 적용 가능성을 평가하고 있습니다...')
         } else if (progress >= 85) {
-          setEvaluationMessage('Finalizing evaluation scores...')
+          setEvaluationMessage('최종 평가 점수를 계산하고 있습니다...')
         }
       }
     }, 500)
@@ -399,7 +416,7 @@ export function CaseTakeClient({
     // Complete progress
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
     setEvaluationProgress(100)
-    setEvaluationMessage('Evaluation complete! Loading results...')
+    setEvaluationMessage('평가 완료! 결과 페이지로 이동합니다...')
 
     if (result.success) {
       setTimeout(() => {
@@ -419,12 +436,12 @@ export function CaseTakeClient({
     })
 
     if (incomplete.length > 0) {
-      if (!confirm(`${incomplete.length} case(s) have incomplete responses. Submit anyway?`)) {
+      if (!confirm(`${incomplete.length}개의 케이스에 미완성 응답이 있습니다. 그래도 제출하시겠습니까?`)) {
         return
       }
     }
 
-    if (confirm('Submit all cases for evaluation? You cannot change your responses after submission.')) {
+    if (confirm('모든 케이스를 제출하시겠습니까? 제출 후에는 응답을 수정할 수 없습니다.')) {
       handleSubmit()
     }
   }
@@ -433,12 +450,15 @@ export function CaseTakeClient({
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <p className="text-gray-600 mb-4">No scenarios available for this case study.</p>
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-gray-600 mb-4">이 케이스 학습에 사용 가능한 시나리오가 없습니다.</p>
           <Link
             href={`/activities/${activityId}`}
             className="inline-block px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
           >
-            Back to Activity
+            활동으로 돌아가기
           </Link>
         </div>
       </div>
@@ -474,62 +494,112 @@ export function CaseTakeClient({
       {/* Auto-Submit Warning Modal */}
       {showAutoSubmitModal && <AutoSubmitModal onContinue={handleAutoSubmitContinue} />}
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{activityName}</h1>
-              <p className="text-gray-600 mt-2">{groupName}</p>
-            </div>
-            <Link
-              href={`/activities/${activityId}`}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-900 font-semibold py-2 px-4 rounded-lg flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Activity
-            </Link>
-          </div>
+      {/* Save Toast */}
+      <SaveToast show={showSaveToast} />
 
-          {/* Instructions Alert */}
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      {/* Sticky Header with Timer */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+        <div className="container mx-auto px-4 py-3 max-w-6xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link
+                href={`/activities/${activityId}`}
+                className="text-gray-500 hover:text-gray-700 transition"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
+              </Link>
+              <div>
+                <p className="text-xs text-indigo-600 font-medium">케이스 학습 모드</p>
+                <h1 className="font-semibold text-gray-900 truncate max-w-xs">{activityName}</h1>
               </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">Case Mode Instructions</h3>
-                <div className="mt-2 text-sm text-blue-700">
-                  {instructions && (
-                    <div className="bg-white border border-blue-200 rounded p-3 mb-3">
-                      <p className="whitespace-pre-wrap">{instructions}</p>
-                    </div>
-                  )}
-                  <p>
-                    You will analyze <span className="font-semibold">{scenarios.length}</span> business case scenarios. For each case:
-                  </p>
-                  <ul className="list-disc ml-5 mt-2 space-y-1">
-                    <li>Identify the key flaws or problems in the scenario</li>
-                    <li>Propose specific, actionable solutions</li>
-                    <li>Each case has a <span className="font-semibold">{timePerCase}</span> minute time limit</li>
-                    <li>Cases auto-submit when time expires</li>
-                  </ul>
-                  <p className="mt-2">
-                    Your responses will be evaluated on 4 criteria: Understanding, Ingenuity, Critical Thinking, and Real-World Application (0-10 scale each).
-                  </p>
-                </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Case Progress */}
+              <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
+                <span className="font-medium text-indigo-600">{currentIndex + 1}</span>
+                <span>/</span>
+                <span>{scenarios.length}</span>
+                <span className="text-gray-400">케이스</span>
               </div>
+
+              {/* Timer */}
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                caseTimeRemaining <= 60 ? 'bg-red-100' : 'bg-indigo-100'
+              }`}>
+                <svg className={`w-4 h-4 ${caseTimeRemaining <= 60 ? 'text-red-600' : 'text-indigo-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className={`font-bold ${caseTimeRemaining <= 60 ? 'text-red-600' : 'text-indigo-700'}`}>
+                  {formatTime(caseTimeRemaining)}
+                </span>
+              </div>
+
+              {/* Total Time */}
+              <div className="hidden md:flex items-center gap-2 text-xs text-gray-500">
+                <span>전체:</span>
+                <span className="font-medium">{formatTime(totalTimeRemaining)}</span>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                onClick={confirmSubmit}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1.5 px-4 rounded-lg text-sm flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="hidden sm:inline">제출하기</span>
+              </button>
             </div>
           </div>
 
-          {/* Grading Rubric */}
-          <GradingRubric passThreshold={passThreshold} />
+          {/* Progress Bar in Header */}
+          <div className="w-full bg-gray-200 rounded-full h-1 mt-2">
+            <div
+              className="bg-indigo-600 h-1 rounded-full transition-all duration-300"
+              style={{ width: `${((currentIndex + 1) / scenarios.length) * 100}%` }}
+            />
+          </div>
         </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        {/* Instructions Card - Collapsible */}
+        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <div className="bg-indigo-100 rounded-lg p-2">
+              <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-indigo-900 mb-2">케이스 학습 안내</h3>
+              {instructions && (
+                <div className="bg-white border border-indigo-100 rounded p-3 mb-3 text-sm text-gray-700">
+                  <p className="whitespace-pre-wrap">{instructions}</p>
+                </div>
+              )}
+              <div className="text-sm text-indigo-800 space-y-1">
+                <p>
+                  <span className="font-semibold">{scenarios.length}개</span>의 비즈니스 케이스 시나리오를 분석합니다.
+                </p>
+                <ul className="list-disc ml-5 text-indigo-700">
+                  <li>시나리오의 핵심 문제점을 파악하세요</li>
+                  <li>구체적이고 실행 가능한 해결책을 제시하세요</li>
+                  <li>케이스별 제한 시간: <span className="font-semibold">{timePerCase}분</span></li>
+                  <li>4가지 기준으로 평가됩니다 (이해도, 창의성, 비판적 사고, 실제 적용)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Grading Rubric */}
+        <GradingRubric passThreshold={passThreshold} />
 
         {/* Evaluating Screen */}
         {showEvaluating ? (
@@ -597,36 +667,53 @@ export function CaseTakeClient({
 
               {/* Response Form */}
               <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Analysis</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  분석 작성
+                </h3>
 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    1. What are the key flaws or problems in this scenario?
-                    <span className="text-red-500">*</span>
+                    1. 이 시나리오의 핵심 문제점은 무엇인가요?
+                    <span className="text-red-500 ml-1">*</span>
                   </label>
                   <textarea
                     value={currentResponse.issues}
                     onChange={(e) => updateResponse('issues', e.target.value)}
-                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                     rows={6}
-                    placeholder="Identify and explain the specific problems, ethical issues, or logical flaws in this business case..."
+                    placeholder="비즈니스 케이스에서 발견된 구체적인 문제점, 윤리적 이슈, 논리적 결함 등을 설명하세요..."
+                    maxLength={2000}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Be specific and explain why each is problematic.</p>
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-xs text-gray-500">문제가 왜 문제인지 구체적으로 설명하세요.</p>
+                    <span className={`text-xs ${currentResponse.issues.length > 1800 ? 'text-red-500' : 'text-gray-400'}`}>
+                      {currentResponse.issues.length} / 2000자
+                    </span>
+                  </div>
                 </div>
 
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    2. What solutions do you propose?
-                    <span className="text-red-500">*</span>
+                    2. 어떤 해결책을 제안하시나요?
+                    <span className="text-red-500 ml-1">*</span>
                   </label>
                   <textarea
                     value={currentResponse.solution}
                     onChange={(e) => updateResponse('solution', e.target.value)}
-                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                     rows={6}
-                    placeholder="Provide concrete, actionable solutions to address the problems you identified..."
+                    placeholder="파악한 문제를 해결하기 위한 구체적이고 실행 가능한 해결책을 제시하세요..."
+                    maxLength={2000}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Focus on practical, implementable solutions.</p>
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-xs text-gray-500">실제로 구현 가능한 실용적인 해결책에 집중하세요.</p>
+                    <span className={`text-xs ${currentResponse.solution.length > 1800 ? 'text-red-500' : 'text-gray-400'}`}>
+                      {currentResponse.solution.length} / 2000자
+                    </span>
+                  </div>
                 </div>
 
                 {/* Navigation Buttons */}
@@ -639,13 +726,13 @@ export function CaseTakeClient({
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                    Previous Case
+                    이전 케이스
                   </button>
-                  <div className="text-sm text-gray-600">
-                    <svg className="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="text-sm text-gray-600 flex items-center gap-1">
+                    <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                     </svg>
-                    Auto-saving responses
+                    자동 저장 중
                   </div>
                   <button
                     onClick={currentIndex === scenarios.length - 1 ? confirmSubmit : handleNext}
@@ -657,11 +744,11 @@ export function CaseTakeClient({
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                        Review All Cases
+                        전체 검토
                       </>
                     ) : (
                       <>
-                        Next Case
+                        다음 케이스
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
@@ -674,7 +761,7 @@ export function CaseTakeClient({
 
             {/* Quick Case Navigator */}
             <div className="bg-white rounded-lg shadow-md p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Navigator</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">케이스 빠른 이동</h3>
               <div className="flex gap-2 flex-wrap">
                 {scenarios.map((scenario, index) => {
                   const hasResponse = responses[scenario.id]?.issues || responses[scenario.id]?.solution

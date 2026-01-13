@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
+import { getUserStreak, checkMilestoneBadges, BADGE_DEFINITIONS } from '@/lib/services/streakService'
 
 // Badge definitions (matching Flask badge-display.html)
 const badgeDefinitions = [
@@ -239,13 +240,71 @@ export async function GET() {
       pointsNeeded = 100 + 50 * (level - 1)
     }
 
+    // Get streak info from the new streak system
+    let streakInfo = {
+      currentStreak: 0,
+      longestStreak: 0,
+      weeklyActivityDays: 0,
+      monthlyActivityDays: 0,
+      badges: [] as Array<{ badgeId: string; earnedAt: Date }>,
+    }
+
+    try {
+      streakInfo = await getUserStreak(session.user.id)
+
+      // Also run milestone badge check to ensure badges are up to date
+      await checkMilestoneBadges(session.user.id)
+    } catch {
+      // Streak system not yet initialized for this user
+    }
+
+    // Merge earned badges from DB with calculated badges
+    const storedBadges = await prisma.badgeEarned.findMany({
+      where: { userId: session.user.id },
+      orderBy: { earnedAt: 'desc' },
+    })
+
+    // Add streak badges if earned
+    if (streakInfo.currentStreak >= 7) {
+      const weekWarrior = badgeDefinitions.find(b => b.id === 'week-warrior')
+      if (weekWarrior && !earnedBadges.find(b => b.id === 'week-warrior')) {
+        const storedBadge = storedBadges.find(b => b.badgeId === 'week_warrior')
+        earnedBadges.push({
+          id: 'week-warrior',
+          badge: weekWarrior,
+          earnedAt: storedBadge?.earnedAt || new Date(),
+          isFeatured: false,
+        })
+      }
+    }
+
+    if (streakInfo.currentStreak >= 30) {
+      const monthMaster = badgeDefinitions.find(b => b.id === 'month-master')
+      if (monthMaster && !earnedBadges.find(b => b.id === 'month-master')) {
+        const storedBadge = storedBadges.find(b => b.badgeId === 'month_master')
+        earnedBadges.push({
+          id: 'month-master',
+          badge: monthMaster,
+          earnedAt: storedBadge?.earnedAt || new Date(),
+          isFeatured: true,
+        })
+      }
+    }
+
     return NextResponse.json({
       earnedBadges,
       allBadges: badgeDefinitions,
+      storedBadges: storedBadges.map(b => ({
+        ...b,
+        definition: BADGE_DEFINITIONS[b.badgeId as keyof typeof BADGE_DEFINITIONS],
+      })),
       userStats: {
         totalPoints,
         level,
-        currentStreak: 0, // Would need streak tracking table
+        currentStreak: streakInfo.currentStreak,
+        longestStreak: streakInfo.longestStreak,
+        weeklyActivityDays: streakInfo.weeklyActivityDays,
+        monthlyActivityDays: streakInfo.monthlyActivityDays,
       },
     })
   } catch (error) {
