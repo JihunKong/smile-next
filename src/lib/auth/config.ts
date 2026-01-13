@@ -1,12 +1,23 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
+import Google from 'next-auth/providers/google'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db/prisma'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // PrismaAdapter removed - not needed for JWT strategy with Credentials provider
   // Using JWT strategy stores session in cookie, not database
   providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: 'consent',
+          access_type: 'offline',
+          response_type: 'code',
+        },
+      },
+    }),
     Credentials({
       name: 'credentials',
       credentials: {
@@ -63,10 +74,92 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: '/auth/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      // Handle Google OAuth sign-in
+      if (account?.provider === 'google') {
+        console.log('[Auth] Google OAuth sign-in for:', user.email)
+
+        if (!user.email) {
+          console.log('[Auth] No email from Google')
+          return false
+        }
+
+        try {
+          // Check if user already exists
+          let existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+          })
+
+          if (existingUser) {
+            // User exists - link Google account if not already linked
+            if (!existingUser.googleId) {
+              await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                  googleId: account.providerAccountId,
+                  emailVerified: true, // Auto-verify for OAuth
+                  avatarUrl: existingUser.avatarUrl || user.image || null,
+                },
+              })
+              console.log('[Auth] Linked Google account to existing user')
+            }
+            // Update the user object with our DB user's id
+            user.id = existingUser.id
+            user.roleId = existingUser.roleId
+          } else {
+            // Create new user from Google OAuth
+            const googleProfile = profile as { given_name?: string; family_name?: string; picture?: string }
+
+            // Generate unique username from email
+            const baseUsername = user.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '')
+            let username = baseUsername
+            let counter = 1
+
+            while (await prisma.user.findUnique({ where: { username } })) {
+              username = `${baseUsername}${counter}`
+              counter++
+            }
+
+            const newUser = await prisma.user.create({
+              data: {
+                email: user.email,
+                username,
+                firstName: googleProfile?.given_name || user.name?.split(' ')[0] || '',
+                lastName: googleProfile?.family_name || user.name?.split(' ').slice(1).join(' ') || '',
+                googleId: account.providerAccountId,
+                avatarUrl: googleProfile?.picture || user.image || null,
+                emailVerified: true, // Auto-verify for OAuth
+                roleId: 2, // Default role (student)
+              },
+            })
+            console.log('[Auth] Created new user from Google OAuth:', newUser.id)
+            user.id = newUser.id
+            user.roleId = newUser.roleId
+          }
+
+          return true
+        } catch (error) {
+          console.error('[Auth] Google OAuth error:', error)
+          return false
+        }
+      }
+
+      return true
+    },
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
         token.roleId = (user as { roleId?: number }).roleId
+      }
+      // For OAuth, fetch roleId from database if not present
+      if (account?.provider === 'google' && !token.roleId && token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { roleId: true },
+        })
+        if (dbUser) {
+          token.roleId = dbUser.roleId
+        }
       }
       return token
     },

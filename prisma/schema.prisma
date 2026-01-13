@@ -29,6 +29,9 @@ model User {
   // Firebase integration
   firebaseUserId          String?   @unique @map("firebase_user_id")
 
+  // Google OAuth
+  googleId                String?   @unique @map("google_id")
+
   // Role (0=Super Admin, 1=Admin, 2=Teacher, 3=Student)
   roleId                  Int       @default(3) @map("role_id")
   role                    Role?     @relation(fields: [roleUuid], references: [id])

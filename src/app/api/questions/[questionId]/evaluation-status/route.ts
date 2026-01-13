@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import { NextResponse } from 'next/server'
+import { generateBloomsGuidance } from '@/lib/ai/claude'
 
 /**
  * GET: Get AI evaluation status for a question
@@ -138,12 +139,47 @@ export async function POST(
       })
     }
 
-    // TODO: Queue Tier 2 guidance generation
-    // For now, return that it's not yet implemented
+    // Get question with activity context for Tier 2 guidance
+    const questionWithContext = await prisma.question.findUnique({
+      where: { id: questionId },
+      include: {
+        activity: true,
+      },
+    })
+
+    if (!questionWithContext) {
+      return NextResponse.json({ error: 'Question not found' }, { status: 404 })
+    }
+
+    // Generate Tier 2 guidance using Claude
+    console.log('[Tier 2] Generating guidance for question:', questionId)
+
+    const guidance = await generateBloomsGuidance(
+      questionWithContext.content,
+      evaluation.bloomsLevel || 'remember',
+      {
+        subject: questionWithContext.activity.schoolSubject || undefined,
+        topic: questionWithContext.activity.topic || undefined,
+        educationLevel: questionWithContext.activity.educationLevel || undefined,
+      }
+    )
+
+    // Save the generated guidance to the database
+    await prisma.questionEvaluation.update({
+      where: { id: evaluation.id },
+      data: {
+        bloomsGuidance: JSON.parse(JSON.stringify(guidance)),
+        tier2GeneratedAt: new Date(),
+      },
+    })
+
+    console.log('[Tier 2] Successfully generated and saved guidance for question:', questionId)
+
     return NextResponse.json({
-      success: false,
-      error: 'Tier 2 guidance generation not yet implemented',
-    }, { status: 501 })
+      success: true,
+      guidance,
+      generatedAt: new Date().toISOString(),
+    })
 
   } catch (error) {
     console.error('[POST /api/questions/[questionId]/evaluation-status] Error:', error)

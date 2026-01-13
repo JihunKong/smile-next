@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { randomBytes } from 'crypto'
+import { sendPasswordResetEmail } from '@/lib/services/emailService'
+import { rateLimit, RATE_LIMIT_CONFIGS, getRateLimitHeaders } from '@/lib/rateLimit'
 
-// Token expiry time: 10 minutes
-const TOKEN_EXPIRY_MINUTES = 10
+// Token expiry time: 1 hour (increased from 10 minutes for better UX)
+const TOKEN_EXPIRY_MINUTES = 60
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting (10 attempts per 15 minutes)
+    const rateLimitResult = await rateLimit(request, RATE_LIMIT_CONFIGS.auth)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many password reset attempts. Please try again later.' },
+        { status: 429, headers: getRateLimitHeaders(rateLimitResult) }
+      )
+    }
+
     const { email } = await request.json()
 
     if (!email) {
@@ -41,20 +52,16 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Generate reset URL
+    // Get base URL for reset link
     const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const resetUrl = `${baseUrl}/auth/reset-password/${resetToken}`
 
-    // In production, send email here
-    // For now, log the reset URL (in development)
-    console.log('=== Password Reset Request ===')
-    console.log(`User: ${user.email}`)
-    console.log(`Reset URL: ${resetUrl}`)
-    console.log(`Token expires: ${resetExpire.toISOString()}`)
-    console.log('==============================')
+    // Send password reset email
+    const emailSent = await sendPasswordResetEmail(user.email, resetToken, baseUrl)
 
-    // TODO: Implement actual email sending
-    // await sendPasswordResetEmail(user.email, resetUrl)
+    if (!emailSent) {
+      console.error('[Password Reset] Failed to send email to:', user.email)
+      // Still return success to prevent enumeration
+    }
 
     return NextResponse.json({
       message: 'If an account exists with this email, you will receive a password reset link.',
