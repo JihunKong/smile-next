@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useDisplaySettings, Theme, Language, ItemsPerPage } from '@/hooks/useDisplaySettings'
 
 interface UserProfile {
@@ -34,7 +34,9 @@ interface UserPreferences {
 export default function SettingsPage() {
   const { data: session, update } = useSession()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('account')
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'account')
   const { settings: displaySettings, setTheme, setLanguage, setItemsPerPage, isLoaded: displaySettingsLoaded } = useDisplaySettings()
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)

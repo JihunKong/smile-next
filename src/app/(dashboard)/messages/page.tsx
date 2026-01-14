@@ -23,6 +23,12 @@ export default function MessagesPage() {
   const [activeTab, setActiveTab] = useState<'inbox' | 'sent'>('inbox')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 4000)
+  }
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -99,13 +105,14 @@ export default function MessagesPage() {
       if (response.ok) {
         setMessages((prev) => prev.filter((m) => !selectedIds.has(m.id)))
         setSelectedIds(new Set())
+        showToast('success', 'Messages deleted successfully')
       } else {
         const data = await response.json()
-        alert(data.error || 'Failed to delete messages')
+        showToast('error', data.error || 'Failed to delete messages')
       }
     } catch (error) {
       console.error('Failed to delete messages:', error)
-      alert('Failed to delete messages')
+      showToast('error', 'Failed to delete messages')
     } finally {
       setIsDeleting(false)
     }
@@ -123,6 +130,34 @@ export default function MessagesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2">
+          <div
+            className={`px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 ${
+              toast.type === 'success'
+                ? 'bg-green-50 border border-green-200 text-green-800'
+                : 'bg-red-50 border border-red-200 text-red-800'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <span className="text-sm font-medium">{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-2 text-gray-400 hover:text-gray-600">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
