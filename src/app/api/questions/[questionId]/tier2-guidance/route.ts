@@ -5,7 +5,7 @@ import { getTier2Guidance, generateTier2Guidance } from '@/lib/services/tier2Gui
 // GET - Retrieve existing Tier 2 guidance
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ questionId: string }> }
 ) {
   try {
     const session = await auth()
@@ -13,7 +13,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: questionId } = await params
+    const { questionId } = await params
 
     const guidance = await getTier2Guidance(questionId)
 
@@ -34,7 +34,7 @@ export async function GET(
 // POST - Generate new Tier 2 guidance
 export async function POST(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ questionId: string }> }
 ) {
   try {
     const session = await auth()
@@ -42,7 +42,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: questionId } = await params
+    const { questionId } = await params
 
     const guidance = await generateTier2Guidance(questionId, session.user.id)
 
