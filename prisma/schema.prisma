@@ -88,12 +88,15 @@ model Role {
   id          String   @id @default(uuid())
   name        String   @unique
   description String?
+  priority    Int      @default(0)              // Higher priority = more privileges
+  isSystem    Boolean  @default(false) @map("is_system")  // System roles cannot be deleted
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   users       User[]
   permissions RolePermission[]
 
+  @@index([priority])
   @@map("roles")
 }
 
@@ -101,11 +104,15 @@ model Permission {
   id          String   @id @default(uuid())
   name        String   @unique
   description String?
+  resource    String?               // e.g., 'groups', 'activities', 'users'
+  action      String?               // e.g., 'create', 'read', 'update', 'delete'
+  isSystem    Boolean  @default(false) @map("is_system")  // System permissions cannot be deleted
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   roles       RolePermission[]
 
+  @@index([resource, action])
   @@map("permissions")
 }
 
@@ -666,19 +673,70 @@ model Leaderboard {
   @@map("leaderboards")
 }
 
-model Subscription {
+model SubscriptionPlan {
   id              String   @id @default(uuid())
-  userId          String   @map("user")
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  plan            String   @default("free")
-  status          String   @default("active")
-  startDate       DateTime @default(now()) @map("start_date")
-  endDate         DateTime? @map("end_date")
+  name            String   @unique
+  description     String?
+  price           Decimal  @db.Decimal(10, 2)
+  interval        String   @default("monthly")  // monthly, yearly, lifetime
+  features        Json?    @default("[]")
+  maxGroups       Int      @default(5) @map("max_groups")
+  maxStorage      Int      @default(1024) @map("max_storage")  // in MB
+  maxMembers      Int      @default(50) @map("max_members")
+  aiEvaluations   Int      @default(100) @map("ai_evaluations")  // per month
+  isActive        Boolean  @default(true) @map("is_active")
+  sortOrder       Int      @default(0) @map("sort_order")
+  stripePriceId   String?  @map("stripe_price_id")
 
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
+  subscriptions   Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                    String   @id @default(uuid())
+  userId                String   @map("user")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Plan reference (optional for backwards compatibility)
+  planId                String?  @map("plan_id")
+  plan                  SubscriptionPlan? @relation(fields: [planId], references: [id])
+
+  // Legacy plan field (for backwards compatibility)
+  planName              String   @default("free") @map("plan")
+
+  // Stripe integration
+  stripeSubscriptionId  String?  @unique @map("stripe_subscription_id")
+  stripeCustomerId      String?  @map("stripe_customer_id")
+
+  // Status: active, past_due, cancelled, expired, trialing
+  status                String   @default("active")
+
+  // Billing period
+  currentPeriodStart    DateTime? @map("current_period_start")
+  currentPeriodEnd      DateTime? @map("current_period_end")
+  startDate             DateTime @default(now()) @map("start_date")
+  endDate               DateTime? @map("end_date")
+
+  // Cancellation
+  cancelledAt           DateTime? @map("cancelled_at")
+  cancelReason          String?  @map("cancel_reason")
+  cancelAtPeriodEnd     Boolean  @default(false) @map("cancel_at_period_end")
+
+  // Usage tracking
+  groupsUsed            Int      @default(0) @map("groups_used")
+  storageUsedMb         Int      @default(0) @map("storage_used_mb")
+  aiEvaluationsUsed     Int      @default(0) @map("ai_evaluations_used")
+  usageResetAt          DateTime? @map("usage_reset_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([stripeSubscriptionId])
+  @@index([stripeCustomerId])
   @@map("subscriptions")
 }
 
@@ -905,6 +963,42 @@ model BadgeEarned {
   @@index([badgeId])
   @@index([earnedAt])
   @@map("badges_earned")
+}
+
+model UserLevel {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+
+  // Points and Level
+  totalPoints     Int      @default(0) @map("total_points")
+  currentLevel    Int      @default(1) @map("current_level")
+
+  // Tier info (calculated from points)
+  currentTier     String   @default("CURIOUS_STARTER") @map("current_tier")
+  tierProgress    Float    @default(0.0) @map("tier_progress")  // 0.0 to 1.0
+
+  // Point breakdown by category
+  questionPoints  Int      @default(0) @map("question_points")
+  responsePoints  Int      @default(0) @map("response_points")
+  evaluationPoints Int     @default(0) @map("evaluation_points")
+  streakPoints    Int      @default(0) @map("streak_points")
+  bonusPoints     Int      @default(0) @map("bonus_points")
+
+  // Activity tracking for points
+  questionsCreated Int     @default(0) @map("questions_created")
+  responsesGiven  Int      @default(0) @map("responses_given")
+  evaluationsReceived Int  @default(0) @map("evaluations_received")
+  perfectScores   Int      @default(0) @map("perfect_scores")
+
+  // Timestamps
+  lastPointsAt    DateTime? @map("last_points_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([totalPoints])
+  @@index([currentLevel])
+  @@index([currentTier])
+  @@map("user_levels")
 }
 
 // ============================================================================
