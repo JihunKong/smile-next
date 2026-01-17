@@ -29,51 +29,18 @@ jobs:
         run: |
           echo "✅ Build verification passed - proceeding with deployment"
 
-      - name: Setup and Update Code on VM
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Copy Deploy Scripts to VM
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 60s
-          script: |
-            # Determine repository URL and branch
-            REPO_URL="https://github.com/${{ github.repository }}.git"
-            # Determine branch based on environment
-            if [ "${{ inputs.environment }}" == "dev" ]; then
-              BRANCH="develop"
-            else
-              BRANCH="main"
-            fi
-            
-            # Preferred directory: /opt/smile-next, fallback: ~/new_smile_flask
-            if [ -d "/opt/smile-next" ]; then
-              REPO_DIR="/opt/smile-next"
-            elif [ -d "$HOME/new_smile_flask" ]; then
-              REPO_DIR="$HOME/new_smile_flask"
-            else
-              # Create directory and clone repository
-              echo "📦 Repository not found. Cloning to ~/new_smile_flask..."
-              mkdir -p $HOME/new_smile_flask
-              cd $HOME
-              git clone -b $BRANCH $REPO_URL new_smile_flask || {
-                echo "⚠️  Failed to clone $BRANCH branch, trying main..."
-                git clone -b main $REPO_URL new_smile_flask || {
-                  echo "❌ Failed to clone repository"
-                  exit 1
-                }
-              }
-              REPO_DIR="$HOME/new_smile_flask"
-            fi
-            
-            # Update repository
-            echo "🔄 Updating repository at $REPO_DIR..."
-            cd $REPO_DIR
-            git fetch origin
-            git checkout $BRANCH || git checkout main
-            git pull origin $BRANCH || git pull origin main || echo "⚠️  Warning: git pull failed, continuing with existing code..."
-            
-            echo "✅ Repository ready at $REPO_DIR"
+          source: "scripts"
+          target: "/opt/smile-next"
+          rm: true
 
       - name: Validate Environment Configuration
         uses: appleboy/ssh-action@v1.0.3
@@ -83,15 +50,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10s
           script: |
-            # Find repository directory
-            if [ -d "/opt/smile-next" ]; then
-              cd /opt/smile-next
-            elif [ -d "$HOME/new_smile_flask" ]; then
-              cd $HOME/new_smile_flask
-            else
-              echo "ERROR: Repository directory not found"
-              exit 1
-            fi
+            cd /opt/smile-next || cd $HOME/new_smile_flask || { echo "ERROR: Scripts directory not found"; exit 1; }
             bash scripts/deploy/validate-env.sh ${{ inputs.environment }}
 
       - name: Deploy to VM via SSH
@@ -102,15 +61,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 60s
           script: |
-            # Find repository directory
-            if [ -d "/opt/smile-next" ]; then
-              cd /opt/smile-next
-            elif [ -d "$HOME/new_smile_flask" ]; then
-              cd $HOME/new_smile_flask
-            else
-              echo "ERROR: Repository directory not found"
-              exit 1
-            fi
+            cd /opt/smile-next || cd $HOME/new_smile_flask || { echo "ERROR: Scripts directory not found"; exit 1; }
             
             # Ensure dependency containers are running
             bash scripts/deploy/ensure-dependencies.sh ${{ inputs.environment }}
@@ -132,13 +83,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30s
           script: |
-            # Find repository directory
-            if [ -d "/opt/smile-next" ]; then
-              cd /opt/smile-next
-            elif [ -d "$HOME/new_smile_flask" ]; then
-              cd $HOME/new_smile_flask
-            else
-              echo "ERROR: Repository directory not found"
-              exit 1
-            fi
+            cd /opt/smile-next || cd $HOME/new_smile_flask || { echo "ERROR: Scripts directory not found"; exit 1; }
             bash scripts/deploy/verify-deployment.sh "${{ inputs.container-name }}"
