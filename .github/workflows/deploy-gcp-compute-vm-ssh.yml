@@ -37,38 +37,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10s
           script: |
-            echo "Validating environment configuration for ${{ inputs.environment }}..."
-            
-            # Check .env file exists
-            ENV_FILE="/opt/smile-next/.env"
-            if [ ! -f "$ENV_FILE" ]; then
-              echo "ERROR: $ENV_FILE not found"
-              exit 1
-            fi
-            
-            # Source and validate required vars
-            set -a
-            source "$ENV_FILE"
-            set +a
-            
-            # Critical variables
-            MISSING_VARS=()
-            [ -z "$AUTH_SECRET" ] && [ -z "$NEXTAUTH_SECRET" ] && MISSING_VARS+=("AUTH_SECRET or NEXTAUTH_SECRET")
-            [ -z "$DATABASE_URL" ] && MISSING_VARS+=("DATABASE_URL")
-            
-            if [ ${#MISSING_VARS[@]} -gt 0 ]; then
-              echo "ERROR: Missing required environment variables:"
-              printf '  - %s\n' "${MISSING_VARS[@]}"
-              exit 1
-            fi
-            
-            # Validate DATABASE_URL format
-            if ! echo "$DATABASE_URL" | grep -qE '^postgresql://'; then
-              echo "ERROR: DATABASE_URL must be a PostgreSQL connection string"
-              exit 1
-            fi
-            
-            echo "✓ Environment validation passed"
+            cd /opt/smile-next || cd ~/new_smile_flask || exit 1
+            bash scripts/deploy/validate-env.sh ${{ inputs.environment }}
 
       - name: Deploy to VM via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -78,67 +48,19 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 60s
           script: |
-            set -e
+            cd /opt/smile-next || cd ~/new_smile_flask || exit 1
             
-            echo "🚀 Starting deployment to ${{ inputs.environment }} environment..."
-            echo "📦 Image: ${{ inputs.image-name }}:${{ inputs.docker-tag }}"
-            echo "🔌 Port: ${{ inputs.port }}"
-            echo "📛 Container: ${{ inputs.container-name }}"
+            # Ensure dependency containers are running
+            bash scripts/deploy/ensure-dependencies.sh ${{ inputs.environment }}
             
-            # 1. Log in to GHCR using GITHUB_TOKEN
-            echo "🔐 Logging in to GitHub Container Registry..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}" --password-stdin || {
-              echo "⚠️  Warning: Failed to login to GHCR. Image might be public or using different credentials."
-            }
-            
-            # 2. Verify image exists and pull the specific tag for the current branch
-            echo "📥 Verifying and pulling Docker image..."
-            IMAGE_TAG="${{ inputs.image-name }}:${{ inputs.docker-tag }}"
-            
-            # Check if image exists in registry (with retry)
-            MAX_PULL_RETRIES=3
-            PULL_RETRY=0
-            while [ $PULL_RETRY -lt $MAX_PULL_RETRIES ]; do
-              if docker pull "$IMAGE_TAG"; then
-                echo "✅ Successfully pulled image: $IMAGE_TAG"
-                break
-              else
-                PULL_RETRY=$((PULL_RETRY + 1))
-                if [ $PULL_RETRY -eq $MAX_PULL_RETRIES ]; then
-                  echo "❌ Failed to pull image after $MAX_PULL_RETRIES attempts: $IMAGE_TAG"
-                  echo "This might indicate the build job failed or the image wasn't pushed."
-                  exit 1
-                fi
-                echo "⚠️  Pull attempt $PULL_RETRY failed, retrying in 5 seconds..."
-                sleep 5
-              fi
-            done
-            
-            # 3. Stop and remove existing container (handle errors gracefully)
-            echo "🛑 Stopping existing container..."
-            docker stop ${{ inputs.container-name }} 2>/dev/null || echo "Container not running or doesn't exist"
-            
-            echo "🗑️  Removing existing container..."
-            docker rm ${{ inputs.container-name }} 2>/dev/null || echo "Container doesn't exist"
-            
-            # 4. Run the new container with restart policy
-            echo "▶️  Starting new container..."
-            docker run -d \
-              --name ${{ inputs.container-name }} \
-              --restart always \
-              -p ${{ inputs.port }}:3000 \
-              --env-file /opt/smile-next/.env \
-              ${{ inputs.image-name }}:${{ inputs.docker-tag }} || {
-              echo "❌ Failed to start container"
-              docker logs ${{ inputs.container-name }} --tail 50 2>/dev/null || true
-              exit 1
-            }
-            
-            # 5. Prune old Docker images to save disk space
-            echo "🧹 Cleaning up old images..."
-            docker image prune -af --filter "until=24h" || echo "Image prune completed with warnings"
-            
-            echo "✅ Deployment completed successfully!"
+            # Deploy the application
+            bash scripts/deploy/deploy-app.sh \
+              "${{ inputs.image-name }}" \
+              "${{ inputs.docker-tag }}" \
+              "${{ inputs.port }}" \
+              "${{ inputs.container-name }}" \
+              "${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}" \
+              "${{ secrets.GHCR_PAT }}"
 
       - name: Verify Deployment
         uses: appleboy/ssh-action@v1.0.3
@@ -148,73 +70,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30s
           script: |
-            echo "🔍 Verifying deployment..."
-            echo "Waiting for container to be healthy..."
-            
-            # Wait for container to start
-            sleep 5
-            
-            # Check if container is running
-            if ! docker ps | grep -q "${{ inputs.container-name }}"; then
-              echo "❌ Container is not running!"
-              echo "Container logs:"
-              docker logs ${{ inputs.container-name }} --tail 50 2>/dev/null || true
-              exit 1
-            fi
-            
-            # Check health endpoint
-            MAX_RETRIES=15
-            RETRY_COUNT=0
-            
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if docker exec ${{ inputs.container-name }} node -e "
-                const http = require('http');
-                http.get('http://localhost:3000/api/health', (res) => {
-                  if (res.statusCode === 200) {
-                    process.exit(0);
-                  } else {
-                    process.exit(1);
-                  }
-                }).on('error', () => process.exit(1));
-              " 2>/dev/null; then
-                echo "✓ Health check passed"
-                
-                # Also check workers status
-                if docker exec ${{ inputs.container-name }} node -e "
-                  const http = require('http');
-                  http.get('http://localhost:3000/api/health/workers', (res) => {
-                    let data = '';
-                    res.on('data', chunk => data += chunk);
-                    res.on('end', () => {
-                      try {
-                        const result = JSON.parse(data);
-                        if (result.workersEnabled) {
-                          console.log('✓ Workers are running');
-                          process.exit(0);
-                        } else {
-                          console.log('⚠ Workers are not running:', result.missingVars?.join(', ') || result.startupStatus?.error || 'unknown');
-                          process.exit(0); // Don't fail deployment if workers are disabled
-                        }
-                      } catch (e) {
-                        console.log('⚠ Could not parse worker status');
-                        process.exit(0);
-                      }
-                    });
-                  }).on('error', () => process.exit(1));
-                " 2>/dev/null; then
-                  echo "✓ Worker status check completed"
-                fi
-                
-                echo "✅ Deployment verification successful!"
-                exit 0
-              fi
-              
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-              echo "⏳ Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
-              sleep 4
-            done
-            
-            echo "❌ Health check failed after $((MAX_RETRIES * 4)) seconds"
-            echo "Container logs:"
-            docker logs ${{ inputs.container-name }} --tail 50
-            exit 1
+            cd /opt/smile-next || cd ~/new_smile_flask || exit 1
+            bash scripts/deploy/verify-deployment.sh "${{ inputs.container-name }}"
