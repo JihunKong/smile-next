@@ -9,6 +9,8 @@ on:
     branches:
       - develop
       - main
+  workflow_dispatch:
+    # Allow manual triggering of the workflow
 
 env:
   REGISTRY: ghcr.io
@@ -19,8 +21,8 @@ jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      should-build: ${{ steps.filter.outputs.src }}
-      should-deploy: ${{ steps.filter.outputs.src }}
+      should-build: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.src }}
+      should-deploy: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.src }}
       # Environment variables calculated once and passed to downstream jobs
       env-name: ${{ steps.vars.outputs.env-name }}
       docker-tag: ${{ steps.vars.outputs.docker-tag }}
@@ -36,7 +38,8 @@ jobs:
         with:
           # For push events: compare against previous commit on same branch
           # For PR events: compare PR branch against base branch (automatic)
-          base: ${{ github.event_name == 'push' && (github.event.before || github.ref) || '' }}
+          # For workflow_dispatch: always return true (manual trigger)
+          base: ${{ github.event_name == 'push' && (github.event.before || github.ref) || (github.event_name == 'workflow_dispatch' && 'HEAD^' || '') }}
           filters: |
             src:
               - 'src/**'
@@ -46,6 +49,7 @@ jobs:
               - 'next.config.*'
               - '.env*'
               - 'prisma/**'
+              - '.github/workflows/**'
 
       - name: Set Environment Variables
         id: vars
