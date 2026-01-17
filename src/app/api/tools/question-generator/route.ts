@@ -3,10 +3,17 @@ import { auth } from '@/lib/auth/config'
 import { z } from 'zod'
 import OpenAI from 'openai'
 
-// OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-})
+// Lazy initialization to avoid build-time errors
+let openaiClient: OpenAI | null = null
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || '',
+    })
+  }
+  return openaiClient
+}
 
 const generateSchema = z.object({
   sourceText: z.string().min(100, 'Source text must be at least 100 characters'),
@@ -83,7 +90,7 @@ Requirements:
 
 Return only the JSON object with the questions array.`
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },

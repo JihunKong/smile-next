@@ -7,10 +7,17 @@ import { GroupRoles } from '@/types/groups'
 import { ActivityModes } from '@/types/activities'
 import OpenAI from 'openai'
 
-// OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-})
+// Lazy initialization to avoid build-time errors
+let openaiClient: OpenAI | null = null
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || '',
+    })
+  }
+  return openaiClient
+}
 
 // Validation schema
 const activityMakerSchema = z.object({
@@ -121,7 +128,7 @@ Requirements:
 Return only the JSON object with the questions array.`
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
