@@ -72,6 +72,9 @@ jobs:
   call-build:
     needs: check-changes
     if: needs.check-changes.outputs.should-build == 'true'
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/build-node.yml
     with:
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
