@@ -14,13 +14,14 @@ if ! docker ps | grep -q "smile-redis"; then
     echo "🔄 Starting existing Redis container..."
     docker start smile-redis
   else
-    echo "📦 Creating Redis container..."
-    docker run -d \
-      --name smile-redis \
-      --restart always \
-      -p 6379:6379 \
-      redis:7-alpine \
-      redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+      echo "📦 Creating Redis container..."
+      docker run -d \
+        --name smile-redis \
+        --restart always \
+        -p 6379:6379 \
+        -v redis_data:/data \
+        redis:7-alpine \
+        redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru --appendonly yes
   fi
   echo "⏳ Waiting for Redis to be ready..."
   for i in {1..10}; do
