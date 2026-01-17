@@ -41,6 +41,46 @@ jobs:
     environment: dev
 
     steps:
+      - name: Validate Environment Configuration
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10
+          script: |
+            echo "Validating environment configuration..."
+            
+            # Check .env file exists
+            if [ ! -f /opt/smile-next/.env ]; then
+              echo "ERROR: /opt/smile-next/.env not found"
+              exit 1
+            fi
+            
+            # Source and validate required vars
+            set -a
+            source /opt/smile-next/.env
+            set +a
+            
+            # Critical variables
+            MISSING_VARS=()
+            [ -z "$AUTH_SECRET" ] && [ -z "$NEXTAUTH_SECRET" ] && MISSING_VARS+=("AUTH_SECRET or NEXTAUTH_SECRET")
+            [ -z "$DATABASE_URL" ] && MISSING_VARS+=("DATABASE_URL")
+            
+            if [ ${#MISSING_VARS[@]} -gt 0 ]; then
+              echo "ERROR: Missing required environment variables:"
+              printf '  - %s\n' "${MISSING_VARS[@]}"
+              exit 1
+            fi
+            
+            # Validate DATABASE_URL format
+            if ! echo "$DATABASE_URL" | grep -qE '^postgresql://'; then
+              echo "ERROR: DATABASE_URL must be a PostgreSQL connection string"
+              exit 1
+            fi
+            
+            echo "✓ Environment validation passed"
+
       - name: Deploy to VM via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -73,3 +113,67 @@ jobs:
 
             # 5. Clean up dangling images to save disk space
             docker image prune -f
+
+      - name: Verify Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30
+          script: |
+            echo "Waiting for container to be healthy..."
+            
+            # Wait for container to start
+            sleep 5
+            
+            # Check health endpoint
+            MAX_RETRIES=15
+            RETRY_COUNT=0
+            
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if docker exec smile-next node -e "
+                const http = require('http');
+                http.get('http://localhost:3000/api/health', (res) => {
+                  if (res.statusCode === 200) {
+                    process.exit(0);
+                  } else {
+                    process.exit(1);
+                  }
+                }).on('error', () => process.exit(1));
+              " 2>/dev/null; then
+                echo "✓ Health check passed"
+                
+                # Also check workers status
+                if docker exec smile-next node -e "
+                  const http = require('http');
+                  http.get('http://localhost:3000/api/health/workers', (res) => {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => {
+                      const result = JSON.parse(data);
+                      if (result.workersEnabled) {
+                        console.log('✓ Workers are running');
+                        process.exit(0);
+                      } else {
+                        console.log('⚠ Workers are not running:', result.missingVars?.join(', ') || result.startupStatus?.error || 'unknown');
+                        process.exit(0); // Don't fail deployment if workers are disabled
+                      }
+                    });
+                  }).on('error', () => process.exit(1));
+                " 2>/dev/null; then
+                  echo "✓ Worker status check completed"
+                fi
+                
+                exit 0
+              fi
+              
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
+              sleep 4
+            done
+            
+            echo "ERROR: Health check failed after $((MAX_RETRIES * 4)) seconds"
+            echo "Container logs:"
+            docker logs smile-next --tail 50
+            exit 1
