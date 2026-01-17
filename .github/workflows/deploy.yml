@@ -1,0 +1,287 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/tedahn-pknic/new_smile_flask
+
+jobs:
+  # Smart path filtering to skip builds when only docs change
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should-build: ${{ steps.filter.outputs.src }}
+      should-deploy: ${{ steps.filter.outputs.src }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check for relevant changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'src/**'
+              - 'public/**'
+              - 'package*.json'
+              - 'Dockerfile'
+              - 'next.config.*'
+              - '.env*'
+              - 'prisma/**'
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.should-build == 'true'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        id: env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT
+            echo "DOCKER_TAG=develop" >> $GITHUB_OUTPUT
+            echo "HOST_PORT=3001" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT
+            echo "DOCKER_TAG=latest" >> $GITHUB_OUTPUT
+            echo "HOST_PORT=3000" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.env.outputs.DOCKER_TAG }}
+            type=sha,prefix={{branch}}-,format=short
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [check-changes, build-and-push]
+    if: needs.check-changes.outputs.should-deploy == 'true'
+    environment: ${{ github.ref == 'refs/heads/develop' && 'dev' || 'prod' }}
+
+    steps:
+      - name: Set environment variables
+        id: env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT
+            echo "DOCKER_TAG=develop" >> $GITHUB_OUTPUT
+            echo "HOST_PORT=3001" >> $GITHUB_OUTPUT
+            echo "CONTAINER_NAME=smile-next-dev" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT
+            echo "DOCKER_TAG=latest" >> $GITHUB_OUTPUT
+            echo "HOST_PORT=3000" >> $GITHUB_OUTPUT
+            echo "CONTAINER_NAME=smile-next" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate Environment Configuration
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10s
+          script: |
+            echo "Validating environment configuration for ${{ steps.env.outputs.ENVIRONMENT }}..."
+            
+            # Check .env file exists
+            ENV_FILE="/opt/smile-next/.env"
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "ERROR: $ENV_FILE not found"
+              exit 1
+            fi
+            
+            # Source and validate required vars
+            set -a
+            source "$ENV_FILE"
+            set +a
+            
+            # Critical variables
+            MISSING_VARS=()
+            [ -z "$AUTH_SECRET" ] && [ -z "$NEXTAUTH_SECRET" ] && MISSING_VARS+=("AUTH_SECRET or NEXTAUTH_SECRET")
+            [ -z "$DATABASE_URL" ] && MISSING_VARS+=("DATABASE_URL")
+            
+            if [ ${#MISSING_VARS[@]} -gt 0 ]; then
+              echo "ERROR: Missing required environment variables:"
+              printf '  - %s\n' "${MISSING_VARS[@]}"
+              exit 1
+            fi
+            
+            # Validate DATABASE_URL format
+            if ! echo "$DATABASE_URL" | grep -qE '^postgresql://'; then
+              echo "ERROR: DATABASE_URL must be a PostgreSQL connection string"
+              exit 1
+            fi
+            
+            echo "✓ Environment validation passed"
+
+      - name: Deploy to VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 60s
+          script: |
+            set -e
+            
+            echo "🚀 Starting deployment to ${{ steps.env.outputs.ENVIRONMENT }} environment..."
+            echo "📦 Image: ${{ env.IMAGE_NAME }}:${{ steps.env.outputs.DOCKER_TAG }}"
+            echo "🔌 Port: ${{ steps.env.outputs.HOST_PORT }}"
+            echo "📛 Container: ${{ steps.env.outputs.CONTAINER_NAME }}"
+            
+            # 1. Log in to GHCR using GITHUB_TOKEN
+            echo "🔐 Logging in to GitHub Container Registry..."
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}" --password-stdin || {
+              echo "⚠️  Warning: Failed to login to GHCR. Image might be public or using different credentials."
+            }
+            
+            # 2. Pull the specific tag for the current branch
+            echo "📥 Pulling Docker image..."
+            docker pull ${{ env.IMAGE_NAME }}:${{ steps.env.outputs.DOCKER_TAG }} || {
+              echo "❌ Failed to pull image"
+              exit 1
+            }
+            
+            # 3. Stop and remove existing container (handle errors gracefully)
+            echo "🛑 Stopping existing container..."
+            docker stop ${{ steps.env.outputs.CONTAINER_NAME }} 2>/dev/null || echo "Container not running or doesn't exist"
+            
+            echo "🗑️  Removing existing container..."
+            docker rm ${{ steps.env.outputs.CONTAINER_NAME }} 2>/dev/null || echo "Container doesn't exist"
+            
+            # 4. Run the new container with restart policy
+            echo "▶️  Starting new container..."
+            docker run -d \
+              --name ${{ steps.env.outputs.CONTAINER_NAME }} \
+              --restart always \
+              -p ${{ steps.env.outputs.HOST_PORT }}:3000 \
+              --env-file /opt/smile-next/.env \
+              ${{ env.IMAGE_NAME }}:${{ steps.env.outputs.DOCKER_TAG }} || {
+              echo "❌ Failed to start container"
+              docker logs ${{ steps.env.outputs.CONTAINER_NAME }} --tail 50 2>/dev/null || true
+              exit 1
+            }
+            
+            # 5. Prune old Docker images to save disk space
+            echo "🧹 Cleaning up old images..."
+            docker image prune -af --filter "until=24h" || echo "Image prune completed with warnings"
+            
+            echo "✅ Deployment completed successfully!"
+
+      - name: Verify Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30s
+          script: |
+            echo "🔍 Verifying deployment..."
+            echo "Waiting for container to be healthy..."
+            
+            # Wait for container to start
+            sleep 5
+            
+            # Check if container is running
+            if ! docker ps | grep -q "${{ steps.env.outputs.CONTAINER_NAME }}"; then
+              echo "❌ Container is not running!"
+              echo "Container logs:"
+              docker logs ${{ steps.env.outputs.CONTAINER_NAME }} --tail 50 2>/dev/null || true
+              exit 1
+            fi
+            
+            # Check health endpoint
+            MAX_RETRIES=15
+            RETRY_COUNT=0
+            
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if docker exec ${{ steps.env.outputs.CONTAINER_NAME }} node -e "
+                const http = require('http');
+                http.get('http://localhost:3000/api/health', (res) => {
+                  if (res.statusCode === 200) {
+                    process.exit(0);
+                  } else {
+                    process.exit(1);
+                  }
+                }).on('error', () => process.exit(1));
+              " 2>/dev/null; then
+                echo "✓ Health check passed"
+                
+                # Also check workers status
+                if docker exec ${{ steps.env.outputs.CONTAINER_NAME }} node -e "
+                  const http = require('http');
+                  http.get('http://localhost:3000/api/health/workers', (res) => {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => {
+                      try {
+                        const result = JSON.parse(data);
+                        if (result.workersEnabled) {
+                          console.log('✓ Workers are running');
+                          process.exit(0);
+                        } else {
+                          console.log('⚠ Workers are not running:', result.missingVars?.join(', ') || result.startupStatus?.error || 'unknown');
+                          process.exit(0); // Don't fail deployment if workers are disabled
+                        }
+                      } catch (e) {
+                        console.log('⚠ Could not parse worker status');
+                        process.exit(0);
+                      }
+                    });
+                  }).on('error', () => process.exit(1));
+                " 2>/dev/null; then
+                  echo "✓ Worker status check completed"
+                fi
+                
+                echo "✅ Deployment verification successful!"
+                exit 0
+              fi
+              
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "⏳ Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES)"
+              sleep 4
+            done
+            
+            echo "❌ Health check failed after $((MAX_RETRIES * 4)) seconds"
+            echo "Container logs:"
+            docker logs ${{ steps.env.outputs.CONTAINER_NAME }} --tail 50
+            exit 1
