@@ -8,7 +8,6 @@ import { getModeLabel, getModeBadgeColor, canManageActivity } from '@/lib/activi
 import { ActivityModes, type ActivityMode } from '@/types/activities'
 import { StudentProgressWidget } from '@/components/activities/StudentProgressWidget'
 import { ExamModeCard, InquiryModeCard, CaseModeCard } from '@/components/activities/ModeInfoCards'
-import { ActivityStatsCard } from '@/components/activities/ActivityStatsCard'
 
 // Helper to get education level label
 function getEducationLevelLabel(level: string | null): string {
@@ -348,40 +347,45 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
             </div>
           </div>
 
-          {/* Action buttons */}
+          {/* Action buttons - Flask order: Leaderboard, Export, Edit, Add Questions, Duplicate, Delete */}
           <div className="flex flex-wrap items-center gap-3 mt-6">
-            {/* Management buttons (Flask-style) */}
+            {/* 1. Leaderboard - First (Stanford Pine) */}
+            <Link
+              href={`/activities/${activity.id}/leaderboard`}
+              className="inline-flex items-center gap-2 px-4 py-2 text-white font-medium rounded-lg hover:opacity-90 transition"
+              style={{ backgroundColor: 'var(--stanford-pine)' }}
+            >
+              <i className="fas fa-trophy"></i>
+              Leaderboard
+            </Link>
+
+            {/* 2. Export CSV (Stanford Tan) */}
             {isManager && (
-              <>
-                <Link
-                  href={`/activities/${activity.id}/edit`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition border border-white/30"
-                >
-                  <i className="fas fa-edit"></i>
-                  Edit
-                </Link>
-                <Link
-                  href={`/activities/${activity.id}/analytics`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition border border-white/30"
-                >
-                  <i className="fas fa-chart-bar"></i>
-                  Analytics
-                </Link>
-                <Link
-                  href={`/activities/${activity.id}/results`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition border border-white/30"
-                >
-                  <i className="fas fa-file-alt"></i>
-                  Results
-                </Link>
-              </>
+              <ActionButtons
+                activityId={activity.id}
+                activityName={activity.name}
+                groupId={activity.owningGroupId}
+                isManager={isManager}
+              />
+            )}
+
+            {/* 3. Edit Activity (Stanford Cardinal) */}
+            {isManager && (
+              <Link
+                href={`/activities/${activity.id}/edit`}
+                className="inline-flex items-center gap-2 px-4 py-2 text-white font-medium rounded-lg hover:opacity-90 transition"
+                style={{ backgroundColor: 'var(--stanford-cardinal)' }}
+              >
+                <i className="fas fa-edit"></i>
+                Edit Activity
+              </Link>
             )}
 
             {/* Mode-specific start buttons */}
             {mode === ActivityModes.EXAM && (
               <Link
                 href={`/activities/${activity.id}/exam`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
               >
                 <i className="fas fa-clipboard-check"></i>
                 Take Exam
@@ -391,7 +395,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
             {mode === ActivityModes.INQUIRY && (
               <Link
                 href={`/activities/${activity.id}/inquiry`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition"
               >
                 <i className="fas fa-lightbulb"></i>
                 Start Inquiry
@@ -413,40 +417,54 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
               <Link
                 href={`/activities/${activity.id}/questions/create`}
                 data-testid="ask-question"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 font-medium rounded-lg hover:bg-gray-100 transition"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition"
               >
                 <i className="fas fa-plus"></i>
                 Ask a Question
               </Link>
             )}
 
+            {/* Delete Activity - Last (Red) */}
             {isManager && (
               <DeleteActivityButton activityId={activity.id} activityName={activity.name} />
             )}
           </div>
-
-          {/* Additional Action Buttons (Flask-style) */}
-          {isManager && (
-            <div className="mt-4">
-              <ActionButtons
-                activityId={activity.id}
-                activityName={activity.name}
-                groupId={activity.owningGroupId}
-                isManager={isManager}
-              />
-            </div>
-          )}
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Activity Stats Card */}
-        <div className="mb-8">
-          <ActivityStatsCard
-            questionCount={activity._count.questions}
-            memberCount={activity.owningGroup._count.members}
-            likeCount={activity.numberOfLikes}
-            isPrivate={activity.owningGroup.isPrivate}
+        {/* Stats + QR Code Row - Flask style 2-column grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Activity Stats */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <i className="fas fa-chart-pie text-blue-500"></i>
+              Activity Statistics
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <p className="text-3xl font-bold text-blue-600">{activity._count.questions}</p>
+                <p className="text-sm text-gray-600">Questions</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-3xl font-bold text-green-600">{activity.owningGroup._count.members}</p>
+                <p className="text-sm text-gray-600">Members</p>
+              </div>
+              <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                <p className="text-3xl font-bold text-yellow-600">{activity.numberOfLikes}</p>
+                <p className="text-sm text-gray-600">Likes</p>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <p className="text-3xl font-bold text-purple-600">{activity.owningGroup.isPrivate ? 'Private' : 'Public'}</p>
+                <p className="text-sm text-gray-600">Visibility</p>
+              </div>
+            </div>
+          </div>
+
+          {/* QR Code Invite */}
+          <QRCodeSection
+            activityId={activity.id}
+            inviteUrl={`${process.env.NEXT_PUBLIC_APP_URL || 'https://smile.example.com'}/activities/join?code=${activity.owningGroup.inviteCode || activity.id}`}
           />
         </div>
 
@@ -491,231 +509,181 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content - Questions (Open Mode only shows questions) */}
-          <div className="lg:col-span-2">
-            {mode === ActivityModes.OPEN ? (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Questions ({activity.questions.length})
-                </h2>
-                <QuestionList
-                  questions={activity.questions}
-                  activityId={activity.id}
-                  currentUserId={session.user.id}
-                  activityCreatorId={activity.creatorId}
-                  groupCreatorId={activity.owningGroup.creatorId}
-                  showActions={true}
-                  likedQuestionIds={likedQuestionIds}
-                />
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  <i className="fas fa-info-circle mr-2 text-blue-500"></i>
-                  About This Activity
-                </h2>
-                <div className="prose prose-sm max-w-none">
-                  {activity.description ? (
-                    <p className="text-gray-600 whitespace-pre-wrap">{activity.description}</p>
-                  ) : (
-                    <p className="text-gray-500 italic">No description provided.</p>
-                  )}
-                </div>
-
-                {/* Show custom instructions if available */}
-                {mode === ActivityModes.EXAM && activity.examSettings && (
-                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h3 className="font-medium text-blue-900 mb-2">
-                      <i className="fas fa-clipboard-list mr-2"></i>Exam Instructions
-                    </h3>
-                    <ul className="text-sm text-blue-800 space-y-1">
-                      <li>Answer all questions to the best of your ability</li>
-                      <li>You can navigate between questions during the exam</li>
-                      <li>Make sure to submit before time runs out</li>
-                    </ul>
-                  </div>
-                )}
-
-                {mode === ActivityModes.INQUIRY && activity.inquirySettings && (
-                  <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                    <h3 className="font-medium text-purple-900 mb-2">
-                      <i className="fas fa-lightbulb mr-2"></i>Inquiry Guidelines
-                    </h3>
-                    <ul className="text-sm text-purple-800 space-y-1">
-                      <li>Use the provided keywords to generate questions</li>
-                      <li>Focus on higher-order thinking (Bloom&apos;s Taxonomy)</li>
-                      <li>Quality is more important than quantity</li>
-                    </ul>
-                  </div>
-                )}
-
-                {mode === ActivityModes.CASE && caseConfig && (
-                  <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                    <h3 className="font-medium text-green-900 mb-2">
-                      <i className="fas fa-briefcase mr-2"></i>Case Study Guidelines
-                    </h3>
-                    <ul className="text-sm text-green-800 space-y-1">
-                      <li>Read each scenario carefully before answering</li>
-                      <li>Identify the key issues and propose solutions</li>
-                      <li>Consider real-world implications of your answers</li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
+        {/* Custom Instructions (Open Mode only) - Full width */}
+        {mode === ActivityModes.OPEN && activity.openModeSettings && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h2 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+              <i className="fas fa-info-circle"></i>
+              Instructions
+            </h2>
+            <p className="text-sm text-blue-700">
+              {(activity.openModeSettings as { instructions?: string })?.instructions ||
+               'Ask thoughtful questions related to the topic.'}
+            </p>
           </div>
+        )}
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Custom Instructions (Open Mode only) */}
-            {mode === ActivityModes.OPEN && activity.openModeSettings && (
-              <section className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h2 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
-                  <i className="fas fa-info-circle"></i>
-                  Instructions
-                </h2>
-                <p className="text-sm text-blue-700">
-                  {(activity.openModeSettings as { instructions?: string })?.instructions ||
-                   'Ask thoughtful questions related to the topic.'}
-                </p>
-              </section>
-            )}
-
-            {/* Student Progress Widget (Open Mode Pass/Fail) */}
-            {mode === ActivityModes.OPEN && (
-              <StudentProgressWidget activityId={activity.id} />
-            )}
-
-            {/* QR Code Invite Section */}
-            <QRCodeSection
-              activityId={activity.id}
-              inviteUrl={`${process.env.NEXT_PUBLIC_APP_URL || 'https://smile.example.com'}/activities/join?code=${activity.owningGroup.inviteCode || activity.id}`}
-            />
-
-            {/* Academic Information */}
-            <section className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                <i className="fas fa-graduation-cap mr-2 text-indigo-500"></i>
-                Academic Information
-              </h2>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Subject</span>
-                  <span className="font-medium">{activity.schoolSubject || 'Not specified'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Topic</span>
-                  <span className="font-medium">{activity.topic || 'Not specified'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Education Level</span>
-                  <span className="font-medium">{getEducationLevelLabel(activity.educationLevel)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Grade</span>
-                  <span className="font-medium">{getGradeLabel(activity.schoolGrade)}</span>
-                </div>
-              </div>
-            </section>
-
-            {/* Activity Info */}
-            <section className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                <i className="fas fa-info-circle mr-2 text-gray-500"></i>
-                Activity Info
-              </h2>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Group</span>
-                  <Link
-                    href={`/groups/${activity.owningGroupId}`}
-                    className="font-medium text-[var(--stanford-cardinal)] hover:underline"
-                  >
-                    {activity.owningGroup.name}
-                  </Link>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Mode</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getModeBadgeColor(mode)}`}>
-                    {getModeLabel(mode)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">AI Rating</span>
-                  <span className="font-medium">{activity.aiRatingEnabled ? 'Enabled' : 'Disabled'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Anonymous</span>
-                  <span className="font-medium">{activity.isAnonymousAuthorAllowed ? 'Allowed' : 'Not Allowed'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Created</span>
-                  <span className="font-medium">{new Date(activity.createdAt).toLocaleDateString()}</span>
-                </div>
-              </div>
-            </section>
-
-            {/* Stats */}
-            <section className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                <i className="fas fa-chart-pie mr-2 text-green-500"></i>
-                Statistics
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-2xl font-bold text-[var(--stanford-cardinal)]">{activity._count.questions}</p>
-                  <p className="text-xs text-gray-500">Questions</p>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-2xl font-bold text-[var(--stanford-pine)]">{activity.numberOfLikes}</p>
-                  <p className="text-xs text-gray-500">Likes</p>
-                </div>
-              </div>
-            </section>
-
-            {/* Pass/Fail Progress (Open Mode with evaluation) */}
-            {mode === ActivityModes.OPEN && activity.aiRatingEnabled && activity.questions.length > 0 && (
-              <section className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  <i className="fas fa-tasks mr-2 text-purple-500"></i>
-                  Evaluation Progress
-                </h2>
-                <div className="space-y-3">
-                  {(() => {
-                    const evaluated = activity.questions.filter(q => q.evaluation).length
-                    const passing = activity.questions.filter(q => q.evaluation && (q.evaluation.overallScore || 0) >= 7).length
-                    const total = activity.questions.length
-                    return (
-                      <>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-500">Evaluated</span>
-                          <span className="font-medium text-blue-600">{evaluated} / {total}</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${total > 0 ? (evaluated / total) * 100 : 0}%` }}
-                          ></div>
-                        </div>
-                        <div className="flex items-center justify-between text-sm mt-3">
-                          <span className="text-gray-500">Passing (7+)</span>
-                          <span className="font-medium text-green-600">{passing} / {evaluated}</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-green-600 h-2 rounded-full transition-all"
-                            style={{ width: `${evaluated > 0 ? (passing / evaluated) * 100 : 0}%` }}
-                          ></div>
-                        </div>
-                      </>
-                    )
-                  })()}
-                </div>
-              </section>
-            )}
+        {/* Student Progress Widget (Open Mode Pass/Fail) - Full width */}
+        {mode === ActivityModes.OPEN && (
+          <div className="mb-6">
+            <StudentProgressWidget activityId={activity.id} />
           </div>
+        )}
+
+        {/* Questions Section - Full Width */}
+        <div className="w-full">
+          {mode === ActivityModes.OPEN ? (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Questions ({activity.questions.length})
+              </h2>
+              <QuestionList
+                questions={activity.questions}
+                activityId={activity.id}
+                currentUserId={session.user.id}
+                activityCreatorId={activity.creatorId}
+                groupCreatorId={activity.owningGroup.creatorId}
+                showActions={true}
+                likedQuestionIds={likedQuestionIds}
+              />
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                <i className="fas fa-info-circle mr-2 text-blue-500"></i>
+                About This Activity
+              </h2>
+              <div className="prose prose-sm max-w-none">
+                {activity.description ? (
+                  <p className="text-gray-600 whitespace-pre-wrap">{activity.description}</p>
+                ) : (
+                  <p className="text-gray-500 italic">No description provided.</p>
+                )}
+              </div>
+
+              {/* Show custom instructions if available */}
+              {mode === ActivityModes.EXAM && activity.examSettings && (
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="font-medium text-blue-900 mb-2">
+                    <i className="fas fa-clipboard-list mr-2"></i>Exam Instructions
+                  </h3>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>Answer all questions to the best of your ability</li>
+                    <li>You can navigate between questions during the exam</li>
+                    <li>Make sure to submit before time runs out</li>
+                  </ul>
+                </div>
+              )}
+
+              {mode === ActivityModes.INQUIRY && activity.inquirySettings && (
+                <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <h3 className="font-medium text-purple-900 mb-2">
+                    <i className="fas fa-lightbulb mr-2"></i>Inquiry Guidelines
+                  </h3>
+                  <ul className="text-sm text-purple-800 space-y-1">
+                    <li>Use the provided keywords to generate questions</li>
+                    <li>Focus on higher-order thinking (Bloom&apos;s Taxonomy)</li>
+                    <li>Quality is more important than quantity</li>
+                  </ul>
+                </div>
+              )}
+
+              {mode === ActivityModes.CASE && caseConfig && (
+                <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <h3 className="font-medium text-green-900 mb-2">
+                    <i className="fas fa-briefcase mr-2"></i>Case Study Guidelines
+                  </h3>
+                  <ul className="text-sm text-green-800 space-y-1">
+                    <li>Read each scenario carefully before answering</li>
+                    <li>Identify the key issues and propose solutions</li>
+                    <li>Consider real-world implications of your answers</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Collapsible Additional Info Section */}
+        {isManager && (
+          <details className="mt-8 bg-white rounded-lg shadow-sm">
+            <summary className="p-4 cursor-pointer font-semibold text-gray-700 hover:bg-gray-50 rounded-lg">
+              <i className="fas fa-cog mr-2"></i>
+              Activity Details & Settings
+            </summary>
+            <div className="p-4 pt-0 grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Academic Information */}
+              <div>
+                <h3 className="font-medium text-gray-900 mb-3">
+                  <i className="fas fa-graduation-cap mr-2 text-indigo-500"></i>
+                  Academic Info
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Subject</span>
+                    <span>{activity.schoolSubject || 'Not specified'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Topic</span>
+                    <span>{activity.topic || 'Not specified'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Level</span>
+                    <span>{getEducationLevelLabel(activity.educationLevel)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Grade</span>
+                    <span>{getGradeLabel(activity.schoolGrade)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Activity Settings */}
+              <div>
+                <h3 className="font-medium text-gray-900 mb-3">
+                  <i className="fas fa-sliders-h mr-2 text-gray-500"></i>
+                  Settings
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">AI Rating</span>
+                    <span>{activity.aiRatingEnabled ? 'Enabled' : 'Disabled'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Anonymous</span>
+                    <span>{activity.isAnonymousAuthorAllowed ? 'Allowed' : 'Not Allowed'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Created</span>
+                    <span>{new Date(activity.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Group Info */}
+              <div>
+                <h3 className="font-medium text-gray-900 mb-3">
+                  <i className="fas fa-users mr-2 text-blue-500"></i>
+                  Group Info
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Group</span>
+                    <span>{activity.owningGroup.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Members</span>
+                    <span>{activity.owningGroup._count.members}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Privacy</span>
+                    <span>{activity.owningGroup.isPrivate ? 'Private' : 'Public'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        )}
       </div>
     </div>
   )

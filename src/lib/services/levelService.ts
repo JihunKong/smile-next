@@ -1,64 +1,76 @@
 import { prisma } from '@/lib/db/prisma'
 
-// Tier definitions
+// Tier definitions - Flask 6-tier system
 export const TIERS = {
-  CURIOUS_STARTER: {
-    id: 'CURIOUS_STARTER',
-    name: 'Curious Starter',
-    nameKo: '호기심 새싹',
+  SMILE_STARTER: {
+    id: 'SMILE_STARTER',
+    name: 'SMILE Starter',
+    nameKo: 'SMILE 스타터',
+    icon: '✨',
+    color: '#8B5CF6',
+    bgColor: '#F5F3FF',
+    pointRange: [0, 4999] as [number, number],
+    levelRange: [1, 10] as [number, number],
+    description: 'Beginning your SMILE journey',
+    descriptionKo: 'SMILE 여정을 시작하는 단계',
+  },
+  SMILE_LEARNER: {
+    id: 'SMILE_LEARNER',
+    name: 'SMILE Learner',
+    nameKo: 'SMILE 학습자',
+    icon: '📚',
+    color: '#3B82F6',
+    bgColor: '#EFF6FF',
+    pointRange: [5000, 9999] as [number, number],
+    levelRange: [11, 20] as [number, number],
+    description: 'Growing through questions and inquiry',
+    descriptionKo: '질문과 탐구를 통해 성장하는 단계',
+  },
+  SMILE_APPRENTICE: {
+    id: 'SMILE_APPRENTICE',
+    name: 'SMILE Apprentice',
+    nameKo: 'SMILE 견습생',
     icon: '🌱',
     color: '#10B981',
     bgColor: '#ECFDF5',
-    pointRange: [0, 99] as [number, number],
-    levelRange: [1, 5] as [number, number],
-    description: 'Beginning your learning journey',
-    descriptionKo: '학습 여정을 시작하는 단계',
+    pointRange: [10000, 24999] as [number, number],
+    levelRange: [21, 35] as [number, number],
+    description: 'Developing strong inquiry skills',
+    descriptionKo: '탄탄한 탐구 능력을 개발하는 단계',
   },
-  QUESTION_EXPLORER: {
-    id: 'QUESTION_EXPLORER',
-    name: 'Question Explorer',
-    nameKo: '질문 탐험가',
-    icon: '🔍',
-    color: '#3B82F6',
-    bgColor: '#EFF6FF',
-    pointRange: [100, 499] as [number, number],
-    levelRange: [6, 15] as [number, number],
-    description: 'Actively exploring and questioning',
-    descriptionKo: '적극적으로 탐구하고 질문하는 단계',
+  SMILE_MAKER: {
+    id: 'SMILE_MAKER',
+    name: 'SMILE Maker',
+    nameKo: 'SMILE 메이커',
+    icon: '🔨',
+    color: '#F59E0B',
+    bgColor: '#FFFBEB',
+    pointRange: [25000, 49999] as [number, number],
+    levelRange: [36, 55] as [number, number],
+    description: 'Creating meaningful learning experiences',
+    descriptionKo: '의미 있는 학습 경험을 창출하는 단계',
   },
-  INSIGHT_SEEKER: {
-    id: 'INSIGHT_SEEKER',
-    name: 'Insight Seeker',
-    nameKo: '통찰 탐구자',
-    icon: '💡',
-    color: '#8B5CF6',
-    bgColor: '#F5F3FF',
-    pointRange: [500, 1499] as [number, number],
-    levelRange: [16, 30] as [number, number],
-    description: 'Seeking deeper understanding',
-    descriptionKo: '더 깊은 이해를 추구하는 단계',
-  },
-  KNOWLEDGE_BUILDER: {
-    id: 'KNOWLEDGE_BUILDER',
-    name: 'Knowledge Builder',
-    nameKo: '지식 건설가',
-    icon: '🏗️',
-    color: '#EC4899',
-    bgColor: '#FDF2F8',
-    pointRange: [1500, 4999] as [number, number],
-    levelRange: [31, 50] as [number, number],
-    description: 'Building comprehensive knowledge',
-    descriptionKo: '종합적인 지식을 구축하는 단계',
+  SMILE_TRAINER: {
+    id: 'SMILE_TRAINER',
+    name: 'SMILE Trainer',
+    nameKo: 'SMILE 트레이너',
+    icon: '👨‍🏫',
+    color: '#EF4444',
+    bgColor: '#FEF2F2',
+    pointRange: [50000, 99999] as [number, number],
+    levelRange: [56, 80] as [number, number],
+    description: 'Guiding others in their learning journey',
+    descriptionKo: '다른 사람의 학습 여정을 이끄는 단계',
   },
   SMILE_MASTER: {
     id: 'SMILE_MASTER',
     name: 'SMILE Master',
     nameKo: 'SMILE 마스터',
-    icon: '👑',
-    color: '#F59E0B',
-    bgColor: '#FFFBEB',
-    pointRange: [5000, Infinity] as [number, number],
-    levelRange: [51, 100] as [number, number],
+    icon: '🏆',
+    color: '#FFD700',
+    bgColor: '#FFFEF0',
+    pointRange: [100000, Infinity] as [number, number],
+    levelRange: [81, 100] as [number, number],
     description: 'Master of inquiry-based learning',
     descriptionKo: '탐구 기반 학습의 마스터',
   },
@@ -158,13 +170,13 @@ export async function getUserLevel(userId: string) {
         userId,
         totalPoints: 0,
         currentLevel: 1,
-        currentTier: 'CURIOUS_STARTER',
+        currentTier: 'SMILE_STARTER',
         tierProgress: 0,
       },
     })
   }
 
-  const tier = TIERS[userLevel.currentTier as TierId] || TIERS.CURIOUS_STARTER
+  const tier = TIERS[userLevel.currentTier as TierId] || TIERS.SMILE_STARTER
   const pointsForNextLevel = getPointsForNextLevel(userLevel.currentLevel)
   const pointsInCurrentLevel = userLevel.totalPoints - getTotalPointsForLevel(userLevel.currentLevel)
 
@@ -242,10 +254,11 @@ export async function getTierProgress(userId: string) {
  */
 function getNextTier(currentTierId: TierId) {
   const tierOrder: TierId[] = [
-    'CURIOUS_STARTER',
-    'QUESTION_EXPLORER',
-    'INSIGHT_SEEKER',
-    'KNOWLEDGE_BUILDER',
+    'SMILE_STARTER',
+    'SMILE_LEARNER',
+    'SMILE_APPRENTICE',
+    'SMILE_MAKER',
+    'SMILE_TRAINER',
     'SMILE_MASTER',
   ]
 

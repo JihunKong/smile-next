@@ -176,46 +176,38 @@ export function ActionButtons({ activityId, activityName, groupId, isManager }: 
   if (!isManager) return null
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* Leaderboard */}
-      <a
-        href={`/activities/${activityId}/leaderboard`}
-        className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-lg hover:bg-yellow-200 transition"
-      >
-        <i className="fas fa-trophy"></i>
-        Leaderboard
-      </a>
-
-      {/* Export CSV */}
+    <>
+      {/* Export CSV - Stanford Tan style */}
       <button
         onClick={handleExportCSV}
         disabled={isExporting}
-        className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-800 text-sm font-medium rounded-lg hover:bg-green-200 transition disabled:opacity-50"
+        className="inline-flex items-center gap-2 px-4 py-2 text-white font-medium rounded-lg hover:opacity-90 transition disabled:opacity-50"
+        style={{ backgroundColor: 'var(--stanford-tan)' }}
       >
         <i className={`fas ${isExporting ? 'fa-spinner fa-spin' : 'fa-file-csv'}`}></i>
         {isExporting ? 'Exporting...' : 'Export CSV'}
       </button>
 
-      {/* Add 5 Questions (AI) */}
+      {/* Add 5 Questions (AI) - Green */}
       <button
         onClick={handleGenerateAIQuestions}
         disabled={isGenerating}
-        className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-100 text-purple-800 text-sm font-medium rounded-lg hover:bg-purple-200 transition disabled:opacity-50"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition disabled:opacity-50"
       >
         <i className={`fas ${isGenerating ? 'fa-spinner fa-spin' : 'fa-robot'}`}></i>
-        {isGenerating ? 'Generating...' : 'Add 5 Questions (AI)'}
+        {isGenerating ? 'Generating...' : 'Add 5 Questions'}
       </button>
 
-      {/* Duplicate */}
+      {/* Duplicate - Gray */}
       <button
         onClick={handleDuplicate}
         disabled={isDuplicating}
-        className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 text-sm font-medium rounded-lg hover:bg-blue-200 transition disabled:opacity-50"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition disabled:opacity-50"
       >
         <i className={`fas ${isDuplicating ? 'fa-spinner fa-spin' : 'fa-copy'}`}></i>
         {isDuplicating ? 'Duplicating...' : 'Duplicate'}
       </button>
-    </div>
+    </>
   )
 }
 

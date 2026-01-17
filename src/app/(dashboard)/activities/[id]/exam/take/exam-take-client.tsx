@@ -511,7 +511,7 @@ export function ExamTakeClient({
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Timer Header (fixed at top) */}
         {timeLimitMinutes > 0 && (
-          <div className="fixed top-0 left-0 right-0 z-40 bg-white shadow-lg border-b-4 border-red-500 px-4 py-3">
+          <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-lg border-b-4 border-red-500 px-4 py-3">
             <div className="container mx-auto max-w-4xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">

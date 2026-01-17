@@ -22,6 +22,16 @@ interface StudentPerformanceData {
   question_count: number
   avg_quality: string
   responses_received: number
+  avg_level: string
+  answers_given: number
+  level_distribution: {
+    L1: number
+    L2: number
+    L3: number
+    L4: number
+    L5: number
+    L6: number
+  }
 }
 
 interface ActivityInfo {
@@ -408,27 +418,48 @@ export default function ActivityAnalyticsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Rank
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Student
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Questions
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Avg Quality
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Level
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Responses Received
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Answers
+                  </th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Bloom Level 1: Remember">
+                    L1
+                  </th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Bloom Level 2: Understand">
+                    L2
+                  </th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Bloom Level 3: Apply">
+                    L3
+                  </th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Bloom Level 4: Analyze">
+                    L4
+                  </th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Bloom Level 5: Evaluate">
+                    L5
+                  </th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Bloom Level 6: Create">
+                    L6
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Avg Quality
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {studentPerformance.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
                       <i className="fas fa-users text-3xl mb-2"></i>
                       <p>No student activity yet</p>
                       <p className="text-sm">Students haven&apos;t created questions in this activity</p>
@@ -437,10 +468,12 @@ export default function ActivityAnalyticsPage() {
                 ) : (
                   studentPerformance.map((student, index) => {
                     const avgQuality = parseFloat(student.avg_quality) || 0
+                    const avgLevel = parseFloat(student.avg_level) || 0
+                    const levels = student.level_distribution || { L1: 0, L2: 0, L3: 0, L4: 0, L5: 0, L6: 0 }
 
                     return (
                       <tr key={student.student_id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
                               index === 0
@@ -455,7 +488,7 @@ export default function ActivityAnalyticsPage() {
                             {index + 1}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3">
                               {student.student_name.charAt(0).toUpperCase()}
@@ -465,11 +498,41 @@ export default function ActivityAnalyticsPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-900">
                           {student.question_count}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
+                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            avgLevel >= 4 ? 'bg-green-100 text-green-800' :
+                            avgLevel >= 3 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {student.avg_level || '—'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                          {student.answers_given || 0}
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center text-xs text-gray-600">
+                          {levels.L1 || '—'}
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center text-xs text-gray-600">
+                          {levels.L2 || '—'}
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center text-xs text-gray-600">
+                          {levels.L3 || '—'}
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center text-xs text-gray-600">
+                          {levels.L4 || '—'}
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center text-xs text-gray-600">
+                          {levels.L5 || '—'}
+                        </td>
+                        <td className="px-2 py-4 whitespace-nowrap text-center text-xs text-gray-600">
+                          {levels.L6 || '—'}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center justify-center">
                             <span className="text-sm font-medium text-gray-900 mr-2">
                               {student.avg_quality}
                             </span>
@@ -486,9 +549,6 @@ export default function ActivityAnalyticsPage() {
                               ))}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {student.responses_received}
                         </td>
                       </tr>
                     )

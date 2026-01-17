@@ -104,12 +104,22 @@ export default function ActivityEditPage() {
   const [examQuestionCount, setExamQuestionCount] = useState(25)
   const [isPublished, setIsPublished] = useState(false)
   const [examInstructions, setExamInstructions] = useState('')
+  // Scheduling settings
+  const [examStartDate, setExamStartDate] = useState('')
+  const [examEndDate, setExamEndDate] = useState('')
+  const [questionPoolSize, setQuestionPoolSize] = useState(0)
 
   // Inquiry settings
   const [inquiryShowLeaderboard, setInquiryShowLeaderboard] = useState(true)
   const [allowHints, setAllowHints] = useState(false)
   const [maxHints, setMaxHints] = useState(3)
   const [inquiryIsPublished, setInquiryIsPublished] = useState(false)
+  const [inquiryTheme, setInquiryTheme] = useState('')
+  const [referenceDocument, setReferenceDocument] = useState('')
+  const [minWordCount, setMinWordCount] = useState(10)
+  const [maxWordCount, setMaxWordCount] = useState(500)
+  const [qualityThreshold, setQualityThreshold] = useState(6.0)
+  const [inquiryMaxAttempts, setInquiryMaxAttempts] = useState(3)
 
   // Open Mode settings
   const [isPassFailEnabled, setIsPassFailEnabled] = useState(false)
@@ -828,6 +838,77 @@ export default function ActivityEditPage() {
                 </p>
               </div>
 
+              {/* Scheduling Settings */}
+              <div className="bg-white rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Scheduling Settings
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date/Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={examStartDate}
+                      onChange={(e) => setExamStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave empty for immediate availability</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date/Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={examEndDate}
+                      onChange={(e) => setExamEndDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave empty for no end date</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Question Pool Settings */}
+              <div className="bg-white rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Question Pool Settings
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Total Questions in Pool
+                    </label>
+                    <input
+                      type="number"
+                      value={questionPoolSize}
+                      onChange={(e) => setQuestionPoolSize(parseInt(e.target.value) || 0)}
+                      min={0}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      disabled
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Total questions available (auto-calculated)</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Questions per Exam
+                    </label>
+                    <input
+                      type="number"
+                      value={examQuestionCount}
+                      onChange={(e) => setExamQuestionCount(parseInt(e.target.value) || 1)}
+                      min={1}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Random selection from pool</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Instructions */}
               <div className="bg-white rounded-lg p-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -851,64 +932,180 @@ export default function ActivityEditPage() {
                 Inquiry Mode Settings
               </h2>
 
-              <div className="space-y-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={inquiryShowLeaderboard}
-                    onChange={(e) => setInquiryShowLeaderboard(e.target.checked)}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    Show leaderboard to students
-                  </span>
-                </label>
-
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={allowHints}
-                    onChange={(e) => setAllowHints(e.target.checked)}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    Allow hints during inquiry
-                  </span>
-                </label>
-
-                {allowHints && (
-                  <div className="ml-6">
+              {/* Theme & Reference */}
+              <div className="bg-white rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Theme &amp; Reference
+                </h3>
+                <div className="space-y-4">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Max Hints per Question
+                      Inquiry Theme
+                    </label>
+                    <input
+                      type="text"
+                      value={inquiryTheme}
+                      onChange={(e) => setInquiryTheme(e.target.value)}
+                      placeholder="e.g., Climate Change, World History"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reference Document URL
+                    </label>
+                    <input
+                      type="url"
+                      value={referenceDocument}
+                      onChange={(e) => setReferenceDocument(e.target.value)}
+                      placeholder="https://example.com/reference.pdf"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Optional. Link to reference material.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Question Parameters */}
+              <div className="bg-white rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Question Parameters
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Min Word Count
                     </label>
                     <input
                       type="number"
-                      value={maxHints}
-                      onChange={(e) => setMaxHints(parseInt(e.target.value) || 1)}
-                      min={1}
-                      max={10}
-                      className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      value={minWordCount}
+                      onChange={(e) => setMinWordCount(parseInt(e.target.value) || 5)}
+                      min={5}
+                      max={100}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
-                )}
 
-                {/* Publishing Status */}
-                <div className="border-t border-purple-200 pt-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Max Word Count
+                    </label>
+                    <input
+                      type="number"
+                      value={maxWordCount}
+                      onChange={(e) => setMaxWordCount(parseInt(e.target.value) || 500)}
+                      min={50}
+                      max={2000}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quality Thresholds */}
+              <div className="bg-white rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Quality Thresholds
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Minimum Quality Score (0-10)
+                    </label>
+                    <input
+                      type="number"
+                      value={qualityThreshold}
+                      onChange={(e) => setQualityThreshold(parseFloat(e.target.value) || 5)}
+                      min={0}
+                      max={10}
+                      step={0.5}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Questions below this score may need revision</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Max Retake Attempts
+                    </label>
+                    <input
+                      type="number"
+                      value={inquiryMaxAttempts}
+                      onChange={(e) => setInquiryMaxAttempts(parseInt(e.target.value) || 1)}
+                      min={1}
+                      max={10}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Times a student can retry</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Display Settings */}
+              <div className="bg-white rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Display Settings
+                </h3>
+                <div className="space-y-4">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={inquiryIsPublished}
-                      onChange={(e) => setInquiryIsPublished(e.target.checked)}
+                      checked={inquiryShowLeaderboard}
+                      onChange={(e) => setInquiryShowLeaderboard(e.target.checked)}
                       className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                     />
                     <span className="ml-2 text-sm text-gray-700">
-                      Inquiry is published and visible to students
+                      Show leaderboard to students
                     </span>
                   </label>
-                  <p className="text-xs text-gray-500 ml-6 mt-1">
-                    Uncheck this to hide the inquiry while you prepare keywords
-                  </p>
+
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={allowHints}
+                      onChange={(e) => setAllowHints(e.target.checked)}
+                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">
+                      Allow hints during inquiry
+                    </span>
+                  </label>
+
+                  {allowHints && (
+                    <div className="ml-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Max Hints per Question
+                      </label>
+                      <input
+                        type="number"
+                        value={maxHints}
+                        onChange={(e) => setMaxHints(parseInt(e.target.value) || 1)}
+                        min={1}
+                        max={10}
+                        className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* Publishing Status */}
+              <div className="bg-white rounded-lg p-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={inquiryIsPublished}
+                    onChange={(e) => setInquiryIsPublished(e.target.checked)}
+                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    Inquiry is published and visible to students
+                  </span>
+                </label>
+                <p className="text-xs text-gray-500 ml-6 mt-1">
+                  Uncheck this to hide the inquiry while you prepare keywords
+                </p>
               </div>
             </div>
           )}
@@ -925,7 +1122,7 @@ export default function ActivityEditPage() {
               type="submit"
               disabled={saving}
               className="px-6 py-2 text-white rounded-lg hover:opacity-90 transition disabled:opacity-50"
-              style={{ backgroundColor: '#4f46e5' }}
+              style={{ backgroundColor: 'var(--stanford-cardinal)' }}
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>

@@ -187,6 +187,66 @@ export default function CreateActivityPage() {
               />
               <p className="text-xs text-gray-500 mt-1">Optional. Maximum 1000 characters.</p>
             </div>
+
+            {/* Subject, Topic, Due Date, Max Points */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
+                  Subject
+                </label>
+                <input
+                  id="subject"
+                  name="subject"
+                  type="text"
+                  maxLength={100}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-transparent outline-none transition"
+                  placeholder="e.g., Mathematics, Science"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="topic" className="block text-sm font-medium text-gray-700 mb-1">
+                  Topic
+                </label>
+                <input
+                  id="topic"
+                  name="topic"
+                  type="text"
+                  maxLength={100}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-transparent outline-none transition"
+                  placeholder="e.g., Algebra, Cell Biology"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-1">
+                  Due Date
+                </label>
+                <input
+                  id="dueDate"
+                  name="dueDate"
+                  type="datetime-local"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-transparent outline-none transition"
+                />
+                <p className="text-xs text-gray-500 mt-1">Optional. Leave empty for no deadline.</p>
+              </div>
+
+              <div>
+                <label htmlFor="maxPoints" className="block text-sm font-medium text-gray-700 mb-1">
+                  Max Points
+                </label>
+                <input
+                  id="maxPoints"
+                  name="maxPoints"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-transparent outline-none transition"
+                  placeholder="e.g., 100"
+                />
+                <p className="text-xs text-gray-500 mt-1">Optional. Points possible for this activity.</p>
+              </div>
+            </div>
           </div>
 
           {/* Mode Selection Card */}
