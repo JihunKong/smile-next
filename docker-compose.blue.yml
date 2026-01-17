@@ -1,0 +1,152 @@
+# Blue/Green Deployment - Blue Environment (Development/Testing)
+# Usage: docker-compose -f docker-compose.blue.yml up -d
+#
+# Architecture:
+# - Blue (port 3001): Development environment - smile-next-blue.seedsofempowerment.org
+# - Green (port 3000): Stable/Production - smile-next.seedsofempowerment.org
+#
+# Initial deployment: Blue only (t3.micro resource optimization)
+# Add Green later when resources permit
+
+services:
+  # PostgreSQL Database (shared between Blue/Green)
+  db:
+    image: postgres:15-alpine
+    container_name: smile-postgres
+    environment:
+      POSTGRES_USER: smile_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+      POSTGRES_DB: smile_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smile_user -d smile_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - smile-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Redis (shared between Blue/Green)
+  redis:
+    image: redis:7-alpine
+    container_name: smile-redis
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - smile-network
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  # BLUE Environment (Development) - Port 3001
+  app-blue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: smile-next-app:blue
+    container_name: smile-app-blue
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-change_me_in_production}@db:5432/smile_db
+      - REDIS_URL=redis://redis:6379
+      - NEXTAUTH_URL=https://smile-next-blue.seedsofempowerment.org
+      - NEXT_PUBLIC_APP_URL=https://smile-next-blue.seedsofempowerment.org
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_TRUST_HOST=true
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+    env_file:
+      - .env.blue
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - smile-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # GREEN Environment (Stable/Production) - Port 3000
+  # Uncomment when ready to add stable environment
+  # app-green:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: smile-next-app:green
+  #   container_name: smile-app-green
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-change_me_in_production}@db:5432/smile_db
+  #     - REDIS_URL=redis://redis:6379
+  #     - NEXTAUTH_URL=https://smile-next.seedsofempowerment.org
+  #     - NEXT_PUBLIC_APP_URL=https://smile-next.seedsofempowerment.org
+  #     - AUTH_SECRET=${AUTH_SECRET}
+  #     - AUTH_TRUST_HOST=true
+  #     - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+  #     - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+  #     - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+  #     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+  #     - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}
+  #     - SMTP_HOST=${SMTP_HOST:-}
+  #     - SMTP_PORT=${SMTP_PORT:-587}
+  #     - SMTP_USER=${SMTP_USER:-}
+  #     - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+  #     - EMAIL_FROM=${EMAIL_FROM:-}
+  #     - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+  #     - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+  #   env_file:
+  #     - .env.green
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   networks:
+  #     - smile-network
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 512M
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  smile-network:
+    driver: bridge
