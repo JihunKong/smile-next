@@ -1,0 +1,38 @@
+# Cursor AI Rules for SMILE Project
+
+## AI Documentation System
+
+This project uses an AI-driven documentation system located at `docs/ai-docs/`.
+
+**IMPORTANT**: When modifying code or documentation, follow the AI documentation maintenance rules.
+
+### Quick Start for AI Agents
+
+1. **Read First**: `docs/ai-docs/AI_AGENT_MEMORY.md` - Quick reference guide
+2. **Rules**: `docs/ai-docs/RULES.md` - Core maintenance rules
+3. **Mapping**: `docs/ai-docs/MAPPING.md` - Document relationships
+
+### When Modifying Documentation
+
+- Always read `docs/ai-docs/RULES.md` before making changes
+- Update `docs/ai-docs/INDEX.md` when adding/removing documents
+- Update `docs/ai-docs/MAPPING.md` when relationships change
+- Run validation: `cd docs/ai-docs && node validate-docs.js`
+
+### Documentation Structure
+
+- `docs/ai-docs/api/` - API endpoint documentation
+- `docs/ai-docs/components/` - React component documentation
+- `docs/ai-docs/services/` - Service layer documentation
+- `docs/ai-docs/features/` - Feature documentation
+- `docs/ai-docs/architecture/` - Architecture documentation
+- `docs/ai-docs/guides/` - How-to guides
+
+### Key Principles
+
+1. All documents must have YAML frontmatter with metadata
+2. All documents must cross-reference related docs
+3. Update INDEX.md and MAPPING.md when structure changes
+4. Run validation after changes
+
+See `docs/ai-docs/AI_AGENT_MEMORY.md` for complete guide.

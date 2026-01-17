@@ -1,0 +1,21 @@
+# Antigravity AI Configuration
+
+## AI Documentation System
+
+This project uses an automated AI-driven documentation system.
+
+**Location**: `docs/ai-docs/`
+
+**Quick Start**: Read `docs/ai-docs/AI_AGENT_MEMORY.md` first
+
+**Rules**: `docs/ai-docs/RULES.md`
+
+**Registry**: `docs/ai-docs/INDEX.md`
+
+**Mapping**: `docs/ai-docs/MAPPING.md`
+
+When modifying documentation:
+1. Read RULES.md first
+2. Update INDEX.md if structure changes
+3. Update MAPPING.md if relationships change
+4. Run validation: `cd docs/ai-docs && node validate-docs.js`

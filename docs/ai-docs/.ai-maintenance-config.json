@@ -1,0 +1,68 @@
+{
+  "version": "1.0.0",
+  "maintainedBy": "ai-agent",
+  "lastUpdated": "2024-01-15",
+  "rules": {
+    "documentStructure": {
+      "requiredSections": [
+        "metadata",
+        "overview",
+        "relatedDocumentation",
+        "mainContent",
+        "seeAlso"
+      ],
+      "metadataFormat": "yaml-frontmatter",
+      "linkFormat": "relative-paths"
+    },
+    "crossReferenceRules": {
+      "bidirectional": ["see-also"],
+      "unidirectional": ["depends-on", "references"],
+      "requiredFor": ["depends-on", "references"]
+    },
+    "updateTriggers": [
+      "code-changes",
+      "new-features",
+      "api-changes",
+      "architecture-changes",
+      "bug-fixes"
+    ],
+    "validation": {
+      "checkLinks": true,
+      "checkMetadata": true,
+      "checkStructure": true,
+      "checkCrossReferences": true
+    }
+  },
+  "categories": {
+    "api": {
+      "template": "api-template.md",
+      "requiredFields": ["endpoints", "authentication", "request", "response", "examples"]
+    },
+    "components": {
+      "template": "component-template.md",
+      "requiredFields": ["location", "props", "usage", "examples"]
+    },
+    "services": {
+      "template": "service-template.md",
+      "requiredFields": ["location", "functions", "dependencies", "configuration"]
+    },
+    "features": {
+      "template": "feature-template.md",
+      "requiredFields": ["userStories", "workflow", "technicalImplementation"]
+    },
+    "architecture": {
+      "template": "architecture-template.md",
+      "requiredFields": ["overview", "components", "patterns"]
+    },
+    "guides": {
+      "template": "guide-template.md",
+      "requiredFields": ["prerequisites", "steps", "commonIssues"]
+    }
+  },
+  "maintenance": {
+    "autoUpdateIndex": true,
+    "autoUpdateMapping": true,
+    "validateOnChange": true,
+    "checkBrokenLinks": true
+  }
+}

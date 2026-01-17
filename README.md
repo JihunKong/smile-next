@@ -121,6 +121,22 @@ REDIS_URL="redis://localhost:6379"
 
 ## 문서
 
+### AI-Driven Documentation (자동 유지보수)
+
+> **AI 에이전트용**: 이 프로젝트는 자동화된 AI 문서 시스템을 사용합니다.  
+> **시작하기**: [AI_AGENT_MEMORY.md](docs/ai-docs/AI_AGENT_MEMORY.md) 또는 [AI_DOCS.md](./AI_DOCS.md) 참조
+
+- [AI 문서 시스템](docs/ai-docs/README.md) - AI가 자동으로 유지보수하는 문서 시스템
+- [AI 에이전트 메모리](docs/ai-docs/AI_AGENT_MEMORY.md) - AI 에이전트용 빠른 참조 가이드
+- [문서 인덱스](docs/ai-docs/INDEX.md) - 모든 문서의 중앙 레지스트리
+- [API 문서](docs/ai-docs/api/) - API 엔드포인트 문서
+- [컴포넌트 문서](docs/ai-docs/components/) - React 컴포넌트 문서
+- [서비스 문서](docs/ai-docs/services/) - 서비스 레이어 문서
+- [기능 문서](docs/ai-docs/features/) - 기능별 문서
+- [아키텍처 문서](docs/ai-docs/architecture/) - 시스템 설계 문서
+- [가이드](docs/ai-docs/guides/) - 개발 및 운영 가이드
+
+### 기존 문서
 - [아키텍처](docs/ARCHITECTURE.md) - 시스템 구조 및 설계
 - [개발 가이드](docs/DEVELOPMENT.md) - 개발 환경 및 가이드라인
 - [배포 가이드](docs/DEPLOYMENT.md) - AWS Docker 배포 방법

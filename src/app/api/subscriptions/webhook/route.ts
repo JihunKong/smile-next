@@ -58,9 +58,5 @@ export async function POST(request: Request) {
   }
 }
 
-// Disable body parsing for webhook (Stripe needs raw body)
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
+// In App Router, route handlers automatically get raw body access via request.text()
+// No need for bodyParser config (that was Pages Router only)

@@ -1,0 +1,16 @@
+# Aider AI Assistant Configuration
+# This file helps Aider understand the project structure
+
+# AI Documentation System
+# When working with documentation, refer to docs/ai-docs/
+# Key files:
+# - docs/ai-docs/AI_AGENT_MEMORY.md (quick reference)
+# - docs/ai-docs/RULES.md (maintenance rules)
+# - docs/ai-docs/INDEX.md (document registry)
+# - docs/ai-docs/MAPPING.md (cross-references)
+
+# Documentation maintenance rules:
+# 1. Read docs/ai-docs/RULES.md before modifying docs
+# 2. Update docs/ai-docs/INDEX.md when adding/removing docs
+# 3. Update docs/ai-docs/MAPPING.md when relationships change
+# 4. Run validation: cd docs/ai-docs && node validate-docs.js
