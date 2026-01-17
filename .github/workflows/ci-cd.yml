@@ -75,7 +75,7 @@ jobs:
     uses: ./.github/workflows/build-node.yml
     with:
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
-      image-name: ${{ env.IMAGE_NAME }}
+      image-name: ghcr.io/tedahn-pknic/new_smile_flask
     secrets: inherit
 
   # 3. Call Deploy (Dev) - ONLY if on develop branch and push event
@@ -94,7 +94,7 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ${{ env.IMAGE_NAME }}
+      image-name: ghcr.io/tedahn-pknic/new_smile_flask
     secrets: inherit
 
   # 4. Call Deploy (Prod) - ONLY if on main branch and push event
@@ -113,5 +113,5 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ${{ env.IMAGE_NAME }}
+      image-name: ghcr.io/tedahn-pknic/new_smile_flask
     secrets: inherit
