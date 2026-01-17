@@ -25,13 +25,6 @@ ENV NEXT_TELEMETRY_DISABLED 1
 # Increase Node.js memory for build
 ENV NODE_OPTIONS="--max-old-space-size=1536"
 
-# Dummy environment variables for build (replaced at runtime)
-ENV OPENAI_API_KEY="build-time-placeholder"
-ENV ANTHROPIC_API_KEY="build-time-placeholder"
-ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db"
-ENV AUTH_SECRET="build-time-secret"
-ENV NEXTAUTH_URL="http://localhost:3000"
-
 RUN npm run build
 
 # Production image, copy all the files and run next
