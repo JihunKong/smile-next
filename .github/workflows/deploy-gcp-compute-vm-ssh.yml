@@ -39,7 +39,7 @@ jobs:
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "scripts"
-          target: "~/smile-next"
+          target: "/home/deployer/smile-next"
           rm: true
 
       - name: Validate Environment Configuration
@@ -50,7 +50,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10s
           script: |
-            cd ~/smile-next || cd $HOME/new_smile_flask || cd /opt/smile-next || { echo "ERROR: Scripts directory not found"; exit 1; }
+            cd /home/deployer/smile-next || cd ~/smile-next || cd $HOME/new_smile_flask || cd /opt/smile-next || { echo "ERROR: Scripts directory not found"; exit 1; }
             bash scripts/deploy/validate-env.sh ${{ inputs.environment }}
 
       - name: Deploy to VM via SSH
@@ -61,7 +61,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 60s
           script: |
-            cd ~/smile-next || cd $HOME/new_smile_flask || cd /opt/smile-next || { echo "ERROR: Scripts directory not found"; exit 1; }
+            cd /home/deployer/smile-next || cd ~/smile-next || cd $HOME/new_smile_flask || cd /opt/smile-next || { echo "ERROR: Scripts directory not found"; exit 1; }
             
             # Ensure dependency containers are running
             bash scripts/deploy/ensure-dependencies.sh ${{ inputs.environment }}
@@ -83,5 +83,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30s
           script: |
-            cd ~/smile-next || cd $HOME/new_smile_flask || cd /opt/smile-next || { echo "ERROR: Scripts directory not found"; exit 1; }
+            cd /home/deployer/smile-next || cd ~/smile-next || cd $HOME/new_smile_flask || cd /opt/smile-next || { echo "ERROR: Scripts directory not found"; exit 1; }
             bash scripts/deploy/verify-deployment.sh "${{ inputs.container-name }}"

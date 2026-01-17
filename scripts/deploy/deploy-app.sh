@@ -64,11 +64,27 @@ docker rm "$CONTAINER_NAME" 2>/dev/null || echo "Container doesn't exist"
 
 # 4. Run the new container
 echo "▶️  Starting new container..."
+# Find .env file location
+ENV_FILE="/home/deployer/smile-next/.env"
+if [ ! -f "$ENV_FILE" ]; then
+  ENV_FILE="$HOME/smile-next/.env"
+fi
+if [ ! -f "$ENV_FILE" ]; then
+  ENV_FILE="$HOME/new_smile_flask/.env"
+fi
+if [ ! -f "$ENV_FILE" ]; then
+  ENV_FILE="/opt/smile-next/.env"
+fi
+if [ ! -f "$ENV_FILE" ]; then
+  echo "❌ ERROR: .env file not found in any expected location"
+  exit 1
+fi
+
 docker run -d \
   --name "$CONTAINER_NAME" \
   --restart always \
   -p "$PORT:3000" \
-  --env-file /opt/smile-next/.env \
+  --env-file "$ENV_FILE" \
   "$IMAGE_TAG" || {
   echo "❌ Failed to start container"
   docker logs "$CONTAINER_NAME" --tail 50 2>/dev/null || true
