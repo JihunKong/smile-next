@@ -32,6 +32,38 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Prepare Deployment Directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10s
+          script: |
+            echo "🔧 Preparing deployment directory..."
+            echo "Current user: $(whoami)"
+            echo "Home directory: $HOME"
+            
+            # Try to create/clean /home/deployer/smile-next if we have permission
+            if mkdir -p /home/deployer/smile-next 2>/dev/null && [ -w /home/deployer/smile-next ] 2>/dev/null; then
+              echo "✅ Can write to /home/deployer/smile-next"
+              echo "📁 Cleaning /home/deployer/smile-next..."
+              rm -rf /home/deployer/smile-next/* /home/deployer/smile-next/.* 2>/dev/null || true
+            else
+              echo "⚠️  Cannot write to /home/deployer/smile-next (permission denied)"
+              echo "📁 Will use user home directory: $HOME/smile-next"
+            fi
+            
+            # Always prepare user home directory as fallback
+            echo "📁 Preparing $HOME/smile-next..."
+            mkdir -p "$HOME/smile-next"
+            rm -rf "$HOME/smile-next"/* "$HOME/smile-next"/.* 2>/dev/null || true
+            
+            # Show permissions for debugging
+            echo "📂 Directory permissions:"
+            ls -la /home/deployer/ 2>/dev/null | head -5 || echo "  Cannot access /home/deployer/"
+            ls -la "$HOME/" | grep smile-next || echo "  $HOME/smile-next ready"
+
       - name: Copy Deploy Scripts to VM
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -39,8 +71,33 @@ jobs:
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "scripts"
-          target: "/home/deployer/smile-next"
-          rm: true
+          target: "~/smile-next"
+          rm: false
+          debug: true
+
+      - name: Move Scripts to Deployer Directory (if permitted)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10s
+          script: |
+            echo "🔄 Attempting to move scripts to /home/deployer/smile-next..."
+            if [ -d "$HOME/smile-next" ]; then
+              # Try to copy to /home/deployer if we have permission
+              if mkdir -p /home/deployer/smile-next 2>/dev/null && [ -w /home/deployer/smile-next ] 2>/dev/null; then
+                echo "✅ Copying to /home/deployer/smile-next..."
+                cp -r "$HOME/smile-next"/* /home/deployer/smile-next/ 2>/dev/null && \
+                echo "✅ Successfully copied to /home/deployer/smile-next" || \
+                echo "⚠️  Copy failed, will use $HOME/smile-next"
+              else
+                echo "⚠️  Cannot write to /home/deployer/smile-next, using $HOME/smile-next"
+              fi
+            else
+              echo "❌ Source directory $HOME/smile-next not found"
+              exit 1
+            fi
 
       - name: Validate Environment Configuration
         uses: appleboy/ssh-action@v1.0.3
