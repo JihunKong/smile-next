@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/seeds-smile/new_smile_flask:develop
+  IMAGE_NAME: ghcr.io/seeds-smile/smile-next
   # Host port for the app (blue environment uses 3001)
   APP_HOST_PORT: 3001
 
@@ -24,9 +24,9 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}
-          password: ${{ secrets.GHCR_PAT }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
