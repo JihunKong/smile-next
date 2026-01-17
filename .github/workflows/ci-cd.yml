@@ -82,9 +82,11 @@ jobs:
   deploy-dev:
     needs: [check-changes, call-build]
     if: |
+      always() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/develop' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
+      needs.check-changes.outputs.should-build == 'true' &&
       needs.call-build.result == 'success'
     uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
     with:
@@ -99,9 +101,11 @@ jobs:
   deploy-prod:
     needs: [check-changes, call-build]
     if: |
+      always() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
+      needs.check-changes.outputs.should-build == 'true' &&
       needs.call-build.result == 'success'
     uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
     with:
