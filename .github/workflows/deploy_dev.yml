@@ -33,7 +33,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.IMAGE_NAME }}:develop
 
   deploy:
     runs-on: ubuntu-latest
@@ -95,7 +95,7 @@ jobs:
             fi
 
             # 2. Pull the latest image
-            docker pull ${{ env.IMAGE_NAME }}:latest
+            docker pull ${{ env.IMAGE_NAME }}:develop
 
             # 3. Stop and remove old container ("|| true" so it doesn't fail if not running)
             docker stop smile-next || true
@@ -109,7 +109,7 @@ jobs:
               --restart always \
               -p ${{ env.APP_HOST_PORT }}:3000 \
               --env-file /opt/smile-next/.env \
-              ${{ env.IMAGE_NAME }}:latest
+              ${{ env.IMAGE_NAME }}:develop
 
             # 5. Clean up dangling images to save disk space
             docker image prune -f
