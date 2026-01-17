@@ -1,116 +1,33 @@
-name: Deploy to GCP
+name: Deploy to GCP Compute VM via SSH
 
 on:
-  push:
-    branches:
-      - develop
-      - main
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/tedahn-pknic/new_smile_flask
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      port:
+        required: true
+        type: string
+      docker-tag:
+        required: true
+        type: string
+      container-name:
+        required: true
+        type: string
+      image-name:
+        required: true
+        type: string
 
 jobs:
-  # Smart path filtering to skip builds when only docs change
-  check-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      should-build: ${{ steps.filter.outputs.src }}
-      should-deploy: ${{ steps.filter.outputs.src }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Check for relevant changes
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            src:
-              - 'src/**'
-              - 'public/**'
-              - 'package*.json'
-              - 'Dockerfile'
-              - 'next.config.*'
-              - '.env*'
-              - 'prisma/**'
-
-  build-and-push:
-    runs-on: ubuntu-latest
-    needs: check-changes
-    if: needs.check-changes.outputs.should-build == 'true'
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set environment variables
-        id: env
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT
-            echo "DOCKER_TAG=develop" >> $GITHUB_OUTPUT
-            echo "HOST_PORT=3001" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT
-            echo "DOCKER_TAG=latest" >> $GITHUB_OUTPUT
-            echo "HOST_PORT=3000" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}
-          password: ${{ secrets.GHCR_PAT }}
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=${{ steps.env.outputs.DOCKER_TAG }}
-            type=sha,prefix={{branch}}-,format=short
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
-
   deploy:
     runs-on: ubuntu-latest
-    needs: [check-changes, build-and-push]
-    if: needs.check-changes.outputs.should-deploy == 'true'
-    environment: ${{ github.ref == 'refs/heads/develop' && 'dev' || 'prod' }}
+    environment: ${{ inputs.environment }}
 
     steps:
-      - name: Set environment variables
-        id: env
+      - name: Verify build succeeded
         run: |
-          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT
-            echo "DOCKER_TAG=develop" >> $GITHUB_OUTPUT
-            echo "HOST_PORT=3001" >> $GITHUB_OUTPUT
-            echo "CONTAINER_NAME=smile-next-dev" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT
-            echo "DOCKER_TAG=latest" >> $GITHUB_OUTPUT
-            echo "HOST_PORT=3000" >> $GITHUB_OUTPUT
-            echo "CONTAINER_NAME=smile-next" >> $GITHUB_OUTPUT
-          fi
+          echo "✅ Build verification passed - proceeding with deployment"
 
       - name: Validate Environment Configuration
         uses: appleboy/ssh-action@v1.0.3
@@ -120,7 +37,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10s
           script: |
-            echo "Validating environment configuration for ${{ steps.env.outputs.ENVIRONMENT }}..."
+            echo "Validating environment configuration for ${{ inputs.environment }}..."
             
             # Check .env file exists
             ENV_FILE="/opt/smile-next/.env"
@@ -163,10 +80,10 @@ jobs:
           script: |
             set -e
             
-            echo "🚀 Starting deployment to ${{ steps.env.outputs.ENVIRONMENT }} environment..."
-            echo "📦 Image: ${{ env.IMAGE_NAME }}:${{ steps.env.outputs.DOCKER_TAG }}"
-            echo "🔌 Port: ${{ steps.env.outputs.HOST_PORT }}"
-            echo "📛 Container: ${{ steps.env.outputs.CONTAINER_NAME }}"
+            echo "🚀 Starting deployment to ${{ inputs.environment }} environment..."
+            echo "📦 Image: ${{ inputs.image-name }}:${{ inputs.docker-tag }}"
+            echo "🔌 Port: ${{ inputs.port }}"
+            echo "📛 Container: ${{ inputs.container-name }}"
             
             # 1. Log in to GHCR using GITHUB_TOKEN
             echo "🔐 Logging in to GitHub Container Registry..."
@@ -174,30 +91,46 @@ jobs:
               echo "⚠️  Warning: Failed to login to GHCR. Image might be public or using different credentials."
             }
             
-            # 2. Pull the specific tag for the current branch
-            echo "📥 Pulling Docker image..."
-            docker pull ${{ env.IMAGE_NAME }}:${{ steps.env.outputs.DOCKER_TAG }} || {
-              echo "❌ Failed to pull image"
-              exit 1
-            }
+            # 2. Verify image exists and pull the specific tag for the current branch
+            echo "📥 Verifying and pulling Docker image..."
+            IMAGE_TAG="${{ inputs.image-name }}:${{ inputs.docker-tag }}"
+            
+            # Check if image exists in registry (with retry)
+            MAX_PULL_RETRIES=3
+            PULL_RETRY=0
+            while [ $PULL_RETRY -lt $MAX_PULL_RETRIES ]; do
+              if docker pull "$IMAGE_TAG"; then
+                echo "✅ Successfully pulled image: $IMAGE_TAG"
+                break
+              else
+                PULL_RETRY=$((PULL_RETRY + 1))
+                if [ $PULL_RETRY -eq $MAX_PULL_RETRIES ]; then
+                  echo "❌ Failed to pull image after $MAX_PULL_RETRIES attempts: $IMAGE_TAG"
+                  echo "This might indicate the build job failed or the image wasn't pushed."
+                  exit 1
+                fi
+                echo "⚠️  Pull attempt $PULL_RETRY failed, retrying in 5 seconds..."
+                sleep 5
+              fi
+            done
             
             # 3. Stop and remove existing container (handle errors gracefully)
             echo "🛑 Stopping existing container..."
-            docker stop ${{ steps.env.outputs.CONTAINER_NAME }} 2>/dev/null || echo "Container not running or doesn't exist"
+            docker stop ${{ inputs.container-name }} 2>/dev/null || echo "Container not running or doesn't exist"
             
             echo "🗑️  Removing existing container..."
-            docker rm ${{ steps.env.outputs.CONTAINER_NAME }} 2>/dev/null || echo "Container doesn't exist"
+            docker rm ${{ inputs.container-name }} 2>/dev/null || echo "Container doesn't exist"
             
             # 4. Run the new container with restart policy
             echo "▶️  Starting new container..."
             docker run -d \
-              --name ${{ steps.env.outputs.CONTAINER_NAME }} \
+              --name ${{ inputs.container-name }} \
               --restart always \
-              -p ${{ steps.env.outputs.HOST_PORT }}:3000 \
+              -p ${{ inputs.port }}:3000 \
               --env-file /opt/smile-next/.env \
-              ${{ env.IMAGE_NAME }}:${{ steps.env.outputs.DOCKER_TAG }} || {
+              ${{ inputs.image-name }}:${{ inputs.docker-tag }} || {
               echo "❌ Failed to start container"
-              docker logs ${{ steps.env.outputs.CONTAINER_NAME }} --tail 50 2>/dev/null || true
+              docker logs ${{ inputs.container-name }} --tail 50 2>/dev/null || true
               exit 1
             }
             
@@ -222,10 +155,10 @@ jobs:
             sleep 5
             
             # Check if container is running
-            if ! docker ps | grep -q "${{ steps.env.outputs.CONTAINER_NAME }}"; then
+            if ! docker ps | grep -q "${{ inputs.container-name }}"; then
               echo "❌ Container is not running!"
               echo "Container logs:"
-              docker logs ${{ steps.env.outputs.CONTAINER_NAME }} --tail 50 2>/dev/null || true
+              docker logs ${{ inputs.container-name }} --tail 50 2>/dev/null || true
               exit 1
             fi
             
@@ -234,7 +167,7 @@ jobs:
             RETRY_COUNT=0
             
             while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if docker exec ${{ steps.env.outputs.CONTAINER_NAME }} node -e "
+              if docker exec ${{ inputs.container-name }} node -e "
                 const http = require('http');
                 http.get('http://localhost:3000/api/health', (res) => {
                   if (res.statusCode === 200) {
@@ -247,7 +180,7 @@ jobs:
                 echo "✓ Health check passed"
                 
                 # Also check workers status
-                if docker exec ${{ steps.env.outputs.CONTAINER_NAME }} node -e "
+                if docker exec ${{ inputs.container-name }} node -e "
                   const http = require('http');
                   http.get('http://localhost:3000/api/health/workers', (res) => {
                     let data = '';
@@ -283,5 +216,5 @@ jobs:
             
             echo "❌ Health check failed after $((MAX_RETRIES * 4)) seconds"
             echo "Container logs:"
-            docker logs ${{ steps.env.outputs.CONTAINER_NAME }} --tail 50
+            docker logs ${{ inputs.container-name }} --tail 50
             exit 1

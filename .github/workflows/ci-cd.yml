@@ -1,0 +1,113 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/tedahn-pknic/new_smile_flask
+
+jobs:
+  # 1. Check if we should run at all (path filtering)
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should-build: ${{ steps.filter.outputs.src }}
+      should-deploy: ${{ steps.filter.outputs.src }}
+      # Environment variables calculated once and passed to downstream jobs
+      env-name: ${{ steps.vars.outputs.env-name }}
+      docker-tag: ${{ steps.vars.outputs.docker-tag }}
+      host-port: ${{ steps.vars.outputs.host-port }}
+      container-name: ${{ steps.vars.outputs.container-name }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check for relevant changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # For push events: compare against previous commit on same branch
+          # For PR events: compare PR branch against base branch (automatic)
+          base: ${{ github.event_name == 'push' && (github.event.before || github.ref) || '' }}
+          filters: |
+            src:
+              - 'src/**'
+              - 'public/**'
+              - 'package*.json'
+              - 'Dockerfile'
+              - 'next.config.*'
+              - '.env*'
+              - 'prisma/**'
+
+      - name: Set Environment Variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For PRs, use PR number as tag (don't deploy, just build/test)
+            echo "env-name=pr" >> $GITHUB_OUTPUT
+            echo "docker-tag=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "host-port=0" >> $GITHUB_OUTPUT
+            echo "container-name=smile-next-pr" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "env-name=dev" >> $GITHUB_OUTPUT
+            echo "docker-tag=develop" >> $GITHUB_OUTPUT
+            echo "host-port=3001" >> $GITHUB_OUTPUT
+            echo "container-name=smile-next-dev" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "env-name=prod" >> $GITHUB_OUTPUT
+            echo "docker-tag=latest" >> $GITHUB_OUTPUT
+            echo "host-port=3000" >> $GITHUB_OUTPUT
+            echo "container-name=smile-next" >> $GITHUB_OUTPUT
+          fi
+
+  # 2. Call the Reusable Build Workflow
+  call-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.should-build == 'true'
+    uses: ./.github/workflows/build-node.yml
+    with:
+      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
+      image-name: ${{ env.IMAGE_NAME }}
+    secrets: inherit
+
+  # 3. Call Deploy (Dev) - ONLY if on develop branch and push event
+  deploy-dev:
+    needs: [check-changes, call-build]
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/develop' &&
+      needs.check-changes.outputs.should-deploy == 'true' &&
+      needs.call-build.result == 'success'
+    uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
+    with:
+      environment: ${{ needs.check-changes.outputs.env-name }}
+      port: ${{ needs.check-changes.outputs.host-port }}
+      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
+      container-name: ${{ needs.check-changes.outputs.container-name }}
+      image-name: ${{ env.IMAGE_NAME }}
+    secrets: inherit
+
+  # 4. Call Deploy (Prod) - ONLY if on main branch and push event
+  deploy-prod:
+    needs: [check-changes, call-build]
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.check-changes.outputs.should-deploy == 'true' &&
+      needs.call-build.result == 'success'
+    uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
+    with:
+      environment: ${{ needs.check-changes.outputs.env-name }}
+      port: ${{ needs.check-changes.outputs.host-port }}
+      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
+      container-name: ${{ needs.check-changes.outputs.container-name }}
+      image-name: ${{ env.IMAGE_NAME }}
+    secrets: inherit
