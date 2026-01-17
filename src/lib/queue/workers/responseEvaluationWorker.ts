@@ -3,17 +3,23 @@ import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/db/prisma'
 import { responseEvaluationQueue, ResponseEvaluationJob } from '../bull'
 
-// Check for API key at module load
-const apiKey = process.env.ANTHROPIC_API_KEY
-if (!apiKey) {
-  console.error('[ResponseEvaluationWorker] WARNING: ANTHROPIC_API_KEY is not set!')
-} else {
-  console.log('[ResponseEvaluationWorker] ANTHROPIC_API_KEY is configured')
-}
+// Lazy initialization to avoid build-time errors
+let anthropicClient: Anthropic | null = null
 
-const anthropic = new Anthropic({
-  apiKey: apiKey,
-})
+function getAnthropic(): Anthropic {
+  if (!anthropicClient) {
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      console.error('[ResponseEvaluationWorker] WARNING: ANTHROPIC_API_KEY is not set!')
+    } else {
+      console.log('[ResponseEvaluationWorker] ANTHROPIC_API_KEY is configured')
+    }
+    anthropicClient = new Anthropic({
+      apiKey: apiKey || '',
+    })
+  }
+  return anthropicClient
+}
 
 /**
  * Flask-compatible Case Evaluation Result
@@ -322,7 +328,7 @@ async function evaluateResponse(job: ResponseEvaluationJob): Promise<CaseEvaluat
   console.log(`[ResponseEvaluationWorker] Calling Anthropic API with model: ${modelId}`)
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await getAnthropic().messages.create({
       model: modelId,
       max_tokens: 2000,
       system: systemPrompt,

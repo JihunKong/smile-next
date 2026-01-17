@@ -4,9 +4,17 @@ import { prisma } from '@/lib/db/prisma'
 import { evaluationQueue, EvaluationJob } from '../bull'
 import { buildInquiryEvaluationPrompt, buildTier2GuidancePrompt } from '@/lib/ai/prompts'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+// Lazy initialization to avoid build-time errors
+let anthropicClient: Anthropic | null = null
+
+function getAnthropic(): Anthropic {
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY || '',
+    })
+  }
+  return anthropicClient
+}
 
 interface BloomsEvaluationResult {
   bloomsLevel: string
@@ -106,7 +114,7 @@ async function evaluateQuestion(job: EvaluationJob): Promise<BloomsEvaluationRes
     questionsRequired: context.questionsRequired,
   })
 
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
     max_tokens: 4096,
     system: systemPrompt,
@@ -166,7 +174,7 @@ async function generateTier2Guidance(
     educationLevel: context.educationLevel,
   })
 
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
     max_tokens: 4096,
     system: systemPrompt,

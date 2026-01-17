@@ -7,9 +7,17 @@ import {
   buildAnswerEvaluationPrompt
 } from './prompts'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+// Lazy initialization to avoid build-time errors
+let anthropicClient: Anthropic | null = null
+
+function getAnthropic(): Anthropic {
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY || '',
+    })
+  }
+  return anthropicClient
+}
 
 export interface BloomsGuidance {
   currentLevel: string
@@ -79,7 +87,7 @@ export async function generateBloomsGuidance(
     educationLevel: context.educationLevel,
   })
 
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
     max_tokens: 4096,
     system: systemPrompt,
@@ -134,7 +142,7 @@ export async function gradeExamResponse(context: {
 }): Promise<ExamGradingResult> {
   const { system: systemPrompt, user: userPrompt } = buildExamEvaluationPrompt(context)
 
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
     max_tokens: 2048,
     system: systemPrompt,
@@ -168,7 +176,7 @@ export async function evaluateCaseResponse(context: {
 }): Promise<CaseEvaluationResult> {
   const { system: systemPrompt, user: userPrompt } = buildCaseEvaluationPrompt(context)
 
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
     max_tokens: 3072,
     system: systemPrompt,
@@ -198,7 +206,7 @@ export async function provideExamCoaching(
   correctAnswer: string,
   isCorrect: boolean
 ): Promise<CoachingResponse> {
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
     max_tokens: 1024,
     system: `You are a supportive and encouraging tutor.
@@ -256,7 +264,7 @@ export async function generateCaseScenario(
   questions: string[]
   learningObjectives: string[]
 }> {
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
     max_tokens: 2048,
     system: `You are an expert case study designer for educational purposes.
@@ -297,4 +305,4 @@ Provide a JSON response:
   return JSON.parse(jsonText)
 }
 
-export default anthropic
+export default getAnthropic
