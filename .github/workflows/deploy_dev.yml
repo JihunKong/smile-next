@@ -48,14 +48,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10
           script: |
-            # =============================================================================
-            # 1. Write the secret to a temporary file on the VM
-            echo "${{ secrets.ENV_FILE }}" > /opt/smile-next/.env
-            
-            # 2. Lock it down immediately
-            chmod 600 /opt/smile-next/.env
-            # =============================================================================
-
             # 1. Log in to GHCR if the image is private (set GHCR_PAT; optional GHCR_USERNAME, default digitalschema)
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "${{ secrets.GHCR_PAT }}" | docker login ${{ env.REGISTRY }} -u "${{ secrets.GHCR_USERNAME || 'digitalschema' }}" --password-stdin
