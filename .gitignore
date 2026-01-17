@@ -33,11 +33,20 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# env files (actual secrets)
 .env
 .env.local
 .env.*.local
+.env.blue
+.env.green
+.env.production
+.env.staging
+
+# env examples (safe to commit)
 !.env.example
+!.env.*.example
+!.env.docker
+!.env.docker.*
 
 # vercel
 .vercel
@@ -47,3 +56,31 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Docker (local volumes, not config)
+docker-volumes/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+
+# SSH keys and credentials
+*.pem
+*.key
+id_rsa*
+*.pub
