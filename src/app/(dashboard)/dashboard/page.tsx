@@ -2,24 +2,26 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/prisma'
 import Link from 'next/link'
 import { getUserStreak, BADGE_DEFINITIONS } from '@/lib/services/streakService'
+import { TIERS } from '@/lib/services/levelService'
 
-// Tier system matching Flask
-const TIERS = [
-  { name: 'SMILE Starter', minPoints: 0, color: '#6B7280', icon: '✨' },
-  { name: 'Rising Star', minPoints: 100, color: '#3B82F6', icon: '⭐' },
-  { name: 'Knowledge Seeker', minPoints: 500, color: '#10B981', icon: '📚' },
-  { name: 'Expert Questioner', minPoints: 1500, color: '#8B5CF6', icon: '🎓' },
-  { name: 'Master Educator', minPoints: 5000, color: '#F59E0B', icon: '👑' },
-]
+// Convert TIERS object to array for tier calculation - Flask 6-tier system
+const TIERS_ARRAY = Object.values(TIERS).map(tier => ({
+  name: tier.name,
+  minPoints: tier.pointRange[0],
+  maxPoints: tier.pointRange[1],
+  color: tier.color,
+  icon: tier.icon,
+  description: tier.description,
+}))
 
 function getTierInfo(points: number) {
-  let currentTier = TIERS[0]
-  let nextTier = TIERS[1]
+  let currentTier = TIERS_ARRAY[0]
+  let nextTier: typeof TIERS_ARRAY[0] | null = TIERS_ARRAY[1]
 
-  for (let i = TIERS.length - 1; i >= 0; i--) {
-    if (points >= TIERS[i].minPoints) {
-      currentTier = TIERS[i]
-      nextTier = TIERS[i + 1] || null
+  for (let i = TIERS_ARRAY.length - 1; i >= 0; i--) {
+    if (points >= TIERS_ARRAY[i].minPoints) {
+      currentTier = TIERS_ARRAY[i]
+      nextTier = TIERS_ARRAY[i + 1] || null
       break
     }
   }

@@ -176,12 +176,12 @@ export function ActivitiesClient({
   ]
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Search and Filter Controls */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Search Query */}
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* Search Query - 2 columns */}
+          <div className="md:col-span-2">
             <label htmlFor="search-query" className="block text-sm font-medium text-gray-700 mb-2">
               Search Activities
             </label>
@@ -189,11 +189,11 @@ export function ActivitiesClient({
               <input
                 type="text"
                 id="search-query"
-                placeholder="Search by name, description, or subject..."
+                placeholder="Search by name, description, subject..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-[var(--stanford-cardinal)]"
+                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               />
               <svg className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -209,11 +209,11 @@ export function ActivitiesClient({
             <input
               type="text"
               id="search-creator"
-              placeholder="Search by creator name..."
+              placeholder="Creator name..."
               value={creatorSearch}
               onChange={(e) => setCreatorSearch(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-[var(--stanford-cardinal)]"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -225,34 +225,12 @@ export function ActivitiesClient({
             <input
               type="text"
               id="search-group"
-              placeholder="Search by group name..."
+              placeholder="Group name..."
               value={groupSearch}
               onChange={(e) => setGroupSearch(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-[var(--stanford-cardinal)]"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             />
-          </div>
-        </div>
-
-        {/* Second Row: Mode Filter, Sort, Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-          {/* Mode Filter */}
-          <div>
-            <label htmlFor="mode-filter" className="block text-sm font-medium text-gray-700 mb-2">
-              Activity Mode
-            </label>
-            <select
-              id="mode-filter"
-              value={modeFilter}
-              onChange={(e) => setModeFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-[var(--stanford-cardinal)]"
-            >
-              {modeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* Sort */}
@@ -264,23 +242,25 @@ export function ActivitiesClient({
               id="search-sort"
               value={sortBy}
               onChange={(e) => handleSortChange(e.target.value as SortOption)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--stanford-cardinal)] focus:border-[var(--stanford-cardinal)]"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="createdAt-desc">Newest First</option>
-              <option value="createdAt-asc">Oldest First</option>
               <option value="name-asc">Name (A-Z)</option>
               <option value="name-desc">Name (Z-A)</option>
+              <option value="createdAt-desc">Newest First</option>
+              <option value="createdAt-asc">Oldest First</option>
               <option value="questions_count-desc">Most Questions</option>
               <option value="questions_count-asc">Fewest Questions</option>
             </select>
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-end gap-2">
+        {/* Action Row: Buttons and View Toggle */}
+        <div className="mt-4 flex justify-between items-center">
+          <div className="flex space-x-2">
             <button
               onClick={handleSearch}
               disabled={loading}
-              className="flex-1 bg-[var(--stanford-cardinal)] text-white px-4 py-2 rounded-md hover:opacity-90 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-50"
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
             >
               {loading ? (
                 <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
@@ -297,7 +277,7 @@ export function ActivitiesClient({
             <button
               onClick={handleClear}
               disabled={loading}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -305,52 +285,39 @@ export function ActivitiesClient({
               Clear
             </button>
           </div>
-        </div>
-
-        {/* Results Count and View Toggle */}
-        <div className="mt-4 flex justify-between items-center border-t border-gray-200 pt-4">
-          <div className="text-sm text-gray-600">
-            {loading ? (
-              'Searching...'
-            ) : (
-              <>
-                <span className="font-medium">{pagination.totalCount}</span> {pagination.totalCount === 1 ? 'activity' : 'activities'} found
-                {isSearchActive && (
-                  <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                    Filtered
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 mr-2">View:</span>
-            <button
-              onClick={() => handleViewModeChange('grid')}
-              className={`p-2 border border-gray-300 rounded-l-md transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-[var(--stanford-cardinal)] text-white border-[var(--stanford-cardinal)]'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-              title="Grid view"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => handleViewModeChange('list')}
-              className={`p-2 border border-gray-300 rounded-r-md border-l-0 transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-[var(--stanford-cardinal)] text-white border-[var(--stanford-cardinal)]'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-              title="List view"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center">
+              <span className="text-sm text-gray-600 mr-2">View:</span>
+              <button
+                onClick={() => handleViewModeChange('grid')}
+                className={`p-2 border border-gray-300 rounded-l-md transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-green-100 text-green-600'
+                    : 'text-gray-600 hover:text-green-600'
+                }`}
+                title="Grid view"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`p-2 border border-gray-300 rounded-r-md border-l-0 transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-green-100 text-green-600'
+                    : 'text-gray-600 hover:text-green-600'
+                }`}
+                title="List view"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+            <span className="text-sm text-gray-600">
+              {loading ? 'Searching...' : `${pagination.totalCount} activities`}
+            </span>
           </div>
         </div>
       </div>
@@ -409,7 +376,7 @@ export function ActivitiesClient({
       ) : !loading && (
         <>
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
               {activities.map((activity) => (
                 <ActivityCard key={activity.id} activity={activity} />
               ))}
