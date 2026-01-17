@@ -6,7 +6,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/seeds-smile/smile-next
+  # temporarily using tedahn-pknic as the username
+  # should be changed to the organization's username after the repository is public
+  IMAGE_NAME: ghcr.io/tedahn-pknic/smile-next
   # Host port for the app (blue environment uses 3001)
   APP_HOST_PORT: 3001
 
