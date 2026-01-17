@@ -48,7 +48,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 10
+          command_timeout: 10s
           script: |
             echo "Validating environment configuration..."
             
@@ -88,7 +88,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 10
+          command_timeout: 10s
           script: |
             # 1. Log in to GHCR if the image is private (set GHCR_PAT; optional GHCR_USERNAME, default tedahn-pknic)
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
@@ -121,7 +121,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 30
+          command_timeout: 30s
           script: |
             echo "Waiting for container to be healthy..."
             
