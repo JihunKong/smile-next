@@ -210,13 +210,31 @@ See [VM Setup Guide](./vm-setup.md) for complete first-time setup instructions.
 
 ## Required GitHub Secrets
 
-| Secret | Description | Required For |
-|--------|-------------|--------------|
-| `GHCR_PAT` | GitHub Container Registry PAT | Build, Deploy |
-| `GHCR_USERNAME` | GitHub username | Build, Deploy |
-| `VM_HOST` | GCP VM IP or hostname | Deploy |
-| `VM_USERNAME` | SSH username | Deploy |
-| `SSH_PRIVATE_KEY` | SSH private key | Deploy |
+| Secret | Description | Required For | Default |
+|--------|-------------|--------------|---------|
+| `GHCR_PAT` | GitHub Container Registry PAT | Build, Deploy | - |
+| `GHCR_USERNAME` | GitHub username | Build, Deploy | - |
+| `VM_HOST` | GCP VM IP or hostname | Deploy | - |
+| `VM_USERNAME` | SSH username | Deploy | - |
+| `SSH_PRIVATE_KEY` | SSH private key | Deploy | - |
+| `VM_PORT_MAIN` | Port for main/production | Deploy (optional) | 3000 |
+| `VM_PORT_DEV` | Port for develop branch | Deploy (optional) | 3001 |
+| `VM_PORT_PR` | Port for PR branches | Deploy (optional) | 3002 |
+
+### Quick VM Setup
+
+For a new VM, run the bootstrap script:
+
+```bash
+# SSH into your new VM, then run:
+curl -fsSL https://raw.githubusercontent.com/tedahn-pknic/new_smile_flask/develop/scripts/deploy/bootstrap-vm.sh | bash
+```
+
+This script will:
+1. Install Docker and Docker Compose
+2. Create the deployment directory structure
+3. Generate SSH keys for CI/CD
+4. Output all the secrets you need for GitHub
 
 ---
 

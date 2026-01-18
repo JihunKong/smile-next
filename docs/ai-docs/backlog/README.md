@@ -2,9 +2,9 @@
 id: backlog-index
 title: Project Backlog Index
 category: guides
-lastUpdated: 2026-01-18
+lastUpdated: 2026-01-17
 maintainedBy: ai-agent
-version: 2.1.0
+version: 2.2.0
 relatedDocs:
   - id: rules
     type: depends-on
@@ -14,6 +14,7 @@ tags:
   - backlog
   - project-management
   - ai-managed
+  - vibe-coding
 ---
 
 # Project Backlog
@@ -21,7 +22,7 @@ tags:
 > **Purpose**: AI-managed backlog for tracking bugs, features, and technical improvements  
 > **Location**: `docs/ai-docs/backlog/`  
 > **Maintained By**: AI Agent  
-> **Format Version**: 2.1.0
+> **Format Version**: 2.2.0
 
 ## Overview
 
@@ -44,48 +45,87 @@ backlog/
 └── completed/                   # ✅ Done items (for reference)
 ```
 
-## File Naming Convention
+---
+
+## 🎯 TOP PRIORITY: Vibe Coding Refactoring
+
+> **Goal**: Make the codebase AI-friendly for rapid redesign and iteration  
+> **Why**: Large monolithic files (1000+ lines) prevent effective AI-assisted development. Breaking them into focused ~100-200 line files enables "vibe coding" where designers and AI can quickly iterate.
+
+### The Problem
+
+The codebase has **20+ files over 500 lines**, with the largest at **1134 lines**. When files exceed ~500 lines:
+- AI agents can't see the full file in context
+- Edits are made with partial understanding
+- Risk of breaking unrelated functionality
+- Designers can't easily find what to modify
+
+### VIBE Priority Order
+
+| Priority | ID | Target | Lines | Description |
+|----------|-----|--------|-------|-------------|
+| 🔴 **1** | [VIBE-0001](./critical/VIBE-0001-activity-edit-refactor.md) | Activity Edit | 1134 | **Largest file** - break into feature folder |
+| 🔴 **2** | [VIBE-0002](./critical/VIBE-0002-case-mode-refactor.md) | Case Mode (all) | 3806 | **Most complex** - 5 files, shared components |
+| 🔴 **3** | [VIBE-0003](./critical/VIBE-0003-dashboard-refactor.md) | Dashboard | 977 | **Central hub** - high visibility for redesign |
+| 🔴 **4** | [VIBE-0004](./critical/VIBE-0004-exam-mode-refactor.md) | Exam Mode (all) | 1924 | Exam take + analytics + results |
+| 🟠 **5** | [VIBE-0005](./high/VIBE-0005-activity-pages-refactor.md) | Activity Create/Detail | 1464 | Core user journey pages |
+| 🟠 **6** | [VIBE-0006](./high/VIBE-0006-groups-pages-refactor.md) | Groups (all) | 2259 | Member management, group creation |
+| 🟠 **7** | [VIBE-0007](./high/VIBE-0007-certificates-refactor.md) | Certificates (all) | 2333 | Designer + progress tracking |
+| 🟠 **8** | [VIBE-0008](./high/VIBE-0008-settings-profile-refactor.md) | Settings & Profile | 2916 | User-facing settings pages |
+| 🟠 **9** | [VIBE-0009](./high/VIBE-0009-inquiry-mode-refactor.md) | Inquiry Mode (all) | 1476 | Third activity mode |
+
+**Total Lines to Refactor**: ~18,289 lines across 9 initiatives
+
+### Target Architecture
+
+Each feature area becomes a focused module:
 
 ```
-{ID}-{descriptive-slug}.md
-
-Examples:
-  REFACTOR-0001-react-query-data-fetching.md
-  BUG-0001-inconsistent-loading-states.md
-  FEAT-0001-toast-notification-system.md
-  TECH-0001-error-boundaries.md
+src/features/
+├── activities/           # Activity create, edit, detail
+├── case-mode/            # Case mode components + hooks
+├── exam-mode/            # Exam mode components + hooks
+├── inquiry-mode/         # Inquiry mode components + hooks
+├── certificates/         # Certificate designer, progress
+├── groups/               # Group management
+├── user/                 # Settings, profile
+└── shared/               # Cross-feature components (Timer, etc.)
 ```
 
-**ID Prefixes:**
-- `BUG-NNNN` - Bugs and defects
-- `FEAT-NNNN` - New features
-- `REFACTOR-NNNN` - Code refactoring
-- `TECH-NNNN` - Technical debt
+**File Size Targets**:
+- Pages: ~80-150 lines (composition only)
+- Components: ~80-200 lines each
+- Hooks: ~60-150 lines each
+- Types: as needed
 
 ---
 
-## 📊 Backlog Summary
+## 📊 Full Backlog Summary
 
-| Priority | Count | Items |
-|----------|-------|-------|
-| 🔴 Critical | 4 | React Query, UI Components, Unit Tests, Structured Logging |
-| 🟠 High | 8 | **Conventions**, Loading States, Error Messages, Error Boundaries, Toast, CI Testing, API Standardization, Middleware |
-| 🟡 Medium | 7 | API Client, Form Validation, Race Conditions, TypeScript, Env Validation, DB Migrations, Mobile E2E |
-| 🟢 Low | 5 | Keyboard Nav, Component Docs, i18n, Dark Mode, Code Splitting |
+| Priority | Count | Focus Areas |
+|----------|-------|-------------|
+| 🔴 Critical | 8 | **VIBE refactoring (4)**, React Query, UI Components, Unit Tests, Logging |
+| 🟠 High | 13 | **VIBE refactoring (5)**, Conventions, Error Handling, Toast, CI Testing |
+| 🟡 Medium | 7 | API Client, Form Validation, TypeScript, DB Migrations |
+| 🟢 Low | 5 | Keyboard Nav, i18n, Dark Mode, Code Splitting |
 | ✅ Completed | 0 | - |
 
-**Total Active Items**: 24
-
-### Overlapping Items Note
-
-Some backlog items overlap significantly (see [BEST-0001](./high/BEST-0001-frontend-conventions-enforcement.md) for analysis):
-- **BUG-0001** is solved by **REFACTOR-0002** (UI library provides LoadingSpinner)
-- **BUG-0003** is solved by **REFACTOR-0001** (React Query handles race conditions)
-- **BUG-0002** overlaps with **REFACTOR-0005** + Toast system
+**Total Active Items**: 33
 
 ---
 
 ## 🔴 Critical Priority
+
+### Vibe Coding (Top Priority)
+
+| ID | Title | Status | Effort | Lines |
+|----|-------|--------|--------|-------|
+| [VIBE-0001](./critical/VIBE-0001-activity-edit-refactor.md) | Refactor Activity Edit page | backlog | L | 1134 |
+| [VIBE-0002](./critical/VIBE-0002-case-mode-refactor.md) | Refactor Case Mode pages | backlog | XL | 3806 |
+| [VIBE-0003](./critical/VIBE-0003-dashboard-refactor.md) | Refactor Dashboard page | backlog | M | 977 |
+| [VIBE-0004](./critical/VIBE-0004-exam-mode-refactor.md) | Refactor Exam Mode pages | backlog | L | 1924 |
+
+### Other Critical Items
 
 | ID | Title | Status | Effort |
 |----|-------|--------|--------|
@@ -95,6 +135,18 @@ Some backlog items overlap significantly (see [BEST-0001](./high/BEST-0001-front
 | [TECH-0005](./critical/TECH-0005-structured-logging.md) | Implement structured logging | backlog | M |
 
 ## 🟠 High Priority
+
+### Vibe Coding (Continued)
+
+| ID | Title | Status | Effort | Lines |
+|----|-------|--------|--------|-------|
+| [VIBE-0005](./high/VIBE-0005-activity-pages-refactor.md) | Refactor Activity Create/Detail | backlog | M | 1464 |
+| [VIBE-0006](./high/VIBE-0006-groups-pages-refactor.md) | Refactor Groups pages | backlog | M | 2259 |
+| [VIBE-0007](./high/VIBE-0007-certificates-refactor.md) | Refactor Certificates pages | backlog | M | 2333 |
+| [VIBE-0008](./high/VIBE-0008-settings-profile-refactor.md) | Refactor Settings & Profile | backlog | M | 2916 |
+| [VIBE-0009](./high/VIBE-0009-inquiry-mode-refactor.md) | Refactor Inquiry Mode pages | backlog | M | 1476 |
+
+### Other High Items
 
 | ID | Title | Status | Effort |
 |----|-------|--------|--------|
@@ -131,7 +183,39 @@ Some backlog items overlap significantly (see [BEST-0001](./high/BEST-0001-front
 
 ---
 
+## File Naming Convention
+
+```
+{ID}-{descriptive-slug}.md
+
+Examples:
+  VIBE-0001-activity-edit-refactor.md      # Vibe coding refactor
+  REFACTOR-0001-react-query-data-fetching.md
+  BUG-0001-inconsistent-loading-states.md
+  FEAT-0001-toast-notification-system.md
+  TECH-0001-error-boundaries.md
+```
+
+**ID Prefixes:**
+- `VIBE-NNNN` - Vibe coding / AI-friendly refactoring
+- `BUG-NNNN` - Bugs and defects
+- `FEAT-NNNN` - New features
+- `REFACTOR-NNNN` - Code refactoring
+- `TECH-NNNN` - Technical debt
+
+---
+
 ## 🤖 AI Management Instructions
+
+### Working on VIBE Items
+
+VIBE items are **top priority** for the redesign. When working on these:
+
+1. **Read the full item** - understand target architecture
+2. **Extract in order**: Types → Hooks → Components → Compose page
+3. **Test after each extraction** - don't break functionality
+4. **Keep files small** - target 80-200 lines each
+5. **Create barrel exports** - `index.ts` for clean imports
 
 ### Starting Work on an Item
 
@@ -156,20 +240,6 @@ Some backlog items overlap significantly (see [BEST-0001](./high/BEST-0001-front
 4. Place in appropriate priority folder
 5. Update this README summary
 
-### Refining Items Through Conversation
-
-When discussing an item with the user:
-1. Read the item file for context
-2. Propose updates based on conversation
-3. Update description, acceptance criteria, or scope
-4. Adjust priority/effort if understanding changes
-
-### Moving Items Between Priorities
-
-1. Move file to new priority folder
-2. Update this README summary
-3. Add note explaining priority change
-
 ---
 
 ## Related Documentation
@@ -177,6 +247,7 @@ When discussing an item with the user:
 - [Backlog Schema](./_SCHEMA.md) - Template for new items
 - [AI Agent Memory](../AI_AGENT_MEMORY.md) - Quick reference
 - [Rules](../RULES.md) - Backlog management rules
+- [Frontend Conventions](../guides/frontend-conventions.md) - Coding standards
 
 ---
 

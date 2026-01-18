@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LoadingState } from '@/components/ui'
 
 interface OverviewData {
   total_questions: number
@@ -173,13 +174,7 @@ export default function ActivityAnalyticsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Loading Analytics...</h3>
-            <p className="text-gray-600">Fetching activity data</p>
-          </div>
-        </div>
+        <LoadingState size="lg" message="Loading Analytics..." />
       </div>
     )
   }

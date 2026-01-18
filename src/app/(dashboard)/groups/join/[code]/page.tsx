@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { getGradientColors, getGroupInitials } from '@/lib/groups/utils'
+import { LoadingSpinner, LoadingState } from '@/components/ui'
 
 interface GroupInfo {
   id: string
@@ -99,12 +100,7 @@ export default function JoinGroupPage({ params }: { params: Promise<{ code: stri
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
+      <LoadingState fullPage message="Loading..." />
     )
   }
 
@@ -274,22 +270,7 @@ export default function JoinGroupPage({ params }: { params: Promise<{ code: stri
                 >
                   {joining ? (
                     <>
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
+                      <LoadingSpinner size="sm" />
                       Joining...
                     </>
                   ) : (
