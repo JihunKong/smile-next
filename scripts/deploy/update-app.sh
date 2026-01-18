@@ -70,6 +70,18 @@ bash scripts/deploy/validate-env.sh "$ENVIRONMENT" || {
   exit 1
 }
 
+# Load environment variables from .env file early (needed for DB_PASSWORD, etc.)
+ENV_FILE="$PROJECT_DIR/.env"
+if [ ! -f "$ENV_FILE" ]; then
+  ENV_FILE="/opt/smile-next/.env"
+fi
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  source "$ENV_FILE"
+  set +a
+  echo "✅ Environment variables loaded from $ENV_FILE"
+fi
+
 # Log in to GHCR (if credentials are available)
 if [ -n "$GHCR_PAT" ] && [ -n "$GHCR_USERNAME" ]; then
   echo "🔐 Logging in to GitHub Container Registry..."
@@ -161,6 +173,14 @@ if [ "$ENVIRONMENT" == "dev" ]; then
     fi
     sleep 1
   done
+  
+  # Re-encode password with scram-sha-256 for SSH tunnel access (DBeaver, etc.)
+  # This ensures the password works with external connections requiring scram-sha-256 auth
+  echo "🔐 Ensuring PostgreSQL password uses scram-sha-256 encoding..."
+  docker exec smile-postgres psql -U smile_user -d postgres -c "ALTER USER smile_user PASSWORD '${DB_PASSWORD:-simple_pass}';" > /dev/null 2>&1 || {
+    echo "⚠️  Could not re-encode password (may need manual reset for DBeaver access)"
+  }
+  echo "✅ PostgreSQL password configured for scram-sha-256 auth"
 else
   # Prod: Start redis and app (uses GCP Cloud SQL)
   docker compose -f "$COMPOSE_FILE" up -d || {
@@ -183,18 +203,7 @@ for i in {1..10}; do
   sleep 1
 done
 
-# Load environment variables from .env file
-ENV_FILE="$PROJECT_DIR/.env"
-if [ ! -f "$ENV_FILE" ]; then
-  ENV_FILE="/opt/smile-next/.env"
-fi
-
-if [ -f "$ENV_FILE" ]; then
-  set -a
-  source "$ENV_FILE"
-  set +a
-fi
-
+# Re-export docker-compose variables (in case they were overwritten)
 export DOCKER_IMAGE="$IMAGE_TAG"
 export CONTAINER_NAME="$CONTAINER_NAME"
 export PORT="$PORT"

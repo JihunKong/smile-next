@@ -13,6 +13,11 @@ services:
       POSTGRES_DB: smile_new_db
       POSTGRES_USER: smile_user
       POSTGRES_PASSWORD: ${DB_PASSWORD:-simple_pass}
+      # Enable SSH tunnel access (DBeaver, etc.) with scram-sha-256 auth
+      # Note: For existing volumes, you may need to reset the password after deploy:
+      #   docker exec smile-postgres psql -U smile_user -d postgres -c "ALTER USER smile_user PASSWORD 'simple_pass';"
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
