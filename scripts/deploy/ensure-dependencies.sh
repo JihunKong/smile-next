@@ -64,14 +64,14 @@ if [ "$ENVIRONMENT" == "dev" ]; then
         --restart always \
         -p 5432:5432 \
         -e POSTGRES_USER=smile_user \
-        -e POSTGRES_DB=smile_db \
-        -e POSTGRES_PASSWORD="${DB_PASSWORD:-change_me_in_production}" \
+        -e POSTGRES_DB=smile_new_db \
+        -e POSTGRES_PASSWORD="${DB_PASSWORD:-simple_pass}" \
         -v postgres_data:/var/lib/postgresql/data \
         postgres:15-alpine
     fi
     echo "⏳ Waiting for PostgreSQL to be ready..."
     for i in {1..20}; do
-      if docker exec smile-postgres pg_isready -U smile_user -d smile_db > /dev/null 2>&1; then
+      if docker exec smile-postgres pg_isready -U smile_user -d smile_new_db > /dev/null 2>&1; then
         echo "✅ PostgreSQL is ready"
         break
       fi

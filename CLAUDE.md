@@ -69,17 +69,17 @@ gcloud compute ssh smilealways --zone=us-central1-a --project=smile-coach2
 # Switch to digitalschema user
 sudo -u digitalschema -i
 
-# Deploy
-cd /opt/smile/app
+# Deploy (dev environment)
+cd ~/smile-next
 git pull origin main
-docker compose -f docker-compose.blue.yml up -d --build
+docker compose -f docker-compose.dev.yml up -d
 
 # Verify
 curl http://localhost:3001/api/health
 ```
 
-### 3. Test on BLUE
-- URL: https://always.seedsofempowerment.org
+### 3. Test on Dev
+- URL: https://smilenew.seedsofempowerment.org
 - Admin: admin0@seedsofempowerment.org / SMILEis#1LMS
 
 ### 4. Push to GitHub
@@ -118,11 +118,10 @@ smile-next/                    # ACTIVE - Next.js application
 ├── prisma/
 │   └── schema.prisma          # Database schema
 ├── scripts/
-│   ├── deploy-blue.sh         # Blue environment deployment
-│   └── setup-blue.sh          # Initial Blue setup
-├── docker-compose.blue.yml    # Blue environment Docker config
-├── docker-compose.prod.yml    # Production Docker config
-└── Dockerfile                 # Multi-stage Docker build
+│   └── deploy/               # Deployment scripts
+├── docker-compose.dev.yml    # Dev environment Docker config
+├── docker-compose.prod.yml   # Production Docker config
+└── Dockerfile                # Multi-stage Docker build
 ```
 
 ## Development Commands
@@ -140,9 +139,9 @@ npx prisma db push              # Push schema changes
 npx prisma studio               # Database GUI
 
 # Docker operations (on server)
-docker compose -f docker-compose.blue.yml ps
-docker compose -f docker-compose.blue.yml logs -f --tail=50 app-blue
-docker compose -f docker-compose.blue.yml restart app-blue
+docker compose -f docker-compose.dev.yml ps
+docker compose -f docker-compose.dev.yml logs -f --tail=50 app
+docker compose -f docker-compose.dev.yml restart app
 ```
 
 ## Key Files
@@ -153,14 +152,14 @@ docker compose -f docker-compose.blue.yml restart app-blue
 | `src/lib/ai/openai.ts` | OpenAI integration |
 | `src/lib/ai/prompts.ts` | AI prompts (Bloom's Taxonomy) |
 | `prisma/schema.prisma` | Database schema (32 tables) |
-| `docker-compose.blue.yml` | Blue environment Docker config |
-| `.env.blue.example` | Environment variables template |
+| `docker-compose.dev.yml` | Dev environment Docker config |
+| `docker-compose.prod.yml` | Production Docker config |
 
 ## Environment Variables
 
-Required in `.env` (local) or `.env.blue` (server):
+Required in `.env` (local) or `.env` (server):
 ```
-DATABASE_URL=postgresql://smile_user:password@db:5432/smile_db
+DATABASE_URL=postgresql://smile_user:simple_pass@db:5432/smile_new_db
 REDIS_URL=redis://redis:6379
 AUTH_SECRET=<generated-secret>
 NEXTAUTH_URL=https://always.seedsofempowerment.org

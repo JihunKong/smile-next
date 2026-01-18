@@ -4,15 +4,15 @@ services:
     image: postgres:15-alpine
     container_name: smile-postgres
     environment:
-      POSTGRES_DB: smile_db
+      POSTGRES_DB: smile_new_db
       POSTGRES_USER: smile_user
-      POSTGRES_PASSWORD: smile_password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-simple_pass}
     ports:
       - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smile_user -d smile_db"]
+      test: ["CMD-SHELL", "pg_isready -U smile_user -d smile_new_db"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -45,7 +45,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://smile_user:smile_password@db:5432/smile_db
+      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/smile_new_db
       - REDIS_URL=redis://redis:6379
       - NEXTAUTH_URL=http://localhost:3000
       - NEXT_PUBLIC_APP_URL=http://localhost:3000

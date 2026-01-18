@@ -2,7 +2,7 @@
 # Usage: docker-compose -f docker-compose.prod.yml up -d
 
 services:
-
+  # PostgreSQL Database does not exist in production because we use GCP Cloud SQL
   # Redis for Bull Queue
   redis:
     image: redis:7-alpine
@@ -34,7 +34,7 @@ services:
       - "80:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-change_me_in_production}@db:5432/smile_db
+      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/smile_new_db
       - REDIS_URL=redis://redis:6379
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
@@ -52,6 +52,8 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - EMAIL_FROM=${EMAIL_FROM:-}
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -67,6 +69,9 @@ networks:
     driver: bridge
 
 volumes:
+  postgres_data:
+    external: true
+    name: app_postgres_data
   redis_data:
     external: true
     name: app_redis_data

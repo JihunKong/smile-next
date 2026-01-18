@@ -152,7 +152,7 @@ if [ "$ENVIRONMENT" == "dev" ]; then
   
   # Verify PostgreSQL is ready (dev only)
   for i in {1..20}; do
-    if docker exec smile-postgres pg_isready -U smile_user -d smile_db > /dev/null 2>&1; then
+    if docker exec smile-postgres pg_isready -U smile_user -d smile_new_db > /dev/null 2>&1; then
       echo "✅ PostgreSQL is ready (data preserved from volume)"
       break
     fi

@@ -10,13 +10,13 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: smile_db
+      POSTGRES_DB: smile_new_db
       POSTGRES_USER: smile_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-simple_pass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smile_user -d smile_db"]
+      test: ["CMD-SHELL", "pg_isready -U smile_user -d smile_new_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -57,7 +57,7 @@ services:
       - "${PORT:-3001}:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-change_me_in_production}@db:5432/smile_db
+      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/smile_new_db
       - REDIS_URL=redis://redis:6379
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}

@@ -95,7 +95,7 @@ echo ""
 echo "⏳ Step 5: Waiting for services to be healthy..."
 sleep 5
 
-if docker exec smile-postgres pg_isready -U smile_user -d smile_db > /dev/null 2>&1; then
+if docker exec smile-postgres pg_isready -U smile_user -d smile_new_db > /dev/null 2>&1; then
   echo "✅ PostgreSQL is healthy"
 else
   echo "⚠️  PostgreSQL health check failed (may need a moment)"
@@ -122,5 +122,5 @@ echo "      docker-compose -f $COMPOSE_FILE up -d app"
 echo "   3. Or continue using smile-next-dev if it's working"
 echo ""
 echo "🔍 To verify data:"
-echo "   docker exec smile-postgres psql -U smile_user -d smile_db -c '\\dt'"
+echo "   docker exec smile-postgres psql -U smile_user -d smile_new_db -c '\\dt'"
 echo "   docker exec smile-redis redis-cli DBSIZE"

@@ -15,7 +15,7 @@ if ! docker ps | grep -q "smile-postgres"; then
 fi
 
 # Get database URL (dev uses port 5432, local docker-compose uses 5435)
-DB_URL="${DATABASE_URL:-postgresql://smile_user:smile_password@localhost:5432/smile_db}"
+DB_URL="${DATABASE_URL:-postgresql://smile_user:simple_pass@localhost:5432/smile_new_db}"
 
 echo "📊 Dropping and recreating database schema..."
 npx prisma db push --force-reset --skip-generate
