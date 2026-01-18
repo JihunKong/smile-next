@@ -68,7 +68,7 @@ function parseJsonFromResponse(text: string): unknown {
   }
 
   // Fourth try: clean common issues and retry
-  let cleaned = text
+  const cleaned = text
     .replace(/^\s*```\s*json?\s*/i, '')
     .replace(/```\s*$/i, '')
     .replace(/[\x00-\x1F\x7F]/g, ' ') // Remove control characters

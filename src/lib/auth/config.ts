@@ -104,7 +104,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         try {
           // Check if user already exists
-          let existingUser = await prisma.user.findUnique({
+          const existingUser = await prisma.user.findUnique({
             where: { email: user.email },
           })
 

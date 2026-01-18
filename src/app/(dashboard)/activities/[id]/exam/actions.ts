@@ -95,7 +95,7 @@ export async function startExamAttempt(activityId: string): Promise<StartExamRes
     questionIds = questionIds.slice(0, questionsToShow)
 
     // Generate choice shuffle maps if shuffleChoices is enabled
-    let choiceShuffles: Record<string, number[]> = {}
+    const choiceShuffles: Record<string, number[]> = {}
     if (shuffleChoices) {
       // Fetch questions with choices
       const questionsWithChoices = await prisma.question.findMany({

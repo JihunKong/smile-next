@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     ])
 
     // If user is logged in, check enrollment status for each certificate
-    let enrollmentMap: Map<string, { isEnrolled: boolean; status: string }> = new Map()
+    const enrollmentMap: Map<string, { isEnrolled: boolean; status: string }> = new Map()
 
     if (session?.user?.id) {
       const enrollments = await prisma.studentCertificate.findMany({

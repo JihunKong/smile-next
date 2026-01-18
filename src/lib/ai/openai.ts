@@ -104,7 +104,7 @@ Return a JSON object with an "questions" array containing exactly 4 enhanced que
  * Build the evaluation prompt based on context
  */
 function buildEvaluationPrompt(context: EvaluationContext): string {
-  let prompt = `You are an expert educational evaluator specializing in question quality assessment.
+  const prompt = `You are an expert educational evaluator specializing in question quality assessment.
 
 Evaluate the student's question based on Bloom's Taxonomy and provide detailed feedback.
 

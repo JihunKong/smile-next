@@ -21,6 +21,24 @@ This document maintains a complete graph of all documentation relationships. AI 
 
 ## Document Graph
 
+### Management Documentation
+
+#### Project Backlog (`backlog/README.md`)
+- **structure**:
+  - `backlog/critical/` - Critical priority items
+  - `backlog/high/` - High priority items
+  - `backlog/medium/` - Medium priority items
+  - `backlog/low/` - Low priority items
+  - `backlog/completed/` - Completed items
+- **references**:
+  - All component docs (UI bugs and features)
+  - All service docs (API issues)
+  - All architecture docs (refactoring items)
+- **see-also**:
+  - `AI_AGENT_MEMORY.md` - AI agent quick reference
+  - `RULES.md` - Backlog management rules
+  - `guides/development.md` - Development workflow
+
 ### API Documentation
 
 #### Authentication API (`api/auth.md`)
@@ -260,6 +278,54 @@ This document maintains a complete graph of all documentation relationships. AI 
 - **see-also**:
   - `architecture/performance.md` - Production optimization
   - `guides/troubleshooting.md` - Deployment issues
+  - `guides/cicd-deployment.md` - CI/CD pipeline details
+
+#### CI/CD Overview (`guides/cicd-deployment.md`)
+- **depends-on**:
+  - `guides/github-actions.md` - Workflow details
+  - `guides/docker-configuration.md` - Docker setup
+  - `guides/vm-setup.md` - VM configuration
+- **references**:
+  - `architecture/system.md` - System architecture
+- **see-also**:
+  - `guides/deployment.md` - General deployment info
+  - `guides/deployment-troubleshooting.md` - Troubleshooting
+
+#### GitHub Actions Guide (`guides/github-actions.md`)
+- **depends-on**:
+  - `guides/cicd-deployment.md` - Overview context
+- **references**:
+  - `guides/docker-configuration.md` - Docker build
+- **see-also**:
+  - `guides/vm-setup.md` - VM setup
+  - `guides/deployment-troubleshooting.md` - Troubleshooting
+
+#### Docker Configuration Guide (`guides/docker-configuration.md`)
+- **depends-on**:
+  - `guides/cicd-deployment.md` - Overview context
+- **references**:
+  - `guides/github-actions.md` - Build workflow
+- **see-also**:
+  - `guides/vm-setup.md` - VM setup
+  - `guides/deployment-troubleshooting.md` - Troubleshooting
+
+#### VM Setup Guide (`guides/vm-setup.md`)
+- **depends-on**:
+  - `guides/docker-configuration.md` - Docker requirements
+- **references**:
+  - `guides/cicd-deployment.md` - CI/CD context
+  - `guides/github-actions.md` - Workflow setup
+- **see-also**:
+  - `guides/deployment-troubleshooting.md` - Troubleshooting
+
+#### Deployment Troubleshooting Guide (`guides/deployment-troubleshooting.md`)
+- **references**:
+  - `guides/cicd-deployment.md` - CI/CD overview
+  - `guides/github-actions.md` - Workflow issues
+  - `guides/docker-configuration.md` - Docker issues
+  - `guides/vm-setup.md` - Setup issues
+- **see-also**:
+  - `guides/troubleshooting.md` - General troubleshooting
 
 #### Troubleshooting Guide (`guides/troubleshooting.md`)
 - **references**:
@@ -272,6 +338,9 @@ This document maintains a complete graph of all documentation relationships. AI 
 ## Dependency Graph
 
 ```
+Management Docs (BACKLOG.md)
+  └── references → All other docs (tracks issues)
+
 API Docs
   ├── depends-on → Service Docs
   ├── depends-on → Architecture Docs
@@ -334,6 +403,8 @@ AI agents should validate:
 | Date | Change | Affected Docs |
 |------|--------|---------------|
 | 2024-01-15 | Initial mapping | All |
+| 2026-01-17 | Split CI/CD docs into multiple files with Mermaid diagrams | guides/ |
+| 2026-01-18 | Added backlog/ folder structure | Management docs |
 | Auto | Auto-updated | - |
 
 ---

@@ -313,7 +313,7 @@ export async function getKeywordAnalytics(
   const startDate = parseDate(filters.startDate)
   const endDate = parseDate(filters.endDate)
 
-  let whereClause: Record<string, unknown> = { isDeleted: false }
+  const whereClause: Record<string, unknown> = { isDeleted: false }
 
   if (scopeType === 'student') {
     whereClause.creatorId = scopeId

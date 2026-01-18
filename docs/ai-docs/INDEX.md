@@ -29,6 +29,7 @@ docs/ai-docs/
 - [AI Maintenance Rules](./RULES.md) - How AI agents maintain this documentation
 - [Cross-Reference Mapping](./MAPPING.md) - Document relationships and dependencies
 - [AI Agent Memory](./AI_AGENT_MEMORY.md) - Quick reference for AI agents
+- [Project Backlog](./backlog/README.md) - AI-managed bugs, features, and tech debt tracker
 
 ### API Documentation
 - [API Overview](./api/README.md) - All API endpoints
@@ -65,10 +66,16 @@ docs/ai-docs/
 - [Performance Optimization](./architecture/performance.md) - Optimization strategies
 
 ### Guides
+- [Frontend Conventions](./guides/frontend-conventions.md) - **Essential patterns to prevent common UX bugs**
 - [Development Guide](./guides/development.md) - Development workflow
 - [Testing Guide](./guides/testing.md) - Testing strategies
-- [Deployment Guide](./guides/deployment.md) - Deployment procedures
-- [Troubleshooting Guide](./guides/troubleshooting.md) - Common issues and solutions
+- [Deployment Guide](./guides/deployment.md) - General deployment procedures
+- [CI/CD Overview](./guides/cicd-deployment.md) - Pipeline overview with Mermaid diagrams
+- [GitHub Actions](./guides/github-actions.md) - Workflow configuration and details
+- [Docker Configuration](./guides/docker-configuration.md) - Docker Compose and Dockerfile setup
+- [VM Setup Guide](./guides/vm-setup.md) - First-time environment setup
+- [Troubleshooting Guide](./guides/troubleshooting.md) - General troubleshooting
+- [Deployment Troubleshooting](./guides/deployment-troubleshooting.md) - CI/CD and deployment issues
 
 ## Document Metadata
 
@@ -124,12 +131,14 @@ When adding new documentation:
 
 | Category | Count | Last Updated | Status |
 |----------|-------|--------------|--------|
+| Core | 4 | Auto | ✅ Maintained |
 | API | 6 | Auto | ✅ Maintained |
 | Components | 4 | Auto | ✅ Maintained |
 | Services | 4 | Auto | ✅ Maintained |
 | Features | 5 | Auto | ✅ Maintained |
 | Architecture | 4 | Auto | ✅ Maintained |
 | Guides | 4 | Auto | ✅ Maintained |
+| Management | 1 | Auto | ✅ Maintained |
 
 ## AI Agent Instructions
 

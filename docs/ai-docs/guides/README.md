@@ -11,16 +11,22 @@ This directory contains practical guides for development, testing, deployment, a
 ## Guides
 
 ### Development
+- [Frontend Conventions](./frontend-conventions.md) - **Essential patterns to prevent common UX bugs**
 - [Development Guide](./development.md) - Development workflow and setup
 
 ### Testing
 - [Testing Guide](./testing.md) - Testing strategies and practices
 
-### Deployment
-- [Deployment Guide](./deployment.md) - Deployment procedures and best practices
+### Deployment & CI/CD
+- [Deployment Guide](./deployment.md) - General deployment procedures
+- [CI/CD Overview](./cicd-deployment.md) - Pipeline overview with Mermaid diagrams
+- [GitHub Actions](./github-actions.md) - Workflow configuration and details
+- [Docker Configuration](./docker-configuration.md) - Docker Compose and Dockerfile setup
+- [VM Setup Guide](./vm-setup.md) - First-time environment setup
 
 ### Troubleshooting
-- [Troubleshooting Guide](./troubleshooting.md) - Common issues and solutions
+- [Troubleshooting Guide](./troubleshooting.md) - General troubleshooting
+- [Deployment Troubleshooting](./deployment-troubleshooting.md) - CI/CD and deployment issues
 
 ## Guide Documentation Template
 

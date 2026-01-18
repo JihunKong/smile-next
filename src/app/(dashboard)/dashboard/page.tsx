@@ -206,7 +206,7 @@ async function getUserStats(userId: string) {
           enrollment_date: uc.enrollmentDate,
           completion_date: uc.completionDate,
           progress_percentage: progressPercentage,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           activities: activities
             .filter((ca: any) => ca.activity) // Filter out any activities with missing relations
             .map((ca: any) => ({

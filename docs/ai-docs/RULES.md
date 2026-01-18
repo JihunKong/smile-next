@@ -350,6 +350,130 @@ See the AI stuff.
 - No cross-references
 - Inconsistent formatting
 
+## Backlog Management Rules
+
+### Overview
+
+The project backlog is maintained in `docs/ai-docs/backlog/` as individual files. This enables:
+- Easy understanding of each item from filename
+- Independent updates without merge conflicts
+- Conversation-based refinement of items
+- Clear priority organization
+
+### Folder Structure
+
+```
+backlog/
+├── README.md       # Index and summary
+├── _SCHEMA.md      # Template for new items
+├── critical/       # 🔴 Blocking issues
+├── high/           # 🟠 Important improvements
+├── medium/         # 🟡 Nice-to-have
+├── low/            # 🟢 Future considerations
+└── completed/      # ✅ Done items
+```
+
+### File Naming Convention
+
+```
+{ID}-{descriptive-slug}.md
+
+Prefixes:
+  BUG-NNNN      Bugs and defects
+  FEAT-NNNN     New features
+  REFACTOR-NNNN Code refactoring
+  TECH-NNNN     Technical debt
+
+Examples:
+  BUG-0001-inconsistent-loading-states.md
+  FEAT-0003-dark-mode-toggle.md
+  REFACTOR-0001-react-query-data-fetching.md
+```
+
+### When Starting Work
+
+1. Read the item file to understand scope
+2. Change `status: backlog` → `status: in_progress`
+3. Update `updated:` date
+4. Update `assignee:` if needed
+5. Begin implementation
+
+### When Completing Work
+
+1. Change `status: in_progress` → `status: done`
+2. Update `updated:` date
+3. Check off completed acceptance criteria
+4. Add completion notes to Conversation History
+5. Move file to `completed/` folder
+6. Update `backlog/README.md` summary table
+
+### When Creating New Items
+
+1. Determine category: `BUG`, `FEAT`, `REFACTOR`, or `TECH`
+2. Find next available ID number for that category
+3. Copy `_SCHEMA.md` template
+4. Create descriptive filename with ID and slug
+5. Fill in all required fields
+6. Place in appropriate priority folder
+7. Update `backlog/README.md` summary table
+
+### When Discussing Items with User
+
+AI agents can refine backlog items through conversation:
+
+1. Read the item file for full context
+2. Discuss scope, approach, or acceptance criteria
+3. Update the item file based on conversation
+4. Add dated note to Conversation History section
+
+Example conversation note:
+```markdown
+## Conversation History
+
+| Date | Note |
+|------|------|
+| 2026-01-18 | Initial creation |
+| 2026-01-19 | Discussed with user - expanded scope to include all modals |
+```
+
+### Priority Definitions
+
+| Priority | Folder | When to Use |
+|----------|--------|-------------|
+| Critical | `critical/` | Blocking development, data loss, security issues |
+| High | `high/` | Significantly impacts UX or developer velocity |
+| Medium | `medium/` | Noticeable issues, quality improvements |
+| Low | `low/` | Nice-to-have, future considerations |
+
+### Moving Items Between Priorities
+
+1. Move file to new priority folder
+2. Update `priority:` field in frontmatter
+3. Add note to Conversation History explaining change
+4. Update `backlog/README.md` summary table
+
+### Effort Estimation
+
+| Size | Time | Examples |
+|------|------|----------|
+| `xs` | < 1 hour | Config change, typo fix |
+| `s` | 1-4 hours | Simple component, bug fix |
+| `m` | 4h - 2 days | Feature, multiple files |
+| `l` | 2-5 days | Large feature, refactoring |
+| `xl` | > 5 days | Architecture change |
+
+### Backlog Quality Standards
+
+Each item should have:
+- [ ] Clear, descriptive title (max 80 chars)
+- [ ] Specific acceptance criteria (testable)
+- [ ] Related files identified
+- [ ] Dependencies documented (blocked_by, blocks)
+- [ ] Effort estimate assigned
+- [ ] Current status accurate
+
+---
+
 ## Maintenance Checklist
 
 When maintaining documentation, ensure:

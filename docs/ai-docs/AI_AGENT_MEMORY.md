@@ -11,7 +11,8 @@
 1. **RULES.md** - Core maintenance rules (READ BEFORE ANY CHANGES)
 2. **MAPPING.md** - Cross-reference relationships
 3. **INDEX.md** - Central document registry
-4. **MAINTENANCE.md** - Maintenance procedures
+4. **backlog/README.md** - AI-managed backlog index
+5. **MAINTENANCE.md** - Maintenance procedures
 
 ### File Purposes
 
@@ -20,6 +21,7 @@
 | `INDEX.md` | Central registry of all documents | When adding/removing docs |
 | `MAPPING.md` | Cross-reference graph | When relationships change |
 | `RULES.md` | Maintenance guidelines | When rules change |
+| `backlog/` | Bug/feature/tech debt tracker | When working on tasks |
 | `MAINTENANCE.md` | Procedures | When procedures change |
 | `validate-docs.js` | Validation script | Run after changes |
 
@@ -148,6 +150,29 @@ Checks:
 3. **Metadata Maintenance** - All docs have YAML frontmatter
 4. **Automated Updates** - Update INDEX.md and MAPPING.md automatically
 
+## Frontend Development Conventions
+
+**Before implementing frontend features**, review:
+- [Frontend Conventions Guide](./guides/frontend-conventions.md)
+
+### Critical Rules (Prevent Common UX Bugs)
+
+| Pattern | ❌ Don't | ✅ Do |
+|---------|----------|-------|
+| **Data Fetching** | Manual useState/useEffect with fetch | React Query hooks |
+| **Loading States** | Inline spinner SVGs | `<LoadingState>` component |
+| **Error Messages** | Technical errors or console.log | `getUserFriendlyError()` + `<ErrorState>` |
+| **API Responses** | Various shapes per endpoint | Standard response helpers |
+| **UI Elements** | Inline Tailwind classes | Shared components from `@/components/ui` |
+
+### Quick Checklist for New Code
+
+- [ ] Data fetching uses React Query (not useState/useEffect)
+- [ ] Loading uses `LoadingSpinner` or `LoadingState`
+- [ ] Errors are user-friendly with retry option
+- [ ] API routes use `success()` / `errors.xxx()` helpers
+- [ ] UI uses shared components
+
 ## Common Patterns
 
 ### Adding Cross-Reference
@@ -226,8 +251,59 @@ grep -r "Broken link" validation-output.txt
 - **Always read RULES.md first**
 - **Update INDEX.md when structure changes**
 - **Update MAPPING.md when relationships change**
+- **Update backlog items when working on tasks**
 - **Run validation after changes**
 - **Maintain consistency across all docs**
+
+## Backlog Management
+
+The backlog is a **folder of individual files** at `docs/ai-docs/backlog/`.
+
+### Structure
+```
+backlog/
+├── README.md       # Index and summary (update counts here)
+├── _SCHEMA.md      # Template for new items
+├── critical/       # 🔴 Blocking issues
+├── high/           # 🟠 Important improvements
+├── medium/         # 🟡 Nice-to-have
+├── low/            # 🟢 Future considerations
+└── completed/      # ✅ Done items
+```
+
+### File Naming
+```
+{ID}-{descriptive-slug}.md
+Example: BUG-0001-inconsistent-loading-states.md
+```
+
+### When Starting Work
+1. Find item file in appropriate priority folder
+2. Read full context from the file
+3. Change `status: backlog` → `status: in_progress`
+4. Update `updated:` date
+
+### When Completing Work
+1. Change `status: in_progress` → `status: done`
+2. Check off acceptance criteria
+3. Add note to Conversation History
+4. Move file to `completed/` folder
+5. Update `backlog/README.md` counts
+
+### When Finding New Issues
+1. Determine category: BUG, FEAT, REFACTOR, or TECH
+2. Find next ID number for that category
+3. Create file using `_SCHEMA.md` template
+4. Use descriptive filename slug
+5. Place in appropriate priority folder
+6. Update `backlog/README.md` summary
+
+### Refining Items via Conversation
+When discussing with user:
+1. Read the full item file
+2. Discuss scope/approach/criteria
+3. Update the item file
+4. Add dated note to Conversation History
 
 ---
 
