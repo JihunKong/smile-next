@@ -15,6 +15,8 @@ if ! docker ps | grep -q "smile-redis"; then
     docker start smile-redis
   else
       echo "📦 Creating Redis container..."
+      # Ensure volume exists
+      docker volume create redis_data 2>/dev/null || true
       docker run -d \
         --name smile-redis \
         --restart always \

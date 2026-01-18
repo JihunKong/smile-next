@@ -56,16 +56,63 @@ jobs:
               echo "✅ Found .env file in $HOME/smile-next (will be preserved)"
             fi
 
-      - name: Copy Deploy Scripts to VM
+      - name: Copy Deploy Scripts and Docker Compose Files to VM
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "scripts"
+          source: "scripts,docker-compose.dev.yml,docker-compose.prod.yml"
           target: "~/smile-next"
           rm: false
           debug: true
+      
+      - name: Setup Systemd Service (if needed)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30s
+          script: |
+            # Find project directory
+            PROJECT_DIR=""
+            for dir in "$HOME/smile-next" "/opt/smile-next" "/opt/smile/app"; do
+              if [ -d "$dir" ] && [ -f "$dir/docker-compose.dev.yml" ] || [ -f "$dir/docker-compose.prod.yml" ]; then
+                PROJECT_DIR="$dir"
+                break
+              fi
+            done
+            
+            if [ -z "$PROJECT_DIR" ]; then
+              echo "⚠️  Warning: Could not find project directory, skipping systemd setup"
+              exit 0
+            fi
+            
+            cd "$PROJECT_DIR" || { echo "ERROR: Cannot cd to $PROJECT_DIR"; exit 1; }
+            
+            ENVIRONMENT="${{ inputs.environment }}"
+            if [ "$ENVIRONMENT" == "dev" ]; then
+              COMPOSE_FILE="docker-compose.dev.yml"
+              SERVICE_NAME="smile-next-dev"
+            else
+              COMPOSE_FILE="docker-compose.prod.yml"
+              SERVICE_NAME="smile-next-prod"
+            fi
+            
+            # Check if systemd service already exists
+            if [ ! -f "/etc/systemd/system/${SERVICE_NAME}.service" ]; then
+              echo "🔧 Setting up systemd service for $SERVICE_NAME..."
+              echo "   Project directory: $PROJECT_DIR"
+              echo "   Compose file: $COMPOSE_FILE"
+              bash scripts/deploy/setup-systemd-service.sh "$ENVIRONMENT" "$COMPOSE_FILE" "$SERVICE_NAME" || {
+                echo "⚠️  Warning: Failed to setup systemd service (may need manual setup)"
+              }
+            else
+              echo "✅ Systemd service $SERVICE_NAME already exists"
+              echo "🔄 Reloading systemd daemon to pick up any changes..."
+              sudo systemctl daemon-reload || true
+            fi
 
       - name: Validate Environment Configuration
         uses: appleboy/ssh-action@v1.0.3
@@ -84,21 +131,187 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 60s
+          command_timeout: 120s
           script: |
-            cd "$HOME/smile-next" || { echo "ERROR: $HOME/smile-next not found"; exit 1; }
+            # Find project directory (check multiple locations)
+            PROJECT_DIR=""
+            for dir in "$HOME/smile-next" "/opt/smile-next" "/opt/smile/app"; do
+              if [ -d "$dir" ]; then
+                PROJECT_DIR="$dir"
+                break
+              fi
+            done
             
-            # Ensure dependency containers are running
-            bash scripts/deploy/ensure-dependencies.sh ${{ inputs.environment }}
+            if [ -z "$PROJECT_DIR" ]; then
+              echo "❌ ERROR: Could not find project directory"
+              exit 1
+            fi
             
-            # Deploy the application
-            bash scripts/deploy/deploy-app.sh \
-              "${{ inputs.image-name }}" \
-              "${{ inputs.docker-tag }}" \
-              "${{ inputs.port }}" \
-              "${{ inputs.container-name }}" \
-              "${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}" \
-              "${{ secrets.GHCR_PAT }}"
+            cd "$PROJECT_DIR" || { echo "ERROR: Cannot cd to $PROJECT_DIR"; exit 1; }
+            echo "📁 Using project directory: $PROJECT_DIR"
+            
+            # Select docker-compose file based on environment
+            ENVIRONMENT="${{ inputs.environment }}"
+            if [ "$ENVIRONMENT" == "dev" ]; then
+              COMPOSE_FILE="docker-compose.dev.yml"
+              echo "📋 Using docker-compose.dev.yml (includes PostgreSQL + Redis)"
+            else
+              COMPOSE_FILE="docker-compose.prod.yml"
+              echo "📋 Using docker-compose.prod.yml (Redis only, uses GCP Cloud SQL)"
+            fi
+            
+            # Verify docker-compose file exists
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              echo "❌ ERROR: $COMPOSE_FILE not found in $PROJECT_DIR"
+              exit 1
+            fi
+            
+            # Log in to GHCR
+            echo "🔐 Logging in to GitHub Container Registry..."
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}" --password-stdin || {
+              echo "⚠️  Warning: Failed to login to GHCR"
+            }
+            
+            # Pull the image
+            IMAGE_TAG="${{ inputs.image-name }}:${{ inputs.docker-tag }}"
+            echo "📥 Pulling Docker image: $IMAGE_TAG"
+            docker pull "$IMAGE_TAG" || {
+              echo "❌ Failed to pull image: $IMAGE_TAG"
+              exit 1
+            }
+            
+            # Tag the image for docker-compose
+            docker tag "$IMAGE_TAG" "${{ inputs.image-name }}:latest" || true
+            
+            # Set environment variables for docker-compose
+            export DOCKER_IMAGE="$IMAGE_TAG"
+            export PORT="${{ inputs.port }}"
+            export CONTAINER_NAME="${{ inputs.container-name }}"
+            
+            # Ensure volumes exist (for first-time setup) - this won't recreate existing volumes
+            echo "📦 Ensuring volumes exist (data will be preserved)..."
+            docker volume create app_redis_data 2>/dev/null || echo "✅ Volume app_redis_data already exists (data preserved)"
+            
+            # For dev environment, also ensure PostgreSQL volume exists
+            if [ "$ENVIRONMENT" == "dev" ]; then
+              docker volume create app_postgres_data 2>/dev/null || echo "✅ Volume app_postgres_data already exists (data preserved)"
+            fi
+            
+            # IMPORTANT: Stop existing standalone containers FIRST to avoid conflicts
+            # Then start them via docker-compose (using same volumes - data preserved)
+            echo "🛑 Stopping existing standalone containers (will restart via docker-compose)..."
+            
+            # Stop app container
+            if docker ps -a | grep -q "${{ inputs.container-name }}"; then
+              echo "   Stopping ${{ inputs.container-name }}..."
+              docker stop "${{ inputs.container-name }}" 2>/dev/null || true
+              docker rm "${{ inputs.container-name }}" 2>/dev/null || true
+            fi
+            
+            # For dev: Stop standalone postgres/redis if they exist (will be managed by docker-compose)
+            if [ "$ENVIRONMENT" == "dev" ]; then
+              if docker ps -a | grep -q "smile-postgres"; then
+                echo "   Stopping standalone smile-postgres (will restart via docker-compose with same volume)..."
+                docker stop smile-postgres 2>/dev/null || true
+                docker rm smile-postgres 2>/dev/null || true
+              fi
+            fi
+            
+            if docker ps -a | grep -q "smile-redis"; then
+              echo "   Stopping standalone smile-redis (will restart via docker-compose with same volume)..."
+              docker stop smile-redis 2>/dev/null || true
+              docker rm smile-redis 2>/dev/null || true
+            fi
+            
+            # Now start all services via docker-compose (using existing volumes - data preserved)
+            echo "🚀 Starting all services with docker-compose (using existing volumes - data preserved)..."
+            if [ "$ENVIRONMENT" == "dev" ]; then
+              # Dev: Start db, redis, and app
+              docker-compose -f "$COMPOSE_FILE" up -d || {
+                echo "❌ Failed to start services"
+                exit 1
+              }
+              
+              # Wait for dependencies to be healthy
+              echo "⏳ Waiting for dependencies to be healthy..."
+              sleep 5
+              
+              # Verify PostgreSQL is ready (dev only)
+              for i in {1..20}; do
+                if docker exec smile-postgres pg_isready -U smile_user -d smile_db > /dev/null 2>&1; then
+                  echo "✅ PostgreSQL is ready (data preserved from volume)"
+                  break
+                fi
+                if [ $i -eq 20 ]; then
+                  echo "⚠️  PostgreSQL health check timeout (may still be starting)"
+                fi
+                sleep 1
+              done
+            else
+              # Prod: Start redis and app (uses GCP Cloud SQL)
+              docker-compose -f "$COMPOSE_FILE" up -d || {
+                echo "❌ Failed to start services"
+                exit 1
+              }
+              echo "⏳ Waiting for Redis to be ready..."
+              sleep 3
+            fi
+            
+            # Verify Redis is ready
+            for i in {1..10}; do
+              if docker exec smile-redis redis-cli ping > /dev/null 2>&1; then
+                echo "✅ Redis is ready (data preserved from volume)"
+                break
+              fi
+              if [ $i -eq 10 ]; then
+                echo "⚠️  Redis health check timeout (may still be starting)"
+              fi
+              sleep 1
+            done
+            
+            # Application is already started above with docker-compose up -d
+            # Just ensure it's using the correct image
+            echo "🔄 Ensuring app container uses latest image..."
+            ENV_FILE="$PROJECT_DIR/.env"
+            if [ ! -f "$ENV_FILE" ]; then
+              ENV_FILE="/opt/smile-next/.env"
+            fi
+            
+            if [ -f "$ENV_FILE" ]; then
+              set -a
+              source "$ENV_FILE"
+              set +a
+            fi
+            export DOCKER_IMAGE="$IMAGE_TAG"
+            export CONTAINER_NAME="${{ inputs.container-name }}"
+            export PORT="${{ inputs.port }}"
+            
+            # Recreate app container with new image
+            docker-compose -f "$COMPOSE_FILE" up -d --force-recreate app || {
+              echo "❌ Failed to recreate app container"
+              exit 1
+            }
+            
+            # Use systemd service to manage the entire stack (if available)
+            SERVICE_NAME="smile-next-${ENVIRONMENT}"
+            if systemctl list-unit-files | grep -q "^${SERVICE_NAME}.service"; then
+              echo "🔄 Reloading systemd service to ensure all containers are managed..."
+              sudo systemctl daemon-reload || true
+              # Restart the service to ensure all containers (db, redis, app) are running
+              sudo systemctl restart "$SERVICE_NAME" || {
+                echo "⚠️  Warning: Failed to restart systemd service, but containers are running"
+              }
+              echo "✅ Systemd service $SERVICE_NAME reloaded - now managing all containers"
+            else
+              echo "ℹ️  Systemd service not found, containers managed directly by docker-compose"
+              echo "💡 Consider running: bash scripts/deploy/setup-systemd-service.sh $ENVIRONMENT $COMPOSE_FILE $SERVICE_NAME"
+            fi
+            
+            # Clean up old images
+            echo "🧹 Cleaning up old Docker images..."
+            docker image prune -af --filter "until=24h" || echo "Image cleanup completed with warnings"
+            
+            echo "✅ Deployment completed successfully!"
 
       - name: Verify Deployment
         uses: appleboy/ssh-action@v1.0.3
@@ -109,4 +322,5 @@ jobs:
           command_timeout: 30s
           script: |
             cd "$HOME/smile-next" || { echo "ERROR: $HOME/smile-next not found"; exit 1; }
+            export ENVIRONMENT="${{ inputs.environment }}"
             bash scripts/deploy/verify-deployment.sh "${{ inputs.container-name }}"

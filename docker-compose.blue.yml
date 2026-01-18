@@ -145,7 +145,11 @@ services:
 
 volumes:
   postgres_data:
+    external: true
+    name: app_postgres_data
   redis_data:
+    external: true
+    name: app_redis_data
 
 networks:
   smile-network:

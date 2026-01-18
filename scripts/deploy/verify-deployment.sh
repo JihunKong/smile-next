@@ -15,6 +15,17 @@ fi
 echo "🔍 Verifying deployment..."
 echo "Waiting for container to be healthy..."
 
+# Check systemd service status if available
+SERVICE_NAME="smile-next-${ENVIRONMENT:-dev}"
+if systemctl list-unit-files | grep -q "^${SERVICE_NAME}.service"; then
+  echo "📋 Checking systemd service status..."
+  if systemctl is-active --quiet "$SERVICE_NAME"; then
+    echo "✅ Systemd service $SERVICE_NAME is active"
+  else
+    echo "⚠️  Systemd service $SERVICE_NAME is not active (checking container directly)"
+  fi
+fi
+
 # Wait for container to start
 sleep 5
 

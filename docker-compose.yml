@@ -49,6 +49,8 @@ services:
       - REDIS_URL=redis://redis:6379
       - NEXTAUTH_URL=http://localhost:3000
       - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      # Trust host for dev environment (required when using 0.0.0.0)
+      - AUTH_TRUST_HOST=true
       # These should be set in .env.local or passed at runtime
       - AUTH_SECRET=${AUTH_SECRET:-docker-dev-secret-change-in-production}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
@@ -57,6 +59,8 @@ services:
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}
+      # Disable workers if Redis is not available (set to "true" to disable)
+      - DISABLE_WORKERS=${DISABLE_WORKERS:-false}
     depends_on:
       db:
         condition: service_healthy
@@ -72,4 +76,8 @@ networks:
 
 volumes:
   postgres_data:
+    external: true
+    name: app_postgres_data
   redis_data:
+    external: true
+    name: app_redis_data

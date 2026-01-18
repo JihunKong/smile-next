@@ -1,7 +1,32 @@
-# Production Docker Compose for AWS EC2
-# Usage: docker-compose -f docker-compose.prod.yml up -d
+# Dev VM Docker Compose (GCP Compute Engine)
+# Includes PostgreSQL and Redis containers
+# Usage: docker-compose -f docker-compose.dev.yml up -d
 
 services:
+  # PostgreSQL Database (local container for dev)
+  db:
+    image: postgres:15-alpine
+    container_name: smile-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: smile_db
+      POSTGRES_USER: smile_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smile_user -d smile_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smile-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # Redis for Bull Queue
   redis:
@@ -26,12 +51,10 @@ services:
   # Next.js Application
   app:
     image: ${DOCKER_IMAGE:-smile-next-app:latest}
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: smile-app
+    # Note: build section removed - image is pulled by GitHub Actions workflow
+    container_name: ${CONTAINER_NAME:-smile-app}
     ports:
-      - "80:3000"
+      - "${PORT:-3001}:3000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-change_me_in_production}@db:5432/smile_db
@@ -51,7 +74,10 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - EMAIL_FROM=${EMAIL_FROM:-}
+      - DISABLE_WORKERS=${DISABLE_WORKERS:-false}
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -67,6 +93,9 @@ networks:
     driver: bridge
 
 volumes:
+  postgres_data:
+    external: true
+    name: app_postgres_data
   redis_data:
     external: true
     name: app_redis_data
