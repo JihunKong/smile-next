@@ -50,6 +50,17 @@ echo "📁 Project directory: $PROJECT_DIR"
 # Create systemd service file
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
+# Check if service file already exists
+if [ -f "$SERVICE_FILE" ]; then
+  echo "✅ Systemd service file already exists: $SERVICE_FILE"
+  echo "🔄 Reloading systemd daemon to pick up any changes..."
+  sudo systemctl daemon-reload
+  echo "✅ Systemd daemon reloaded"
+  echo ""
+  echo "💡 To update the service file, delete it first: sudo rm $SERVICE_FILE"
+  exit 0
+fi
+
 echo "📝 Creating systemd service file: $SERVICE_FILE"
 
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF

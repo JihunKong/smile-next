@@ -77,12 +77,13 @@ jobs:
             echo "container-name=smile-next" >> $GITHUB_OUTPUT
           fi
 
-  # 2. Provision Infrastructure - Only runs when infrastructure files change (and on push events, not PRs)
+  # 2. Provision Infrastructure - Only runs on manual trigger or when infra changes on main branch
   provision-infra:
     needs: check-changes
     if: |
       needs.check-changes.outputs.should-provision == 'true' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      (github.event_name == 'workflow_dispatch' || 
+       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
     uses: ./.github/workflows/setup-vm.yml
     with:
       environment: ${{ needs.check-changes.outputs.env-name }}
