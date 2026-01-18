@@ -72,8 +72,7 @@ jobs:
             infra:
               - 'scripts/deploy/**'
               - 'docker-compose.*.yml'
-              - '.github/workflows/deploy-gcp-compute-vm-ssh.yml'
-              - '.github/workflows/setup-vm.yml'
+              - '.github/workflows/**'
 
       - name: Decide build/deploy actions
         id: decide
