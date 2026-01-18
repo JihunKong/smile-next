@@ -1,0 +1,145 @@
+name: Setup GCP Compute VM Infrastructure
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: false
+        type: string
+        description: 'Environment to setup (dev or prod)'
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        description: 'Environment to setup'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'docker-compose.*.yml'
+      - 'scripts/deploy/**'
+      - '.github/workflows/setup-vm.yml'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Prepare Deployment Directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10s
+          script: |
+            echo "🔧 Preparing deployment directory..."
+            echo "Current user: $(whoami)"
+            echo "Home directory: $HOME"
+            
+            # Prepare user home directory
+            echo "📁 Preparing $HOME/smile-next..."
+            mkdir -p "$HOME/smile-next"
+            
+            # Verify .env file exists (should be created manually)
+            if [ ! -f "$HOME/smile-next/.env" ]; then
+              echo "⚠️  Warning: .env file not found in $HOME/smile-next"
+              echo "   Please create it manually before first deployment"
+            else
+              echo "✅ Found .env file in $HOME/smile-next"
+            fi
+
+      - name: Copy Setup Scripts and Docker Compose Files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "scripts,docker-compose.dev.yml,docker-compose.prod.yml"
+          target: "~/smile-next"
+          rm: false
+          debug: true
+
+      - name: Setup Infrastructure
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 60s
+          script: |
+            ENVIRONMENT="${{ inputs.environment || github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }}"
+            PROJECT_DIR="$HOME/smile-next"
+            
+            cd "$PROJECT_DIR" || { echo "ERROR: Cannot cd to $PROJECT_DIR"; exit 1; }
+            
+            echo "🔧 Setting up infrastructure for $ENVIRONMENT environment..."
+            
+            # Determine compose file and service name
+            if [ "$ENVIRONMENT" == "dev" ]; then
+              COMPOSE_FILE="docker-compose.dev.yml"
+              SERVICE_NAME="smile-next-dev"
+            else
+              COMPOSE_FILE="docker-compose.prod.yml"
+              SERVICE_NAME="smile-next-prod"
+            fi
+            
+            # Ensure Docker is installed
+            if ! command -v docker &> /dev/null; then
+              echo "📦 Installing Docker..."
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sudo sh get-docker.sh
+              sudo usermod -aG docker "$USER"
+              rm get-docker.sh
+              echo "✅ Docker installed"
+            else
+              echo "✅ Docker is already installed"
+            fi
+            
+            # Ensure docker-compose is installed
+            if ! command -v docker-compose &> /dev/null; then
+              echo "📦 Installing docker-compose..."
+              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+              echo "✅ docker-compose installed"
+            else
+              echo "✅ docker-compose is already installed"
+            fi
+            
+            # Create volumes (idempotent - won't recreate if they exist)
+            echo "📦 Creating Docker volumes..."
+            docker volume create app_redis_data 2>/dev/null || echo "✅ Volume app_redis_data already exists"
+            
+            if [ "$ENVIRONMENT" == "dev" ]; then
+              docker volume create app_postgres_data 2>/dev/null || echo "✅ Volume app_postgres_data already exists"
+            fi
+            
+            # Setup systemd service
+            echo "🔧 Setting up systemd service..."
+            if [ ! -f "/etc/systemd/system/${SERVICE_NAME}.service" ]; then
+              bash scripts/deploy/setup-systemd-service.sh "$ENVIRONMENT" "$COMPOSE_FILE" "$SERVICE_NAME" || {
+                echo "⚠️  Warning: Failed to setup systemd service (may need sudo)"
+                exit 1
+              }
+            else
+              echo "✅ Systemd service $SERVICE_NAME already exists"
+              echo "🔄 Reloading systemd daemon..."
+              sudo systemctl daemon-reload || true
+            fi
+            
+            echo ""
+            echo "✅ Infrastructure setup complete!"
+            echo ""
+            echo "📋 Next steps:"
+            echo "   1. Ensure .env file is configured in $PROJECT_DIR"
+            echo "   2. Run the deployment workflow to deploy the application"
+            echo "   3. Service will be managed by systemd: sudo systemctl start $SERVICE_NAME"

@@ -21,8 +21,9 @@ jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      should-build: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.src }}
-      should-deploy: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.src }}
+      should-build: ${{ github.event_name == 'workflow_dispatch' && 'true' || (steps.filter.outputs.src == 'true' || steps.filter.outputs.infra == 'true') }}
+      should-deploy: ${{ github.event_name == 'workflow_dispatch' && 'true' || (steps.filter.outputs.src == 'true' || steps.filter.outputs.infra == 'true') }}
+      should-provision: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.infra == 'true' }}
       # Environment variables calculated once and passed to downstream jobs
       env-name: ${{ steps.vars.outputs.env-name }}
       docker-tag: ${{ steps.vars.outputs.docker-tag }}
@@ -49,7 +50,11 @@ jobs:
               - 'next.config.*'
               - '.env*'
               - 'prisma/**'
-              - '.github/workflows/**'
+            infra:
+              - 'scripts/deploy/**'
+              - 'docker-compose.*.yml'
+              - '.github/workflows/deploy-gcp-compute-vm-ssh.yml'
+              - '.github/workflows/setup-vm.yml'
 
       - name: Set Environment Variables
         id: vars
@@ -72,7 +77,18 @@ jobs:
             echo "container-name=smile-next" >> $GITHUB_OUTPUT
           fi
 
-  # 2. Call the Reusable Build Workflow
+  # 2. Provision Infrastructure - Only runs when infrastructure files change (and on push events, not PRs)
+  provision-infra:
+    needs: check-changes
+    if: |
+      needs.check-changes.outputs.should-provision == 'true' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/setup-vm.yml
+    with:
+      environment: ${{ needs.check-changes.outputs.env-name }}
+    secrets: inherit
+
+  # 3. Call the Reusable Build Workflow
   call-build:
     needs: check-changes
     if: needs.check-changes.outputs.should-build == 'true'
@@ -85,16 +101,17 @@ jobs:
       image-name: ghcr.io/tedahn-pknic/new_smile_flask
     secrets: inherit
 
-  # 3. Call Deploy (Dev) - ONLY if on develop branch and push event
+  # 4. Call Deploy (Dev) - ONLY if on develop branch and push event
   deploy-dev:
-    needs: [check-changes, call-build]
+    needs: [check-changes, call-build, provision-infra]
     if: |
       always() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/develop' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
       needs.check-changes.outputs.should-build == 'true' &&
-      needs.call-build.result == 'success'
+      needs.call-build.result == 'success' &&
+      (needs.provision-infra.result == 'success' || needs.provision-infra.result == 'skipped')
     uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
     with:
       environment: ${{ needs.check-changes.outputs.env-name }}
@@ -104,16 +121,17 @@ jobs:
       image-name: ghcr.io/tedahn-pknic/new_smile_flask
     secrets: inherit
 
-  # 4. Call Deploy (Prod) - ONLY if on main branch and push event
+  # 5. Call Deploy (Prod) - ONLY if on main branch and push event
   deploy-prod:
-    needs: [check-changes, call-build]
+    needs: [check-changes, call-build, provision-infra]
     if: |
       always() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
       needs.check-changes.outputs.should-build == 'true' &&
-      needs.call-build.result == 'success'
+      needs.call-build.result == 'success' &&
+      (needs.provision-infra.result == 'success' || needs.provision-infra.result == 'skipped')
     uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
     with:
       environment: ${{ needs.check-changes.outputs.env-name }}
