@@ -44,35 +44,17 @@ jobs:
             echo "Current user: $(whoami)"
             echo "Home directory: $HOME"
             
-            # Try to create/clean /home/deployer/smile-next if we have permission
-            if mkdir -p /home/deployer/smile-next 2>/dev/null && [ -w /home/deployer/smile-next ] 2>/dev/null; then
-              echo "✅ Can write to /home/deployer/smile-next"
-              echo "📁 Cleaning only scripts directory (preserving .env and other files)..."
-              # Only remove scripts directory, preserve .env and other files
-              rm -rf /home/deployer/smile-next/scripts 2>/dev/null || true
-            else
-              echo "⚠️  Cannot write to /home/deployer/smile-next (permission denied)"
-              echo "📁 Will use user home directory: $HOME/smile-next"
-            fi
-            
-            # Always prepare user home directory as fallback
+            # Prepare user home directory
             echo "📁 Preparing $HOME/smile-next..."
             mkdir -p "$HOME/smile-next"
             # Only remove scripts directory, preserve .env and other files
             echo "🔒 Preserving .env file and other non-script files..."
             rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
             
-            # Show permissions for debugging
-            echo "📂 Directory permissions:"
-            ls -la /home/deployer/ 2>/dev/null | head -5 || echo "  Cannot access /home/deployer/"
-            ls -la "$HOME/" | grep smile-next || echo "  $HOME/smile-next ready"
-            
             # Verify .env file is preserved (if it exists)
-            for dir in "/home/deployer/smile-next" "$HOME/smile-next"; do
-              if [ -f "$dir/.env" ]; then
-                echo "✅ Found .env file in $dir (will be preserved)"
-              fi
-            done
+            if [ -f "$HOME/smile-next/.env" ]; then
+              echo "✅ Found .env file in $HOME/smile-next (will be preserved)"
+            fi
 
       - name: Copy Deploy Scripts to VM
         uses: appleboy/scp-action@v0.1.7
@@ -85,32 +67,6 @@ jobs:
           rm: false
           debug: true
 
-      - name: Move Scripts to Deployer Directory (if permitted)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 10s
-          script: |
-            echo "🔄 Attempting to move scripts to /home/deployer/smile-next..."
-            if [ -d "$HOME/smile-next" ]; then
-              # Try to copy to /home/deployer if we have permission
-              if mkdir -p /home/deployer/smile-next 2>/dev/null && [ -w /home/deployer/smile-next ] 2>/dev/null; then
-                echo "✅ Copying scripts to /home/deployer/smile-next..."
-                # Only copy scripts directory, preserve existing .env and other files
-                rm -rf /home/deployer/smile-next/scripts 2>/dev/null || true
-                cp -r "$HOME/smile-next/scripts" /home/deployer/smile-next/ 2>/dev/null && \
-                echo "✅ Successfully copied scripts to /home/deployer/smile-next" || \
-                echo "⚠️  Copy failed, will use $HOME/smile-next"
-              else
-                echo "⚠️  Cannot write to /home/deployer/smile-next, using $HOME/smile-next"
-              fi
-            else
-              echo "❌ Source directory $HOME/smile-next not found"
-              exit 1
-            fi
-
       - name: Validate Environment Configuration
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -119,7 +75,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10s
           script: |
-            cd /home/deployer/smile-next || cd ~/smile-next || cd $HOME/new_smile_flask || cd /opt/smile-next || { echo "ERROR: Scripts directory not found"; exit 1; }
+            cd "$HOME/smile-next" || { echo "ERROR: $HOME/smile-next not found"; exit 1; }
             bash scripts/deploy/validate-env.sh ${{ inputs.environment }}
 
       - name: Deploy to VM via SSH
@@ -130,7 +86,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 60s
           script: |
-            cd /home/deployer/smile-next || cd ~/smile-next || cd $HOME/new_smile_flask || cd /opt/smile-next || { echo "ERROR: Scripts directory not found"; exit 1; }
+            cd "$HOME/smile-next" || { echo "ERROR: $HOME/smile-next not found"; exit 1; }
             
             # Ensure dependency containers are running
             bash scripts/deploy/ensure-dependencies.sh ${{ inputs.environment }}
@@ -152,5 +108,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30s
           script: |
-            cd /home/deployer/smile-next || cd ~/smile-next || cd $HOME/new_smile_flask || cd /opt/smile-next || { echo "ERROR: Scripts directory not found"; exit 1; }
+            cd "$HOME/smile-next" || { echo "ERROR: $HOME/smile-next not found"; exit 1; }
             bash scripts/deploy/verify-deployment.sh "${{ inputs.container-name }}"

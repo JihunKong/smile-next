@@ -65,13 +65,7 @@ docker rm "$CONTAINER_NAME" 2>/dev/null || echo "Container doesn't exist"
 # 4. Run the new container
 echo "▶️  Starting new container..."
 # Find .env file location
-ENV_FILE="/home/deployer/smile-next/.env"
-if [ ! -f "$ENV_FILE" ]; then
-  ENV_FILE="$HOME/smile-next/.env"
-fi
-if [ ! -f "$ENV_FILE" ]; then
-  ENV_FILE="$HOME/new_smile_flask/.env"
-fi
+ENV_FILE="$HOME/smile-next/.env"
 if [ ! -f "$ENV_FILE" ]; then
   ENV_FILE="/opt/smile-next/.env"
 fi

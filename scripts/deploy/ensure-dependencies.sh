@@ -48,13 +48,7 @@ if [ "$ENVIRONMENT" == "dev" ]; then
     else
       echo "📦 Creating PostgreSQL container..."
       # Source .env to get DB_PASSWORD
-      ENV_FILE="/home/deployer/smile-next/.env"
-      if [ ! -f "$ENV_FILE" ]; then
-        ENV_FILE="$HOME/smile-next/.env"
-      fi
-      if [ ! -f "$ENV_FILE" ]; then
-        ENV_FILE="$HOME/new_smile_flask/.env"
-      fi
+      ENV_FILE="$HOME/smile-next/.env"
       if [ ! -f "$ENV_FILE" ]; then
         ENV_FILE="/opt/smile-next/.env"
       fi

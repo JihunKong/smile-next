@@ -6,14 +6,8 @@ set -e
 
 ENVIRONMENT="${1:-dev}"
 
-# Try to find .env file in multiple locations
-ENV_FILE="/home/deployer/smile-next/.env"
-if [ ! -f "$ENV_FILE" ]; then
-  ENV_FILE="$HOME/smile-next/.env"
-fi
-if [ ! -f "$ENV_FILE" ]; then
-  ENV_FILE="$HOME/new_smile_flask/.env"
-fi
+# Try to find .env file
+ENV_FILE="$HOME/smile-next/.env"
 if [ ! -f "$ENV_FILE" ]; then
   ENV_FILE="/opt/smile-next/.env"
 fi
@@ -23,9 +17,7 @@ echo "Validating environment configuration for $ENVIRONMENT..."
 # Check .env file exists
 if [ ! -f "$ENV_FILE" ]; then
   echo "ERROR: .env file not found in any expected location:"
-  echo "  - /home/deployer/smile-next/.env"
   echo "  - $HOME/smile-next/.env"
-  echo "  - $HOME/new_smile_flask/.env"
   echo "  - /opt/smile-next/.env"
   exit 1
 fi
