@@ -40,7 +40,6 @@ jobs:
           images: ${{ inputs.image-name }}
           tags: |
             type=raw,value=${{ inputs.docker-tag }}
-            type=sha,prefix={{branch}}-,format=short
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
