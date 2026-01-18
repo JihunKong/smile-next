@@ -64,10 +64,10 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=$PROJECT_DIR
-# Start all services (db, redis, app) - docker-compose handles dependencies
-ExecStart=/usr/bin/docker-compose -f $COMPOSE_FILE up -d
-ExecStop=/usr/bin/docker-compose -f $COMPOSE_FILE down
-ExecReload=/usr/bin/docker-compose -f $COMPOSE_FILE up -d --force-recreate
+# Start all services (db, redis, app) - docker compose handles dependencies
+ExecStart=/usr/bin/docker compose -f $COMPOSE_FILE up -d
+ExecStop=/usr/bin/docker compose -f $COMPOSE_FILE down
+ExecReload=/usr/bin/docker compose -f $COMPOSE_FILE up -d --force-recreate
 # Restart on failure (systemd will restart the service, which restarts containers)
 Restart=on-failure
 RestartSec=10

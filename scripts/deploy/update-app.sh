@@ -141,7 +141,7 @@ fi
 echo "🚀 Starting all services with docker-compose (using existing volumes - data preserved)..."
 if [ "$ENVIRONMENT" == "dev" ]; then
   # Dev: Start db, redis, and app
-  docker-compose -f "$COMPOSE_FILE" up -d || {
+  docker compose -f "$COMPOSE_FILE" up -d || {
     echo "❌ Failed to start services"
     exit 1
   }
@@ -163,7 +163,7 @@ if [ "$ENVIRONMENT" == "dev" ]; then
   done
 else
   # Prod: Start redis and app (uses GCP Cloud SQL)
-  docker-compose -f "$COMPOSE_FILE" up -d || {
+  docker compose -f "$COMPOSE_FILE" up -d || {
     echo "❌ Failed to start services"
     exit 1
   }
@@ -201,7 +201,7 @@ export PORT="$PORT"
 
 # Recreate app container with new image
 echo "🔄 Ensuring app container uses latest image..."
-docker-compose -f "$COMPOSE_FILE" up -d --force-recreate app || {
+docker compose -f "$COMPOSE_FILE" up -d --force-recreate app || {
   echo "❌ Failed to recreate app container"
   exit 1
 }

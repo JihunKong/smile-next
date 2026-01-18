@@ -76,9 +76,9 @@ else
     docker build -t $IMAGE_NAME .
 fi
 
-# Deploy with docker-compose
+# Deploy with docker compose
 echo -e "${YELLOW}Starting container with host network mode...${NC}"
-docker-compose -f $COMPOSE_FILE --env-file $ENV_FILE up -d
+docker compose -f $COMPOSE_FILE --env-file $ENV_FILE up -d
 
 # Wait for container to be ready
 echo -e "${YELLOW}Waiting for container to be ready...${NC}"

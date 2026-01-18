@@ -105,14 +105,34 @@ jobs:
               echo "✅ Docker is already installed"
             fi
             
-            # Ensure docker-compose is installed
-            if ! command -v docker-compose &> /dev/null; then
-              echo "📦 Installing docker-compose..."
-              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-              echo "✅ docker-compose installed"
+            # Ensure Docker Compose V2 plugin is installed
+            # Check if compose plugin is available (try with sudo in case of permission issues)
+            if docker compose version &> /dev/null 2>&1 || sudo docker compose version &> /dev/null 2>&1; then
+              echo "✅ docker compose plugin is available"
             else
-              echo "✅ docker-compose is already installed"
+              echo "📦 Installing Docker Compose Plugin..."
+              # For Debian/Ubuntu systems (GCP VMs)
+              if command -v apt-get &> /dev/null; then
+                sudo apt-get update
+                sudo apt-get install -y docker-compose-plugin
+              # For RHEL/CentOS systems
+              elif command -v yum &> /dev/null; then
+                sudo yum install -y docker-compose-plugin
+              else
+                echo "⚠️  Warning: Could not detect package manager to install docker-compose-plugin"
+                echo "   Please install it manually: https://docs.docker.com/compose/install/"
+                exit 1
+              fi
+              
+              # Verify installation (try both with and without sudo)
+              if docker compose version &> /dev/null 2>&1 || sudo docker compose version &> /dev/null 2>&1; then
+                echo "✅ docker compose plugin installed successfully"
+              else
+                echo "❌ ERROR: Failed to install or verify docker compose plugin"
+                echo "   Attempting to check Docker version for troubleshooting..."
+                docker --version || sudo docker --version || echo "   Docker command also failed"
+                exit 1
+              fi
             fi
             
             # Create volumes (idempotent - won't recreate if they exist)

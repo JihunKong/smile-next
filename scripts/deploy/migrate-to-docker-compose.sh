@@ -88,7 +88,7 @@ echo "🚀 Step 4: Starting containers with docker-compose..."
 echo "   Using existing volumes - all data will be preserved!"
 
 # Start only db and redis services (not app, since user has smile-next-dev)
-docker-compose -f "$COMPOSE_FILE" up -d db redis
+docker compose -f "$COMPOSE_FILE" up -d db redis
 
 # Step 5: Verify services are healthy
 echo ""
