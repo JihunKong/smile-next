@@ -16,14 +16,6 @@ on:
           - dev
           - prod
         description: 'Environment to setup'
-  push:
-    branches:
-      - main
-      - develop
-    paths:
-      - 'docker-compose.*.yml'
-      - 'scripts/deploy/**'
-      - '.github/workflows/setup-vm.yml'
 
 jobs:
   setup:
