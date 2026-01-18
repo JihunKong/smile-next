@@ -84,3 +84,7 @@ temp/
 *.key
 id_rsa*
 *.pub
+
+playwright-report/
+test-results/
+coverage/

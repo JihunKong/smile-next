@@ -42,17 +42,43 @@ MAX_RETRIES=15
 RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  if docker exec "$CONTAINER_NAME" node -e "
+  HEALTH_RESULT=$(docker exec "$CONTAINER_NAME" node -e "
     const http = require('http');
     http.get('http://localhost:3000/api/health', (res) => {
-      if (res.statusCode === 200) {
-        process.exit(0);
-      } else {
-        process.exit(1);
-      }
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(data);
+          console.log(JSON.stringify({
+            status: result.status,
+            database: result.checks?.database?.status,
+            dbLatency: result.checks?.database?.latencyMs,
+            dbError: result.checks?.database?.error,
+            redis: result.checks?.redis?.status,
+            httpStatus: res.statusCode
+          }));
+          process.exit(res.statusCode === 200 ? 0 : 1);
+        } catch (e) {
+          process.exit(1);
+        }
+      });
     }).on('error', () => process.exit(1));
-  " 2>/dev/null; then
+  " 2>/dev/null)
+  
+  if [ $? -eq 0 ]; then
     echo "✓ Health check passed"
+    
+    # Parse and display database status
+    DB_STATUS=$(echo "$HEALTH_RESULT" | grep -o '"database":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "unknown")
+    DB_LATENCY=$(echo "$HEALTH_RESULT" | grep -o '"dbLatency":[0-9]*' | cut -d':' -f2 2>/dev/null || echo "")
+    DB_ERROR=$(echo "$HEALTH_RESULT" | grep -o '"dbError":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "")
+    
+    if [ "$DB_STATUS" == "ok" ]; then
+      echo "✓ Database connection OK (${DB_LATENCY}ms)"
+    elif [ "$DB_STATUS" == "error" ]; then
+      echo "⚠️  Database connection FAILED: $DB_ERROR"
+    fi
     
     # Also check workers status
     if docker exec "$CONTAINER_NAME" node -e "
