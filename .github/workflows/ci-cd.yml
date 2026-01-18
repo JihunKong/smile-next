@@ -53,13 +53,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check for relevant changes
+        # Skip path filtering for workflow_dispatch - those are manual triggers
+        if: github.event_name != 'workflow_dispatch'
         uses: dorny/paths-filter@v3
         id: filter
         with:
           # For push events: compare against previous commit on same branch
           # For PR events: compare PR branch against base branch (automatic)
-          # For workflow_dispatch: always return true (manual trigger)
-          base: ${{ github.event_name == 'push' && (github.event.before || github.ref) || (github.event_name == 'workflow_dispatch' && 'HEAD^' || '') }}
+          base: ${{ github.event_name == 'push' && (github.event.before || github.ref) || '' }}
           filters: |
             src:
               - 'src/**'
@@ -89,11 +90,12 @@ jobs:
               SHOULD_DEPLOY="true"
               IS_RESTORE="true"
             else
-              # Deploy PR - need to build first (or use existing PR image)
-              SHOULD_BUILD="true"
+              # Deploy specific PR - use existing PR image (no rebuild needed)
+              SHOULD_BUILD="false"
               SHOULD_DEPLOY="true"
             fi
           elif [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
+            # Push or PR with relevant changes
             SHOULD_BUILD="true"
             SHOULD_DEPLOY="true"
           fi
