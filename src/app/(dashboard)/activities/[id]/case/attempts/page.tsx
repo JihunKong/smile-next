@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LoadingState } from '@/components/ui'
 
 interface CaseResponse {
   understanding_score: number
@@ -95,13 +96,7 @@ export default function CaseAttemptsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mx-auto mb-4"></div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Loading Attempts...</h3>
-          <p className="text-gray-600">Fetching your attempt history</p>
-        </div>
-      </div>
+      <LoadingState size="lg" message="Loading Attempts..." />
     )
   }
 

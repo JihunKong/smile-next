@@ -288,7 +288,7 @@ export default function Navigation() {
                         Settings
                       </Link>
                       <button
-                        onClick={() => signOut()}
+                        onClick={() => signOut({ callbackUrl: '/' })}
                         className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                       >
                         Logout
@@ -471,7 +471,7 @@ export default function Navigation() {
                     Settings
                   </Link>
                   <button
-                    onClick={() => signOut()}
+                    onClick={() => signOut({ callbackUrl: '/' })}
                     className="block w-full text-left px-3 py-2 text-[var(--stanford-cardinal)] hover:opacity-80"
                   >
                     Logout

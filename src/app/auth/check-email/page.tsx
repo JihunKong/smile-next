@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { LoadingState } from '@/components/ui'
 
 function CheckEmailContent() {
   const searchParams = useSearchParams()
@@ -194,11 +195,7 @@ function CheckEmailContent() {
 export default function CheckEmailPage() {
   return (
     <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8C1515]"></div>
-        </div>
-      }
+      fallback={<LoadingState fullPage message="Loading..." />}
     >
       <CheckEmailContent />
     </Suspense>

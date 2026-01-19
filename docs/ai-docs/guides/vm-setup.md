@@ -30,9 +30,30 @@ This guide covers the first-time setup of a GCP Compute Engine VM for the SMILE 
 ## Prerequisites
 
 - GCP account with Compute Engine access
-- SSH key pair for VM access
 - GitHub repository access
 - Required API keys (OpenAI, etc.)
+
+---
+
+## Quick Start (Automated Bootstrap)
+
+For a new VM, use the automated bootstrap script:
+
+```bash
+# SSH into your new VM (use GCP Console SSH or your own key)
+# Then run:
+curl -fsSL https://raw.githubusercontent.com/tedahn-pknic/new_smile_flask/develop/scripts/deploy/bootstrap-vm.sh | bash
+```
+
+This script automatically:
+1. Updates system packages
+2. Installs Docker and Docker Compose
+3. Creates deployment directory structure
+4. Generates SSH key pair for CI/CD
+5. Creates Docker volumes
+6. **Outputs all GitHub secrets you need to copy**
+
+After running, copy the output secrets to GitHub and edit the `.env` file.
 
 ---
 
@@ -351,6 +372,21 @@ Go to: Repository → Settings → Secrets and variables → Actions
 | `VM_HOST` | VM external IP | e.g., `34.123.45.67` |
 | `VM_USERNAME` | SSH username | e.g., `your-gcp-username` |
 | `SSH_PRIVATE_KEY` | Full private key | Include `-----BEGIN...` and `-----END...` |
+| `VM_PORT_MAIN` | Production port | Default: `3000` (optional) |
+| `VM_PORT_DEV` | Development port | Default: `3001` (optional) |
+| `VM_PORT_PR` | PR testing port | Default: `3002` (optional) |
+
+### Port Configuration
+
+The CI/CD pipeline supports configurable ports via secrets:
+
+| Branch | Secret | Default Port | Container Name |
+|--------|--------|--------------|----------------|
+| `main` | `VM_PORT_MAIN` | 3000 | smile-next |
+| `develop` | `VM_PORT_DEV` | 3001 | smile-next-dev |
+| PRs | `VM_PORT_PR` | 3002 | smile-next-pr |
+
+This allows main and develop to run simultaneously on different ports, with PRs on a third port for testing.
 
 ### Create GitHub PAT
 

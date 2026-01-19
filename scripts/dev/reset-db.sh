@@ -1,36 +1,59 @@
 #!/bin/bash
-# Reset dev database and reseed with test data
-# Usage: ./scripts/dev/reset-db.sh
+# =============================================================================
+# Reset Database Script
+# =============================================================================
+# Drops all tables and reseeds with fresh test data.
+# Usage: npm run db:reset
+#    or: ./scripts/dev/reset-db.sh
+# =============================================================================
 
 set -e
 
-echo "🔄 Resetting development database..."
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
-# Check if containers are running
-if ! docker ps | grep -q "smile-postgres"; then
-  echo "❌ PostgreSQL container is not running"
-  echo "Start it with: docker start smile-postgres"
-  echo "Or create it with: bash scripts/deploy/ensure-dependencies.sh dev"
+echo -e "${YELLOW}🔄 Resetting development database...${NC}"
+
+# Check if containers are running (try both container names)
+CONTAINER_NAME=""
+if docker ps | grep -q "smile-postgres-local"; then
+  CONTAINER_NAME="smile-postgres-local"
+elif docker ps | grep -q "smile-postgres"; then
+  CONTAINER_NAME="smile-postgres"
+else
+  echo -e "${RED}❌ PostgreSQL container is not running${NC}"
+  echo ""
+  echo "Start containers with one of:"
+  echo "  docker-compose -f docker-compose.local.yml up -d"
+  echo "  npm run setup"
   exit 1
 fi
 
-# Get database URL (dev uses port 5432, local docker-compose uses 5435)
-DB_URL="${DATABASE_URL:-postgresql://smile_user:simple_pass@localhost:5432/smile_new_db}"
+echo -e "Using container: ${GREEN}$CONTAINER_NAME${NC}"
 
-echo "📊 Dropping and recreating database schema..."
+# Create .env symlink for Prisma if needed (Prisma doesn't read .env.local)
+if [ -f ".env.local" ] && [ ! -L ".env" ]; then
+    echo -e "\n📝 Creating .env symlink for Prisma..."
+    ln -sf .env.local .env
+fi
+
+echo -e "\n📊 Dropping and recreating database schema..."
 npx prisma db push --force-reset --skip-generate
 
-echo "🌱 Seeding database with test data..."
+echo -e "\n🌱 Seeding database with test data..."
 npm run db:seed
 
-echo ""
-echo "✅ Database reset complete!"
+echo -e "\n${GREEN}✅ Database reset complete!${NC}"
 echo ""
 echo "Test accounts (password: Test1234!):"
-echo "  - superadmin@smile.test"
-echo "  - admin@smile.test"
-echo "  - teacher1@smile.test"
-echo "  - student1@smile.test"
-echo "  - student2@smile.test"
-echo "  - student3@smile.test"
-echo "  - student4@smile.test"
+echo "  - superadmin@smile.test (Super Admin)"
+echo "  - admin@smile.test (Admin)"
+echo "  - teacher1@smile.test (Teacher)"
+echo "  - teacher2@smile.test (Teacher)"
+echo "  - student1@smile.test (Student - has completed attempts)"
+echo "  - student2@smile.test (Student - has failed attempts)"
+echo "  - student3@smile.test (Student - has in-progress attempt)"
+echo "  - student4@smile.test (Student - no attempts)"

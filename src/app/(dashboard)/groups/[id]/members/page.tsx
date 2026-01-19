@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { GroupRoles, type GroupRole } from '@/types/groups'
 import { getRoleLabel, getRoleBadgeColor, getGradientColors, getGroupInitials, canManageGroup, canChangeUserRole } from '@/lib/groups/utils'
+import { LoadingState } from '@/components/ui'
 
 interface Member {
   id: string
@@ -188,12 +189,7 @@ export default function GroupMembersPage({ params }: { params: Promise<{ id: str
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading members...</p>
-        </div>
-      </div>
+      <LoadingState fullPage message="Loading members..." />
     )
   }
 

@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LoadingState } from '@/components/ui'
 
 interface ActivityResult {
   id: string
@@ -74,11 +75,7 @@ export default function ActivityResultsPage({ params }: { params: Promise<{ id: 
   }, [session, activityId, router])
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8C1515]"></div>
-      </div>
-    )
+    return <LoadingState fullPage message="Loading results..." />
   }
 
   if (!results) {
