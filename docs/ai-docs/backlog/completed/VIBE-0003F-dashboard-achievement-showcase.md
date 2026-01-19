@@ -1,12 +1,13 @@
 ---
 id: VIBE-0003F
 title: Extract Dashboard AchievementShowcase with tests
-status: backlog
+status: completed
 priority: critical
 category: refactoring
 component: ui
 created: 2026-01-18
 updated: 2026-01-18
+completed: 2026-01-18
 effort: s
 assignee: ai-agent
 ---
