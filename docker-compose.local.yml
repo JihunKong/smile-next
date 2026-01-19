@@ -1,0 +1,53 @@
+# Local Development Docker Compose
+# Usage: docker-compose -f docker-compose.local.yml up -d
+#
+# This configuration is designed for easy local development:
+# - No external volumes required (creates local volumes automatically)
+# - PostgreSQL on port 5432 (standard)
+# - Redis on port 6379 (standard)
+# - Does NOT include the app container (run with npm run dev instead)
+#
+# Quick Start:
+#   npm run setup          # Full setup (Docker + DB + seed)
+#   npm run dev:simple     # Start dev server
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: smile-postgres-local
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: smile_new_db
+      POSTGRES_USER: smile_user
+      POSTGRES_PASSWORD: simple_pass
+    volumes:
+      - smile_postgres_local:/var/lib/postgresql/data
+      # Optional: Mount SQL init scripts (runs on first container creation only)
+      # - ./scripts/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smile_user -d smile_new_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for Bull Queue (optional - only needed for AI evaluation workers)
+  redis:
+    image: redis:7-alpine
+    container_name: smile-redis-local
+    ports:
+      - "6379:6379"
+    volumes:
+      - smile_redis_local:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  smile_postgres_local:
+  smile_redis_local:

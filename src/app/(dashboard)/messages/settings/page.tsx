@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { LoadingState } from '@/components/ui'
 
 interface NotificationSettings {
   question_liked: boolean
@@ -149,11 +150,7 @@ export default function MessageSettingsPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8C1515]"></div>
-      </div>
-    )
+    return <LoadingState fullPage message="Loading settings..." />
   }
 
   return (

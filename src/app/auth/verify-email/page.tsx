@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LoadingSpinner, LoadingState } from '@/components/ui'
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams()
@@ -72,7 +73,7 @@ function VerifyEmailContent() {
         {status === 'loading' && (
           <>
             <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8C1515]"></div>
+              <LoadingSpinner size="lg" className="text-[var(--stanford-cardinal)]" />
             </div>
             <h2 className="text-2xl font-bold text-[#2E2D29]">Verifying your email...</h2>
             <p className="text-gray-600">Please wait while we verify your email address.</p>
@@ -157,11 +158,7 @@ function VerifyEmailContent() {
 export default function VerifyEmailPage() {
   return (
     <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8C1515]"></div>
-        </div>
-      }
+      fallback={<LoadingState fullPage message="Loading..." />}
     >
       <VerifyEmailContent />
     </Suspense>
