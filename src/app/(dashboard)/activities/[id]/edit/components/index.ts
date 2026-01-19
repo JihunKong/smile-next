@@ -1,0 +1,5 @@
+export { BasicInfoForm } from './BasicInfoForm'
+export { PrivacySettings } from './PrivacySettings'
+export { OpenModeSettings } from './OpenModeSettings'
+export { ExamModeSettings } from './ExamModeSettings'
+export { InquiryModeSettings } from './InquiryModeSettings'

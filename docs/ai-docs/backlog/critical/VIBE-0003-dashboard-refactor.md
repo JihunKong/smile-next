@@ -6,9 +6,19 @@ priority: critical
 category: refactoring
 component: ui
 created: 2026-01-17
-updated: 2026-01-17
+updated: 2026-01-18
 effort: m
 assignee: ai-agent
+is_parent: true
+sub_items:
+  - VIBE-0003A
+  - VIBE-0003B
+  - VIBE-0003C
+  - VIBE-0003D
+  - VIBE-0003E
+  - VIBE-0003F
+  - VIBE-0003G
+  - VIBE-0003H
 ---
 
 # Refactor Dashboard Page for Vibe Coding
@@ -239,15 +249,34 @@ export default async function DashboardPage() {
 **Blocks:**
 - None (but benefits from REFACTOR-0002 UI components)
 
+## Sub-Items (Test-First Approach)
+
+This parent item has been broken into 8 sub-items following a **unit-test-first** approach:
+
+| ID | Title | Effort | Description |
+|----|-------|--------|-------------|
+| [VIBE-0003A](./VIBE-0003A-dashboard-types-tier-utils.md) | Types & Tier Utils | XS | Foundation types and getTierInfo() with tests |
+| [VIBE-0003B](./VIBE-0003B-dashboard-data-fetching.md) | Data Fetching | S | Extract getUserStats() with mocked Prisma tests |
+| [VIBE-0003C](./VIBE-0003C-dashboard-simple-ui.md) | Simple UI | S | ErrorBanner, WelcomeHeader, QuickActions with tests |
+| [VIBE-0003D](./VIBE-0003D-dashboard-stats-grid.md) | StatsGrid | M | 4 stat cards component with tests |
+| [VIBE-0003E](./VIBE-0003E-dashboard-activity-feeds.md) | Activity Feeds | S | ActivityFeed, CommunityFeed with tests |
+| [VIBE-0003F](./VIBE-0003F-dashboard-achievement-showcase.md) | Achievements | S | 3-column showcase with tests |
+| [VIBE-0003G](./VIBE-0003G-dashboard-certificate-progress.md) | Certificates | M | Certificate cards with activity lists |
+| [VIBE-0003H](./VIBE-0003H-dashboard-final-composition.md) | Final Compose | S | Integrate all + E2E validation |
+
+**Execution Order**: A → (B, C, D, E, F, G in parallel) → H
+
 ## Notes
 
 - Dashboard is a **server component** - keep it that way for SEO/performance
 - Some components may need 'use client' for interactivity
 - Consider extracting `TierProgress` and `StreakDisplay` to `src/components/gamification/` for reuse
 - This refactor is straightforward compared to Case Mode
+- **Test-first approach**: Write unit tests before extracting each module
 
 ## Conversation History
 
 | Date | Note |
 |------|------|
 | 2026-01-17 | Created - Dashboard is high-visibility for redesign |
+| 2026-01-18 | Broken into 8 sub-items (VIBE-0003A through VIBE-0003H) with test-first approach |
