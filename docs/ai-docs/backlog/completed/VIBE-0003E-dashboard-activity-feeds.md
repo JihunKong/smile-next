@@ -1,7 +1,8 @@
 ---
 id: VIBE-0003E
 title: Extract Dashboard ActivityFeed and CommunityFeed with tests
-status: backlog
+status: completed
+completed: 2026-01-18
 priority: critical
 category: refactoring
 component: ui
@@ -33,13 +34,13 @@ dashboard/components/
 
 ## Acceptance Criteria
 
-- [ ] Unit tests written FIRST for both components
-- [ ] `ActivityFeed.tsx` shows user's recent activities
-- [ ] `ActivityFeed.tsx` shows empty state when no activities
-- [ ] `CommunityFeed.tsx` renders community items
-- [ ] `CommunityFeed.tsx` shows weekly challenge with dynamic participant count
-- [ ] Tests pass: `npm run test -- ActivityFeeds`
-- [ ] Visual output identical to current
+- [x] Unit tests written FIRST for both components
+- [x] `ActivityFeed.tsx` shows user's recent activities
+- [x] `ActivityFeed.tsx` shows empty state when no activities
+- [x] `CommunityFeed.tsx` renders community items
+- [x] `CommunityFeed.tsx` shows weekly challenge with dynamic participant count
+- [x] Tests pass: `npm run test -- ActivityFeeds`
+- [x] Visual output identical to current
 
 ## Technical Approach
 
@@ -252,3 +253,4 @@ export function CommunityFeed({ totalQuestions }: CommunityFeedProps) {
 | Date | Note |
 |------|------|
 | 2026-01-18 | Created as part of VIBE-0003 breakdown |
+| 2026-01-18 | Completed: Created ActivityFeed.tsx (~85 lines) and CommunityFeed.tsx (~130 lines). All 31 tests passing. |

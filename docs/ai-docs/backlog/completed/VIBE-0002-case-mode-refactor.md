@@ -1,8 +1,9 @@
 ---
 id: VIBE-0002
 title: Refactor Case Mode pages for AI-friendly development (3825 total lines)
-status: backlog
+status: completed
 priority: critical
+completed: 2026-01-19
 category: refactoring
 component: ui
 created: 2026-01-17

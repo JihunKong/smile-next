@@ -332,10 +332,11 @@ function processCertificates(userCertificates: any[]): ProcessedCertificate[] {
         enrollment_date: uc.enrollmentDate,
         completion_date: uc.completionDate,
         progress_percentage: progressPercentage,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        /* eslint-disable @typescript-eslint/no-explicit-any */
         activities: activities
           .filter((ca: any) => ca.activity)
           .map((ca: any) => ({
+            /* eslint-enable @typescript-eslint/no-explicit-any */
             activity_id: ca.activityId,
             activity_name: ca.activity?.name || 'Unknown Activity',
             required: ca.required,

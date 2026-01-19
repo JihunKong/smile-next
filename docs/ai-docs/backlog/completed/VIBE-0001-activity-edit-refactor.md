@@ -1,8 +1,9 @@
 ---
 id: VIBE-0001
 title: Refactor Activity Edit page for AI-friendly development (1134 lines → ~150 each)
-status: backlog
+status: completed
 priority: critical
+completed: 2026-01-19
 category: refactoring
 component: ui
 created: 2026-01-17
