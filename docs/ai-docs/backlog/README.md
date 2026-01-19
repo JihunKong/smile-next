@@ -2,9 +2,9 @@
 id: backlog-index
 title: Project Backlog Index
 category: guides
-lastUpdated: 2026-01-17
+lastUpdated: 2026-01-18
 maintainedBy: ai-agent
-version: 2.2.0
+version: 2.3.0
 relatedDocs:
   - id: rules
     type: depends-on
@@ -65,7 +65,7 @@ The codebase has **20+ files over 500 lines**, with the largest at **1134 lines*
 | Priority | ID | Target | Lines | Description |
 |----------|-----|--------|-------|-------------|
 | 🔴 **1** | [VIBE-0001](./critical/VIBE-0001-activity-edit-refactor.md) | Activity Edit | 1134 | **Largest file** - break into feature folder |
-| 🔴 **2** | [VIBE-0002](./critical/VIBE-0002-case-mode-refactor.md) | Case Mode (all) | 3806 | **Most complex** - 5 files, shared components |
+| 🔴 **2** | [VIBE-0002](./critical/VIBE-0002-case-mode-refactor.md) | Case Mode (all) | 3806 | **Most complex** - broken into 4 sub-items |
 | 🔴 **3** | [VIBE-0003](./critical/VIBE-0003-dashboard-refactor.md) | Dashboard | 977 | **Central hub** - high visibility for redesign |
 | 🔴 **4** | [VIBE-0004](./critical/VIBE-0004-exam-mode-refactor.md) | Exam Mode (all) | 1924 | Exam take + analytics + results |
 | 🟠 **5** | [VIBE-0005](./high/VIBE-0005-activity-pages-refactor.md) | Activity Create/Detail | 1464 | Core user journey pages |
@@ -104,13 +104,13 @@ src/features/
 
 | Priority | Count | Focus Areas |
 |----------|-------|-------------|
-| 🔴 Critical | 8 | **VIBE refactoring (4)**, React Query, UI Components, Unit Tests, Logging |
+| 🔴 Critical | 18 | **VIBE refactoring (4 + 10 sub-items)**, React Query, UI Components, Unit Tests, Logging |
 | 🟠 High | 13 | **VIBE refactoring (5)**, Conventions, Error Handling, Toast, CI Testing |
 | 🟡 Medium | 7 | API Client, Form Validation, TypeScript, DB Migrations |
 | 🟢 Low | 5 | Keyboard Nav, i18n, Dark Mode, Code Splitting |
-| ✅ Completed | 0 | - |
+| ✅ Completed | 2 | VIBE-0002B, VIBE-0002C |
 
-**Total Active Items**: 33
+**Total Active Items**: 43 (including VIBE-0002 and VIBE-0003 sub-items)
 
 ---
 
@@ -121,8 +121,20 @@ src/features/
 | ID | Title | Status | Effort | Lines |
 |----|-------|--------|--------|-------|
 | [VIBE-0001](./critical/VIBE-0001-activity-edit-refactor.md) | Refactor Activity Edit page | backlog | L | 1134 |
-| [VIBE-0002](./critical/VIBE-0002-case-mode-refactor.md) | Refactor Case Mode pages | backlog | XL | 3806 |
-| [VIBE-0003](./critical/VIBE-0003-dashboard-refactor.md) | Refactor Dashboard page | backlog | M | 977 |
+| [VIBE-0002](./critical/VIBE-0002-case-mode-refactor.md) | Refactor Case Mode pages (parent) | backlog | XL | 3806 |
+| ↳ [VIBE-0002A](./critical/VIBE-0002A-case-unit-tests.md) | Unit Tests for Server Actions | backlog | M | - |
+| ↳ [VIBE-0002B](./completed/VIBE-0002B-case-types-foundation.md) | Types & Foundation | ✅ done | S | - |
+| ↳ [VIBE-0002C](./completed/VIBE-0002C-case-results-leaderboard.md) | Results & Leaderboard Refactor | ✅ done | M | 981 |
+| ↳ [VIBE-0002D](./critical/VIBE-0002D-case-take-configure-review.md) | Take/Configure/Review Refactor | backlog | L | 2825 |
+| [VIBE-0003](./critical/VIBE-0003-dashboard-refactor.md) | Refactor Dashboard page (parent) | backlog | M | 977 |
+| ↳ [VIBE-0003A](./critical/VIBE-0003A-dashboard-types-tier-utils.md) | Types & Tier Utils with Tests | backlog | XS | - |
+| ↳ [VIBE-0003B](./critical/VIBE-0003B-dashboard-data-fetching.md) | Data Fetching Layer with Tests | backlog | S | - |
+| ↳ [VIBE-0003C](./critical/VIBE-0003C-dashboard-simple-ui.md) | Simple UI Components with Tests | backlog | S | - |
+| ↳ [VIBE-0003D](./critical/VIBE-0003D-dashboard-stats-grid.md) | StatsGrid Component with Tests | backlog | M | - |
+| ↳ [VIBE-0003E](./critical/VIBE-0003E-dashboard-activity-feeds.md) | Activity Feeds with Tests | backlog | S | - |
+| ↳ [VIBE-0003F](./critical/VIBE-0003F-dashboard-achievement-showcase.md) | Achievement Showcase with Tests | backlog | S | - |
+| ↳ [VIBE-0003G](./critical/VIBE-0003G-dashboard-certificate-progress.md) | Certificate Progress with Tests | backlog | M | - |
+| ↳ [VIBE-0003H](./critical/VIBE-0003H-dashboard-final-composition.md) | Final Composition & Validation | backlog | S | - |
 | [VIBE-0004](./critical/VIBE-0004-exam-mode-refactor.md) | Refactor Exam Mode pages | backlog | L | 1924 |
 
 ### Other Critical Items

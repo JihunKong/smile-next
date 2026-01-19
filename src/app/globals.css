@@ -114,3 +114,15 @@ input::placeholder,
 textarea::placeholder {
   color: #9ca3af; /* text-gray-400 */
 }
+
+/* Restore pointer cursor for all interactive elements */
+button,
+[role="button"],
+[type="button"],
+[type="submit"],
+[type="reset"],
+select,
+summary,
+[tabindex]:not([tabindex="-1"]) {
+  cursor: pointer;
+}
