@@ -88,3 +88,51 @@ The improved error handling will now show:
 - Helpful error message pointing to repository settings
 
 Look for the "Verify GitHub App Secrets" step output in your workflow logs to see exactly what's missing.
+
+## Error: "403 Forbidden" when pushing to GitHub Container Registry
+
+If you're seeing a 403 error when trying to push Docker images to `ghcr.io`, it means the GitHub App token doesn't have the required permissions.
+
+### Symptoms
+
+```
+ERROR: failed to push ghcr.io/seeds-smile-the-ultimate/smile-web:pr-7: 
+unexpected status from HEAD request to https://ghcr.io/v2/.../blobs/...: 403 Forbidden
+```
+
+### Root Cause
+
+The GitHub App doesn't have the `write:packages` permission enabled, or the installation hasn't accepted the updated permissions.
+
+### Solution
+
+1. **Enable Packages Permission in GitHub App Settings**:
+   - Go to: https://github.com/settings/apps
+   - Select your GitHub App
+   - Navigate to **"Permissions & events"**
+   - Under **"Repository permissions"**, find **"Packages"**
+   - Set it to **"Write"**
+   - Under **"Account permissions"** (if using organization packages), also set **"Packages"** to **"Write"**
+   - Click **"Save changes"**
+
+2. **Accept Updated Permissions for Installation**:
+   - Go to: https://github.com/settings/installations
+   - Find your installation (should show your organization/repository)
+   - Click **"Configure"**
+   - Review the updated permissions
+   - Click **"Save"** or **"Update"** to accept the new permissions
+
+3. **Verify the Fix**:
+   - Re-run your workflow
+   - The token should now have `packages:write` permission
+   - The push to GHCR should succeed
+
+### Verification
+
+After updating permissions, you can verify the token has the right permissions by checking the workflow logs. The "Get GitHub App Token" step will show a warning if the token doesn't have `packages:write` permission.
+
+### Additional Notes
+
+- If you're using organization-level packages, you may need both repository and account permissions
+- Some organizations have additional security policies that restrict package access
+- The installation must be granted access to the specific repository where packages are stored

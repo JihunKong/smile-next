@@ -201,12 +201,39 @@ async function getInstallationToken(
 
   if (!response.ok) {
     const errorText = await response.text()
-    throw new Error(
-      `Failed to get installation access token: ${response.status} - ${errorText}`
-    )
+    let errorMessage = `Failed to get installation access token: ${response.status} - ${errorText}`
+    
+    // Provide specific guidance for permission-related errors
+    if (response.status === 403 || response.status === 422) {
+      errorMessage += '\n\n🔒 Permission Error:'
+      errorMessage += '\nThe GitHub App may not have the required permissions enabled.'
+      errorMessage += '\n\nTo fix this:'
+      errorMessage += '\n1. Go to your GitHub App settings: https://github.com/settings/apps'
+      errorMessage += '\n2. Select your GitHub App'
+      errorMessage += '\n3. Navigate to "Permissions & events"'
+      errorMessage += '\n4. Under "Repository permissions", ensure "Packages" is set to "Write"'
+      errorMessage += '\n5. Under "Account permissions", ensure "Packages" is set to "Write" (if using organization packages)'
+      errorMessage += '\n6. Click "Save changes"'
+      errorMessage += '\n7. If the app is already installed, you may need to accept the new permissions'
+      errorMessage += '\n   - Go to: https://github.com/settings/installations'
+      errorMessage += '\n   - Click "Configure" next to your installation'
+      errorMessage += '\n   - Review and accept the updated permissions'
+    }
+    
+    throw new Error(errorMessage)
   }
 
   const data = await response.json()
+
+  // Verify the token has the required permissions
+  if (data.permissions) {
+    const hasPackagesWrite = data.permissions.packages === 'write'
+    if (!hasPackagesWrite) {
+      console.warn('⚠️  Warning: Token does not have packages:write permission')
+      console.warn('   The GitHub App may not have this permission enabled.')
+      console.warn('   See troubleshooting guide for steps to enable it.')
+    }
+  }
 
   return {
     token: data.token,

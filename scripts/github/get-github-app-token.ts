@@ -65,12 +65,27 @@ async function main() {
       console.error('   - DEPLOYER_APP_INSTALLATION_ID')
       console.error('   - DEPLOYER_APP_PRIVATE_KEY')
       console.error('3. Check that secrets: inherit is present in the workflow_call')
+    } else if (errorMessage.includes('Permission Error') || errorMessage.includes('403') || errorMessage.includes('422')) {
+      console.error('\n🔒 GitHub App Permission Error:')
+      console.error('The GitHub App does not have the required permissions enabled.')
+      console.error('\nTo fix this:')
+      console.error('1. Go to: https://github.com/settings/apps')
+      console.error('2. Select your GitHub App')
+      console.error('3. Navigate to "Permissions & events"')
+      console.error('4. Under "Repository permissions", set "Packages" to "Write"')
+      console.error('5. Under "Account permissions" (if using org packages), set "Packages" to "Write"')
+      console.error('6. Click "Save changes"')
+      console.error('7. Go to: https://github.com/settings/installations')
+      console.error('8. Click "Configure" next to your installation')
+      console.error('9. Review and accept the updated permissions')
+      console.error('\nFor more details, see: docs/GITHUB_APP_TROUBLESHOOTING.md')
     } else {
       console.error('\nTroubleshooting:')
       console.error('1. Ensure secrets are set in GitHub: Settings → Secrets and variables → Actions')
       console.error('2. Verify the secrets are named exactly: DEPLOYER_APP_ID, DEPLOYER_APP_INSTALLATION_ID, DEPLOYER_APP_PRIVATE_KEY')
       console.error('3. Check that secrets: inherit is present in the workflow_call')
       console.error('4. Verify your GitHub App credentials are correct')
+      console.error('5. Check GitHub App permissions: https://github.com/settings/apps')
     }
     
     process.exit(1)

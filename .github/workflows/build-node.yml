@@ -66,6 +66,11 @@ jobs:
           echo "token=$TOKEN" >> $GITHUB_OUTPUT
           # Mask token in logs for security
           echo "::add-mask::$TOKEN"
+          echo "✅ GitHub App token generated successfully"
+          echo "ℹ️  If you encounter 403 errors when pushing to GHCR, verify:"
+          echo "   1. GitHub App has 'Packages: Write' permission enabled"
+          echo "   2. Installation has accepted the updated permissions"
+          echo "   See: docs/GITHUB_APP_TROUBLESHOOTING.md for details"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
