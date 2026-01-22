@@ -18,9 +18,29 @@ IMAGE_NAME="${3}"
 CONTAINER_NAME="${4}"
 PORT="${5}"
 
+# Set default port based on environment if not provided
+if [ -z "$PORT" ]; then
+  case "$ENVIRONMENT" in
+    prod)
+      PORT="${VM_PORT_MAIN:-3001}"
+      ;;
+    dev|*)
+      PORT="${VM_PORT_DEV:-3002}"
+      ;;
+  esac
+  echo "⚠️  Port not provided, using default for $ENVIRONMENT: $PORT"
+fi
+
 if [ -z "$DOCKER_TAG" ] || [ -z "$IMAGE_NAME" ] || [ -z "$CONTAINER_NAME" ] || [ -z "$PORT" ]; then
   echo "ERROR: Missing required arguments"
   echo "Usage: update-app.sh <environment> <docker-tag> <image-name> <container-name> <port>"
+  echo ""
+  echo "Received arguments:"
+  echo "  ENVIRONMENT: ${ENVIRONMENT:-'(empty)'}"
+  echo "  DOCKER_TAG: ${DOCKER_TAG:-'(empty)'}"
+  echo "  IMAGE_NAME: ${IMAGE_NAME:-'(empty)'}"
+  echo "  CONTAINER_NAME: ${CONTAINER_NAME:-'(empty)'}"
+  echo "  PORT: ${PORT:-'(empty)'}"
   exit 1
 fi
 

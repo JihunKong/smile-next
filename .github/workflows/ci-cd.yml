@@ -115,24 +115,49 @@ jobs:
           DEV_PORT="${PORT_DEV:-3002}"
           PR_PORT="${PORT_PR:-3002}"
           
+          echo "🔧 Port configuration:"
+          echo "   MAIN_PORT: $MAIN_PORT"
+          echo "   DEV_PORT: $DEV_PORT"
+          echo "   PR_PORT: $PR_PORT"
+          echo "   Event: ${{ github.event_name }}"
+          echo "   Ref: ${{ github.ref }}"
+          
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Manual PR deploy: deploy specific PR
             echo "env-name=dev" >> $GITHUB_OUTPUT
             echo "docker-tag=pr-${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
             echo "host-port=$PR_PORT" >> $GITHUB_OUTPUT
             echo "container-name=smile-next-pr" >> $GITHUB_OUTPUT
+            echo "✅ Set for workflow_dispatch: port=$PR_PORT"
           elif [ "${{ github.event_name }}" == "pull_request" ]; then
             # PR: build and deploy to PR port
             echo "env-name=dev" >> $GITHUB_OUTPUT
             echo "docker-tag=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
             echo "host-port=$PR_PORT" >> $GITHUB_OUTPUT
             echo "container-name=smile-next-pr" >> $GITHUB_OUTPUT
+            echo "✅ Set for pull_request: port=$PR_PORT"
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
             echo "env-name=prod" >> $GITHUB_OUTPUT
             echo "docker-tag=latest" >> $GITHUB_OUTPUT
             echo "host-port=$MAIN_PORT" >> $GITHUB_OUTPUT
             echo "container-name=smile-next" >> $GITHUB_OUTPUT
+            echo "✅ Set for main branch: port=$MAIN_PORT"
+          else
+            echo "⚠️  Warning: No matching condition for event=${{ github.event_name }}, ref=${{ github.ref }}"
+            echo "   Using default PR port"
+            echo "env-name=dev" >> $GITHUB_OUTPUT
+            echo "docker-tag=unknown" >> $GITHUB_OUTPUT
+            echo "host-port=$PR_PORT" >> $GITHUB_OUTPUT
+            echo "container-name=smile-next-pr" >> $GITHUB_OUTPUT
           fi
+          
+          # Verify outputs were set
+          echo ""
+          echo "📋 Outputs set:"
+          echo "   env-name: $(cat $GITHUB_OUTPUT | grep '^env-name=' | cut -d'=' -f2 || echo 'NOT SET')"
+          echo "   docker-tag: $(cat $GITHUB_OUTPUT | grep '^docker-tag=' | cut -d'=' -f2 || echo 'NOT SET')"
+          echo "   host-port: $(cat $GITHUB_OUTPUT | grep '^host-port=' | cut -d'=' -f2 || echo 'NOT SET')"
+          echo "   container-name: $(cat $GITHUB_OUTPUT | grep '^container-name=' | cut -d'=' -f2 || echo 'NOT SET')"
 
   # 2. Provision Infrastructure - Only runs on manual trigger or when infra changes on main branch
   provision-infra:
