@@ -107,14 +107,16 @@ jobs:
       - name: Set Environment Variables
         id: vars
         env:
-          # Port configuration from secrets (with defaults)
+          # Port configuration from secrets (with defaults matching nginx config)
+          # main branch → smilealways.seedsofempowerment.org (port 3001)
+          # develop/PR → smilealways-blue.seedsofempowerment.org (port 3002)
           PORT_MAIN: ${{ secrets.VM_PORT_MAIN }}
           PORT_DEV: ${{ secrets.VM_PORT_DEV }}
           PORT_PR: ${{ secrets.VM_PORT_PR }}
         run: |
           # Set default ports if secrets are not configured
-          MAIN_PORT="${PORT_MAIN:-3000}"
-          DEV_PORT="${PORT_DEV:-3001}"
+          MAIN_PORT="${PORT_MAIN:-3001}"
+          DEV_PORT="${PORT_DEV:-3002}"
           PR_PORT="${PORT_PR:-3002}"
           
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -194,7 +196,7 @@ jobs:
       image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
-  # 5. Deploy PR - Deploys PR to port 3001 (replaces dev temporarily)
+  # 5. Deploy PR - Deploys PR to port 3002 (smilealways-blue.seedsofempowerment.org)
   deploy-pr:
     needs: [check-changes, call-build]
     if: |

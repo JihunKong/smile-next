@@ -76,7 +76,7 @@ jobs:
             export CONTAINER_NAME="${{ inputs.container-name }}"
             export PORT="${{ inputs.port }}"
             export GHCR_PAT="${{ secrets.GHCR_PAT }}"
-            export GHCR_USERNAME="${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}"
+            export GHCR_USERNAME="${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}"
             
             cd "$HOME/smile-next" || { echo "ERROR: $HOME/smile-next not found"; exit 1; }
             bash scripts/deploy/update-app.sh "$ENVIRONMENT" "$DOCKER_TAG" "$IMAGE_NAME" "$CONTAINER_NAME" "$PORT"

@@ -8,7 +8,7 @@ IMAGE_NAME="$1"
 DOCKER_TAG="$2"
 PORT="$3"
 CONTAINER_NAME="$4"
-GHCR_USERNAME="${5:-tedahn-pknic}"
+GHCR_USERNAME="${5:-seeds-smile-the-ultimate}"
 GHCR_PAT="$6"
 
 if [ -z "$IMAGE_NAME" ] || [ -z "$DOCKER_TAG" ] || [ -z "$PORT" ] || [ -z "$CONTAINER_NAME" ]; then

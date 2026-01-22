@@ -125,7 +125,7 @@ flowchart TB
 
 2. **Verify username matches:**
    ```yaml
-   username: ${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}
+   username: ${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}
    ```
 
 3. **Check package visibility:**

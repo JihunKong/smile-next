@@ -91,7 +91,7 @@ if [ -n "$GHCR_PAT" ] && [ -n "$GHCR_USERNAME" ]; then
 elif [ -n "$GHCR_PAT" ]; then
   # Try with default username if only PAT is provided
   echo "🔐 Logging in to GitHub Container Registry (using default username)..."
-  echo "$GHCR_PAT" | docker login ghcr.io -u "tedahn-pknic" --password-stdin || {
+  echo "$GHCR_PAT" | docker login ghcr.io -u "seeds-smile-the-ultimate" --password-stdin || {
     echo "⚠️  Warning: Failed to login to GHCR"
   }
 else
