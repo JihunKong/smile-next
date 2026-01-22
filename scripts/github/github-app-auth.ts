@@ -139,12 +139,33 @@ export async function getGitHubAppToken(): Promise<string> {
   const installationId = process.env.GITHUB_APP_INSTALLATION_ID
   const privateKey = process.env.GITHUB_APP_PRIVATE_KEY
 
-  if (!appId || !installationId || !privateKey) {
-    const missing = []
-    if (!appId) missing.push('GITHUB_APP_ID')
-    if (!installationId) missing.push('GITHUB_APP_INSTALLATION_ID')
-    if (!privateKey) missing.push('GITHUB_APP_PRIVATE_KEY')
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+  // Check if environment variables are set (including empty string check)
+  const missing: string[] = []
+  if (!appId || appId.trim() === '') {
+    missing.push('GITHUB_APP_ID')
+  }
+  if (!installationId || installationId.trim() === '') {
+    missing.push('GITHUB_APP_INSTALLATION_ID')
+  }
+  if (!privateKey || privateKey.trim() === '') {
+    missing.push('GITHUB_APP_PRIVATE_KEY')
+  }
+
+  if (missing.length > 0) {
+    // Provide helpful debugging info
+    const debugInfo = {
+      hasAppId: !!appId,
+      hasInstallationId: !!installationId,
+      hasPrivateKey: !!privateKey,
+      appIdLength: appId?.length || 0,
+      installationIdLength: installationId?.length || 0,
+      privateKeyLength: privateKey?.length || 0,
+    }
+    console.error('[GitHubApp] Environment check failed:', debugInfo)
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}\n` +
+        `Please ensure these secrets are set in your GitHub repository settings.`
+    )
   }
 
   // Token Rotation: Check cache first - reuse token if it has more than 5 minutes remaining
