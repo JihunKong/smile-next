@@ -245,6 +245,12 @@ export async function getGitHubAppToken(): Promise<string> {
     )
   }
 
+  // At this point, TypeScript knows these are defined (non-empty strings)
+  // Use non-null assertions since we've validated they exist above
+  const validatedAppId = appId!
+  const validatedInstallationId = installationId!
+  const validatedPrivateKey = privateKey!
+
   // Token Rotation: Check cache first - reuse token if it has more than 5 minutes remaining
   if (cachedToken) {
     const bufferMs = 5 * 60 * 1000 // 5 minutes buffer
@@ -254,10 +260,10 @@ export async function getGitHubAppToken(): Promise<string> {
   }
 
   // Step A: Generate JWT (The Handshake)
-  const jwt = await generateAppJWT(appId, privateKey)
+  const jwt = await generateAppJWT(validatedAppId, validatedPrivateKey)
 
   // Step B: Exchange JWT for Installation Token (The Exchange)
-  const result = await getInstallationToken(installationId, jwt)
+  const result = await getInstallationToken(validatedInstallationId, jwt)
 
   // Cache the token for future use
   cachedToken = result
