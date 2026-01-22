@@ -36,11 +36,41 @@ async function main() {
     console.log(token)
     process.exit(0)
   } catch (error) {
-    console.error('Failed to get GitHub App token:', error)
-    console.error('\nTroubleshooting:')
-    console.error('1. Ensure secrets are set in GitHub: Settings → Secrets and variables → Actions')
-    console.error('2. Verify the secrets are named exactly: DEPLOYER_APP_ID, DEPLOYER_APP_INSTALLATION_ID, DEPLOYER_APP_PRIVATE_KEY')
-    console.error('3. Check that secrets: inherit is present in the workflow_call')
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('Failed to get GitHub App token:', errorMessage)
+    
+    // Provide specific troubleshooting based on error type
+    if (errorMessage.includes('private key') || errorMessage.includes('ASN1') || errorMessage.includes('wrong tag')) {
+      console.error('\n🔑 Private Key Format Error:')
+      console.error('The private key format is incorrect. Common issues:')
+      console.error('1. Missing headers: Ensure the key includes:')
+      console.error('   -----BEGIN RSA PRIVATE KEY-----')
+      console.error('   [key content]')
+      console.error('   -----END RSA PRIVATE KEY-----')
+      console.error('2. Lost newlines: When pasting into GitHub secrets, newlines may be lost.')
+      console.error('   The script will try to fix this, but ensure you copy the ENTIRE key.')
+      console.error('3. Wrong key type: Make sure you\'re using the private key (.pem file), not the public key.')
+      console.error('\n💡 Solution:')
+      console.error('1. Open your .pem file')
+      console.error('2. Copy the ENTIRE content (including headers)')
+      console.error('3. Paste it into the DEPLOYER_APP_PRIVATE_KEY secret')
+      console.error('4. The script will normalize newlines automatically')
+    } else if (errorMessage.includes('Missing required environment variables')) {
+      console.error('\n📋 Missing Secrets:')
+      console.error('1. Ensure secrets are set in GitHub: Settings → Secrets and variables → Actions')
+      console.error('2. Verify the secrets are named exactly:')
+      console.error('   - DEPLOYER_APP_ID')
+      console.error('   - DEPLOYER_APP_INSTALLATION_ID')
+      console.error('   - DEPLOYER_APP_PRIVATE_KEY')
+      console.error('3. Check that secrets: inherit is present in the workflow_call')
+    } else {
+      console.error('\nTroubleshooting:')
+      console.error('1. Ensure secrets are set in GitHub: Settings → Secrets and variables → Actions')
+      console.error('2. Verify the secrets are named exactly: DEPLOYER_APP_ID, DEPLOYER_APP_INSTALLATION_ID, DEPLOYER_APP_PRIVATE_KEY')
+      console.error('3. Check that secrets: inherit is present in the workflow_call')
+      console.error('4. Verify your GitHub App credentials are correct')
+    }
+    
     process.exit(1)
   }
 }

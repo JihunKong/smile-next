@@ -29,22 +29,62 @@ let cachedToken: CachedToken | null = null
 /**
  * Normalizes the PEM private key by handling different newline formats.
  * GitHub App private keys may have literal '\n' strings or actual newlines.
+ * When pasted into GitHub secrets, newlines are often lost or corrupted.
  */
 function normalizePrivateKey(key: string): string {
+  if (!key || key.trim() === '') {
+    throw new Error('Private key is empty')
+  }
+
   // Replace literal \n with actual newlines
   let normalized = key.replace(/\\n/g, '\n')
 
-  // Ensure proper PEM format with headers on their own lines
-  normalized = normalized
-    .replace(/-----BEGIN RSA PRIVATE KEY-----\s*/, '-----BEGIN RSA PRIVATE KEY-----\n')
-    .replace(/\s*-----END RSA PRIVATE KEY-----/, '\n-----END RSA PRIVATE KEY-----')
+  // Detect key type
+  const isRSA = normalized.includes('BEGIN RSA PRIVATE KEY')
+  const isPKCS8 = normalized.includes('BEGIN PRIVATE KEY')
 
-  // Also handle PKCS8 format
-  normalized = normalized
-    .replace(/-----BEGIN PRIVATE KEY-----\s*/, '-----BEGIN PRIVATE KEY-----\n')
-    .replace(/\s*-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----')
+  if (!isRSA && !isPKCS8) {
+    throw new Error('Private key must start with "-----BEGIN RSA PRIVATE KEY-----" or "-----BEGIN PRIVATE KEY-----"')
+  }
 
-  return normalized.trim()
+  // Extract the key body (everything between headers)
+  let keyBody: string
+  let beginHeader: string
+  let endHeader: string
+
+  if (isRSA) {
+    beginHeader = '-----BEGIN RSA PRIVATE KEY-----'
+    endHeader = '-----END RSA PRIVATE KEY-----'
+  } else {
+    beginHeader = '-----BEGIN PRIVATE KEY-----'
+    endHeader = '-----END PRIVATE KEY-----'
+  }
+
+  // Find and extract the key body
+  const beginIndex = normalized.indexOf(beginHeader)
+  const endIndex = normalized.indexOf(endHeader)
+
+  if (beginIndex === -1 || endIndex === -1) {
+    throw new Error(`Private key must contain both ${beginHeader} and ${endHeader}`)
+  }
+
+  // Extract the key body and clean it
+  keyBody = normalized.substring(beginIndex + beginHeader.length, endIndex)
+    .replace(/\s+/g, '') // Remove all whitespace (spaces, newlines, tabs)
+    .trim()
+
+  if (!keyBody || keyBody.length === 0) {
+    throw new Error('Private key body is empty')
+  }
+
+  // Reconstruct the key with proper formatting (64 characters per line, as per PEM standard)
+  const lines: string[] = []
+  for (let i = 0; i < keyBody.length; i += 64) {
+    lines.push(keyBody.substring(i, i + 64))
+  }
+
+  // Reconstruct the full PEM key
+  return `${beginHeader}\n${lines.join('\n')}\n${endHeader}\n`
 }
 
 /**
@@ -57,19 +97,37 @@ function normalizePrivateKey(key: string): string {
  * @returns JWT string valid for 10 minutes
  */
 async function generateAppJWT(appId: string, privateKey: string): Promise<string> {
-  const normalizedKey = normalizePrivateKey(privateKey)
+  let normalizedKey: string
+  try {
+    normalizedKey = normalizePrivateKey(privateKey)
+  } catch (error) {
+    throw new Error(`Failed to normalize private key: ${error instanceof Error ? error.message : String(error)}`)
+  }
 
   // Import the private key for signing
+  // jose library requires PKCS8 format, so we need to convert RSA format if needed
   let key
+  const isRSAFormat = normalizedKey.includes('BEGIN RSA PRIVATE KEY')
+  
   try {
-    key = await importPKCS8(normalizedKey, 'RS256')
-  } catch {
-    // If PKCS8 fails, the key might be in traditional RSA format
-    // Convert RSA to PKCS8 format header for jose
-    const pkcs8Key = normalizedKey
-      .replace('-----BEGIN RSA PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----')
-      .replace('-----END RSA PRIVATE KEY-----', '-----END PRIVATE KEY-----')
-    key = await importPKCS8(pkcs8Key, 'RS256')
+    if (isRSAFormat) {
+      // Convert RSA format to PKCS8 format for jose
+      // Note: This is just a header change - the actual key structure is the same
+      const pkcs8Key = normalizedKey
+        .replace('-----BEGIN RSA PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----')
+        .replace('-----END RSA PRIVATE KEY-----', '-----END PRIVATE KEY-----')
+      key = await importPKCS8(pkcs8Key, 'RS256')
+    } else {
+      // Already in PKCS8 format
+      key = await importPKCS8(normalizedKey, 'RS256')
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    throw new Error(
+      `Failed to import private key. This usually means the key format is incorrect.\n` +
+      `Error: ${errorMessage}\n` +
+      `Make sure you copied the entire .pem file including headers and all content.`
+    )
   }
 
   const now = Math.floor(Date.now() / 1000)
