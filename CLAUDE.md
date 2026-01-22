@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **GitHub**:
 - `JihunKong/smile-next` (Main development)
-- `Seeds-SMILE/new_smile_flask` (Branch: `nextjs_migration`)
+- `Seeds-SMILE/smile-web` (Branch: `nextjs_migration`)
 
 **Remote**: `origin` (JihunKong), `seeds-smile` (Seeds-SMILE)
 

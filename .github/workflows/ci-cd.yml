@@ -26,7 +26,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/tedahn-pknic/new_smile_flask
+  IMAGE_NAME: ghcr.io/seeds-smile-the-ultimate/smile-web
 
 # Permissions needed for various actions
 permissions:
@@ -171,7 +171,7 @@ jobs:
     uses: ./.github/workflows/build-node.yml
     with:
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
   # 4. Call Deploy (Dev) - ONLY if on develop branch and push event
@@ -191,7 +191,7 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
   # 5. Deploy PR - Deploys PR to port 3001 (replaces dev temporarily)
@@ -208,7 +208,7 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
   # 6. Restore Develop - Manual trigger to restore develop after PR testing
@@ -224,7 +224,7 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
   # 7. Manual PR Deploy - Deploy a specific PR image manually
@@ -240,7 +240,7 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
   # 8. Call Deploy (Prod) - ONLY if on main branch and push event
@@ -260,5 +260,5 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit

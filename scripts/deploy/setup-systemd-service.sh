@@ -66,7 +66,7 @@ echo "📝 Creating systemd service file: $SERVICE_FILE"
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=SMILE Next.js Application ($ENVIRONMENT)
-Documentation=https://github.com/tedahn-pknic/new_smile_flask
+Documentation=https://github.com/seeds-smile-the-ultimate/smile-web
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target
