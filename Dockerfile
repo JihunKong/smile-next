@@ -1,5 +1,7 @@
 FROM node:20-alpine AS base
 
+LABEL org.opencontainers.image.source=https://github.com/seeds-smile-the-ultimate/smile-web
+
 # Install dependencies only when needed
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
