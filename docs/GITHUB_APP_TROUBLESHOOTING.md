@@ -136,3 +136,26 @@ After updating permissions, you can verify the token has the right permissions b
 - If you're using organization-level packages, you may need both repository and account permissions
 - Some organizations have additional security policies that restrict package access
 - The installation must be granted access to the specific repository where packages are stored
+
+### If Token Has Packages:Write But Still Getting 403
+
+If your token shows `packages: write` permission but you're still getting 403 errors, the issue is likely:
+
+1. **Organization Package Settings**: The GitHub App installation may not be allowed to create organization-level packages
+   - Go to your organization settings: `https://github.com/organizations/seeds-smile-the-ultimate/settings/packages`
+   - Check "Package creation" settings
+   - Ensure GitHub Apps are allowed to create packages
+   - Or check if there are specific package access restrictions
+
+2. **Package Visibility**: The package might need to be created first, or visibility settings might block access
+   - Try creating the package manually first via the GitHub UI
+   - Or ensure the package visibility allows the installation to push
+
+3. **Repository-Level vs Organization-Level**: 
+   - If pushing to `ghcr.io/seeds-smile-the-ultimate/smile-web`, this is an organization-level package
+   - Organization-level packages have additional restrictions
+   - You may need to explicitly grant the installation access in package settings
+
+4. **Alternative Solution**: If GitHub App limitations persist, consider:
+   - Using a Personal Access Token (PAT) with `write:packages` scope as a temporary workaround
+   - Or using the `GITHUB_TOKEN` (which has packages access) for builds within the same repository
