@@ -23,6 +23,27 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get GitHub App Token
+        id: github-token
+        env:
+          GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
+          GITHUB_APP_INSTALLATION_ID: ${{ secrets.GITHUB_APP_INSTALLATION_ID }}
+          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+        run: |
+          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          # Mask token in logs for security
+          echo "::add-mask::$TOKEN"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -31,7 +52,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ steps.github-token.outputs.token }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
