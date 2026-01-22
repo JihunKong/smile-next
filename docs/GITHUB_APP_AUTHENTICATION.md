@@ -33,9 +33,9 @@ The implementation follows GitHub's required two-step authentication process:
 
 Add these secrets to your GitHub repository:
 
-1. **GITHUB_APP_ID** - The integer ID of your GitHub App
-2. **GITHUB_APP_INSTALLATION_ID** - The integer ID of the specific installation
-3. **GITHUB_APP_PRIVATE_KEY** - The content of your `.pem` file (can include literal `\n` or actual newlines)
+1. **DEPLOYER_APP_ID** - The integer ID of your GitHub App
+2. **DEPLOYER_APP_INSTALLATION_ID** - The integer ID of the specific installation
+3. **DEPLOYER_APP_PRIVATE_KEY** - The content of your `.pem` file (can include literal `\n` or actual newlines)
 
 ## Dependencies
 
@@ -97,9 +97,9 @@ Both `build-node.yml` and `deploy-gcp-compute-vm-ssh.yml` include:
 - name: Get GitHub App Token
   id: github-token
   env:
-    GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
-    GITHUB_APP_INSTALLATION_ID: ${{ secrets.GITHUB_APP_INSTALLATION_ID }}
-    GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+    DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
+    DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
+    DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
   run: |
     TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
     echo "token=$TOKEN" >> $GITHUB_OUTPUT
@@ -140,9 +140,9 @@ The GitHub App authentication code is located in `scripts/github/` rather than `
 To test locally:
 
 ```bash
-export GITHUB_APP_ID="your_app_id"
-export GITHUB_APP_INSTALLATION_ID="your_installation_id"
-export GITHUB_APP_PRIVATE_KEY="$(cat path/to/private-key.pem)"
+export DEPLOYER_APP_ID="your_app_id"
+export DEPLOYER_APP_INSTALLATION_ID="your_installation_id"
+export DEPLOYER_APP_PRIVATE_KEY="$(cat path/to/private-key.pem)"
 
 npx tsx scripts/github/get-github-app-token.ts
 ```

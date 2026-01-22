@@ -9,22 +9,22 @@ If you're seeing this error, it means the GitHub App secrets are not being passe
 1. Go to your GitHub repository
 2. Navigate to **Settings** → **Secrets and variables** → **Actions**
 3. Verify these three secrets exist:
-   - `GITHUB_APP_ID`
-   - `GITHUB_APP_INSTALLATION_ID`
-   - `GITHUB_APP_PRIVATE_KEY`
+   - `DEPLOYER_APP_ID`
+   - `DEPLOYER_APP_INSTALLATION_ID`
+   - `DEPLOYER_APP_PRIVATE_KEY`
 
 ### Step 2: Check Secret Values
 
-**GITHUB_APP_ID**:
+**DEPLOYER_APP_ID**:
 - Should be a numeric string (e.g., `"123456"`)
 - Found in your GitHub App settings: `https://github.com/settings/apps/YOUR_APP_NAME`
 
-**GITHUB_APP_INSTALLATION_ID**:
+**DEPLOYER_APP_INSTALLATION_ID**:
 - Should be a numeric string (e.g., `"987654"`)
 - Found by calling: `GET /app/installations` with your App JWT
 - Or in the URL when viewing your app installation: `https://github.com/settings/installations/INSTALLATION_ID`
 
-**GITHUB_APP_PRIVATE_KEY**:
+**DEPLOYER_APP_PRIVATE_KEY**:
 - Should be the full content of your `.pem` file
 - Can include literal `\n` characters or actual newlines
 - Starts with `-----BEGIN RSA PRIVATE KEY-----` or `-----BEGIN PRIVATE KEY-----`
@@ -56,9 +56,9 @@ If this step fails, the secrets are definitely not being passed.
 You can test locally to verify your credentials work:
 
 ```bash
-export GITHUB_APP_ID="your_app_id"
-export GITHUB_APP_INSTALLATION_ID="your_installation_id"
-export GITHUB_APP_PRIVATE_KEY="$(cat path/to/private-key.pem)"
+export DEPLOYER_APP_ID="your_app_id"
+export DEPLOYER_APP_INSTALLATION_ID="your_installation_id"
+export DEPLOYER_APP_PRIVATE_KEY="$(cat path/to/private-key.pem)"
 
 npx tsx scripts/github/get-github-app-token.ts
 ```

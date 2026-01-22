@@ -9,9 +9,9 @@
  * Step B: Exchange JWT for Installation Access Token (The Exchange)
  *
  * Required Environment Variables:
- * - GITHUB_APP_ID: The integer ID of the GitHub App
- * - GITHUB_APP_INSTALLATION_ID: The integer ID of the specific installation
- * - GITHUB_APP_PRIVATE_KEY: The content of the .pem file
+ * - DEPLOYER_APP_ID: The integer ID of the GitHub App
+ * - DEPLOYER_APP_INSTALLATION_ID: The integer ID of the specific installation
+ * - DEPLOYER_APP_PRIVATE_KEY: The content of the .pem file
  */
 
 import { SignJWT, importPKCS8 } from 'jose'
@@ -135,20 +135,20 @@ async function getInstallationToken(
  * @returns A valid GitHub access token
  */
 export async function getGitHubAppToken(): Promise<string> {
-  const appId = process.env.GITHUB_APP_ID
-  const installationId = process.env.GITHUB_APP_INSTALLATION_ID
-  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY
+  const appId = process.env.DEPLOYER_APP_ID
+  const installationId = process.env.DEPLOYER_APP_INSTALLATION_ID
+  const privateKey = process.env.DEPLOYER_APP_PRIVATE_KEY
 
   // Check if environment variables are set (including empty string check)
   const missing: string[] = []
   if (!appId || appId.trim() === '') {
-    missing.push('GITHUB_APP_ID')
+    missing.push('DEPLOYER_APP_ID')
   }
   if (!installationId || installationId.trim() === '') {
-    missing.push('GITHUB_APP_INSTALLATION_ID')
+    missing.push('DEPLOYER_APP_INSTALLATION_ID')
   }
   if (!privateKey || privateKey.trim() === '') {
-    missing.push('GITHUB_APP_PRIVATE_KEY')
+    missing.push('DEPLOYER_APP_PRIVATE_KEY')
   }
 
   if (missing.length > 0) {

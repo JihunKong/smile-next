@@ -43,33 +43,33 @@ jobs:
 
       - name: Verify GitHub App Secrets
         env:
-          GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
-          GITHUB_APP_INSTALLATION_ID: ${{ secrets.GITHUB_APP_INSTALLATION_ID }}
-          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
+          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
+          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
         run: |
-          if [ -z "$GITHUB_APP_ID" ]; then
-            echo "❌ GITHUB_APP_ID is not set"
+          if [ -z "$DEPLOYER_APP_ID" ]; then
+            echo "❌ DEPLOYER_APP_ID is not set"
             exit 1
           fi
-          if [ -z "$GITHUB_APP_INSTALLATION_ID" ]; then
-            echo "❌ GITHUB_APP_INSTALLATION_ID is not set"
+          if [ -z "$DEPLOYER_APP_INSTALLATION_ID" ]; then
+            echo "❌ DEPLOYER_APP_INSTALLATION_ID is not set"
             exit 1
           fi
-          if [ -z "$GITHUB_APP_PRIVATE_KEY" ]; then
-            echo "❌ GITHUB_APP_PRIVATE_KEY is not set"
+          if [ -z "$DEPLOYER_APP_PRIVATE_KEY" ]; then
+            echo "❌ DEPLOYER_APP_PRIVATE_KEY is not set"
             exit 1
           fi
           echo "✅ All GitHub App secrets are set"
-          echo "GITHUB_APP_ID length: ${#GITHUB_APP_ID}"
-          echo "GITHUB_APP_INSTALLATION_ID length: ${#GITHUB_APP_INSTALLATION_ID}"
-          echo "GITHUB_APP_PRIVATE_KEY length: ${#GITHUB_APP_PRIVATE_KEY}"
+          echo "DEPLOYER_APP_ID length: ${#DEPLOYER_APP_ID}"
+          echo "DEPLOYER_APP_INSTALLATION_ID length: ${#DEPLOYER_APP_INSTALLATION_ID}"
+          echo "DEPLOYER_APP_PRIVATE_KEY length: ${#DEPLOYER_APP_PRIVATE_KEY}"
 
       - name: Get GitHub App Token
         id: github-token
         env:
-          GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
-          GITHUB_APP_INSTALLATION_ID: ${{ secrets.GITHUB_APP_INSTALLATION_ID }}
-          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
+          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
+          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
         run: |
           TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
           echo "token=$TOKEN" >> $GITHUB_OUTPUT
