@@ -225,14 +225,37 @@ async function getInstallationToken(
 
   const data = await response.json()
 
-  // Verify the token has the required permissions
+  // Log and verify the token permissions
   if (data.permissions) {
-    const hasPackagesWrite = data.permissions.packages === 'write'
-    if (!hasPackagesWrite) {
-      console.warn('⚠️  Warning: Token does not have packages:write permission')
-      console.warn('   The GitHub App may not have this permission enabled.')
-      console.warn('   See troubleshooting guide for steps to enable it.')
+    console.error('[GitHubApp] Token permissions granted:')
+    const permissions = data.permissions
+    for (const [permission, level] of Object.entries(permissions)) {
+      console.error(`  - ${permission}: ${level}`)
     }
+    
+    const hasPackagesWrite = permissions.packages === 'write'
+    if (!hasPackagesWrite) {
+      console.error('')
+      console.error('❌ ERROR: Token does NOT have packages:write permission')
+      console.error('   This will cause 403 errors when pushing to GitHub Container Registry.')
+      console.error('')
+      console.error('   To fix this:')
+      console.error('   1. Go to: https://github.com/settings/apps')
+      console.error('   2. Select your GitHub App')
+      console.error('   3. Navigate to "Permissions & events"')
+      console.error('   4. Under "Repository permissions", set "Packages" to "Write"')
+      console.error('   5. Under "Account permissions" (if using org packages), set "Packages" to "Write"')
+      console.error('   6. Click "Save changes"')
+      console.error('   7. Go to: https://github.com/settings/installations')
+      console.error('   8. Click "Configure" next to your installation')
+      console.error('   9. Review and accept the updated permissions')
+      console.error('')
+      throw new Error('GitHub App token does not have packages:write permission. See logs above for fix instructions.')
+    } else {
+      console.error('✅ Token has packages:write permission')
+    }
+  } else {
+    console.warn('⚠️  Warning: Could not verify token permissions (permissions object not in response)')
   }
 
   return {

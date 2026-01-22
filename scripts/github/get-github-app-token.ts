@@ -36,6 +36,7 @@ async function main() {
     // Output token to stdout ONLY (GitHub Actions captures this via command substitution)
     // All debug/logging goes to stderr to avoid interfering with stdout
     console.log(token)
+    console.error('✅ Successfully generated GitHub App token with required permissions')
     process.exit(0)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
