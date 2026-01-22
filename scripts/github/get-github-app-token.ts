@@ -17,11 +17,11 @@
  *   Prints the installation access token to stdout (suitable for GitHub Actions)
  */
 
-import { getGitHubToken } from '../../src/lib/services/githubAppService'
+import { getGitHubAppToken } from './github-app-auth'
 
 async function main() {
   try {
-    const token = await getGitHubToken()
+    const token = await getGitHubAppToken()
     // Output token to stdout (GitHub Actions can capture this)
     console.log(token)
     process.exit(0)
