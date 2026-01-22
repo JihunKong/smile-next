@@ -15,6 +15,7 @@
  */
 
 import { SignJWT, importPKCS8 } from 'jose'
+import { createPrivateKey } from 'node:crypto'
 
 const GITHUB_API_BASE = 'https://api.github.com'
 
@@ -111,11 +112,21 @@ async function generateAppJWT(appId: string, privateKey: string): Promise<string
   
   try {
     if (isRSAFormat) {
-      // Convert RSA format to PKCS8 format for jose
-      // Note: This is just a header change - the actual key structure is the same
-      const pkcs8Key = normalizedKey
-        .replace('-----BEGIN RSA PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----')
-        .replace('-----END RSA PRIVATE KEY-----', '-----END PRIVATE KEY-----')
+      // RSA format keys need to be converted to PKCS8 format
+      // Use Node's crypto module to properly convert the key format
+      const cryptoKey = createPrivateKey({
+        key: normalizedKey,
+        format: 'pem',
+        type: 'pkcs1', // RSA keys are in PKCS1 format
+      })
+      
+      // Export as PKCS8 format
+      const pkcs8Key = cryptoKey.export({
+        format: 'pem',
+        type: 'pkcs8',
+      }) as string
+      
+      // Now import with jose
       key = await importPKCS8(pkcs8Key, 'RS256')
     } else {
       // Already in PKCS8 format
@@ -123,11 +134,19 @@ async function generateAppJWT(appId: string, privateKey: string): Promise<string
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    throw new Error(
-      `Failed to import private key. This usually means the key format is incorrect.\n` +
-      `Error: ${errorMessage}\n` +
-      `Make sure you copied the entire .pem file including headers and all content.`
-    )
+    
+    // Provide more specific error information
+    let detailedError = `Failed to import private key.\nError: ${errorMessage}`
+    
+    if (errorMessage.includes('ASN1') || errorMessage.includes('wrong tag')) {
+      detailedError += `\n\nThe key format appears to be incorrect. Please verify:`
+      detailedError += `\n1. You copied the ENTIRE .pem file (including headers)`
+      detailedError += `\n2. The key starts with "-----BEGIN RSA PRIVATE KEY-----" or "-----BEGIN PRIVATE KEY-----"`
+      detailedError += `\n3. The key ends with "-----END RSA PRIVATE KEY-----" or "-----END PRIVATE KEY-----"`
+      detailedError += `\n4. You're using the PRIVATE key, not the public key`
+    }
+    
+    throw new Error(detailedError)
   }
 
   const now = Math.floor(Date.now() / 1000)
