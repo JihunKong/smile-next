@@ -21,18 +21,20 @@ import { getGitHubAppToken } from './github-app-auth'
 
 async function main() {
   // Debug: Check if environment variables are available (without revealing values)
+  // Use stderr for debug output so it doesn't interfere with stdout token capture
   const hasAppId = !!process.env.DEPLOYER_APP_ID
   const hasInstallationId = !!process.env.DEPLOYER_APP_INSTALLATION_ID
   const hasPrivateKey = !!process.env.DEPLOYER_APP_PRIVATE_KEY
   
-  console.log('[DEBUG] Environment check:')
-  console.log(`  DEPLOYER_APP_ID: ${hasAppId ? 'SET' : 'NOT SET'} (length: ${process.env.DEPLOYER_APP_ID?.length || 0})`)
-  console.log(`  DEPLOYER_APP_INSTALLATION_ID: ${hasInstallationId ? 'SET' : 'NOT SET'} (length: ${process.env.DEPLOYER_APP_INSTALLATION_ID?.length || 0})`)
-  console.log(`  DEPLOYER_APP_PRIVATE_KEY: ${hasPrivateKey ? 'SET' : 'NOT SET'} (length: ${process.env.DEPLOYER_APP_PRIVATE_KEY?.length || 0})`)
+  console.error('[DEBUG] Environment check:')
+  console.error(`  DEPLOYER_APP_ID: ${hasAppId ? 'SET' : 'NOT SET'} (length: ${process.env.DEPLOYER_APP_ID?.length || 0})`)
+  console.error(`  DEPLOYER_APP_INSTALLATION_ID: ${hasInstallationId ? 'SET' : 'NOT SET'} (length: ${process.env.DEPLOYER_APP_INSTALLATION_ID?.length || 0})`)
+  console.error(`  DEPLOYER_APP_PRIVATE_KEY: ${hasPrivateKey ? 'SET' : 'NOT SET'} (length: ${process.env.DEPLOYER_APP_PRIVATE_KEY?.length || 0})`)
   
   try {
     const token = await getGitHubAppToken()
-    // Output token to stdout (GitHub Actions can capture this)
+    // Output token to stdout ONLY (GitHub Actions captures this via command substitution)
+    // All debug/logging goes to stderr to avoid interfering with stdout
     console.log(token)
     process.exit(0)
   } catch (error) {
