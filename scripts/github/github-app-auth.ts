@@ -178,6 +178,8 @@ async function getInstallationToken(
   installationId: string,
   jwt: string
 ): Promise<{ token: string; expiresAt: Date }> {
+  // Request specific permissions for the token
+  // This ensures we get package write permissions if they're available
   const response = await fetch(
     `${GITHUB_API_BASE}/app/installations/${installationId}/access_tokens`,
     {
@@ -186,7 +188,14 @@ async function getInstallationToken(
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${jwt}`,
         'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        permissions: {
+          contents: 'read',
+          packages: 'write',
+        },
+      }),
     }
   )
 
