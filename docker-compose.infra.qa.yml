@@ -1,6 +1,6 @@
-# Infrastructure Docker Compose for Production
-# Includes Redis container (PostgreSQL is GCP Cloud SQL)
-# Usage: docker-compose -f docker-compose.infra.prod.yml up -d
+# Infrastructure Docker Compose for QA
+# Includes Redis container (PostgreSQL is GCP Cloud SQL or external)
+# Usage: docker-compose -f docker-compose.infra.qa.yml up -d
 
 services:
   # Redis for Bull Queue

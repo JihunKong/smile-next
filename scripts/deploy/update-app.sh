@@ -69,18 +69,23 @@ cd "$PROJECT_DIR" || { echo "ERROR: Cannot cd to $PROJECT_DIR"; exit 1; }
 echo "📁 Using project directory: $PROJECT_DIR"
 
 # Select docker-compose files based on environment
-if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
+# Select docker-compose files based on environment
+if [ "$ENVIRONMENT" == "dev" ]; then
   COMPILE_FILE_APP="docker-compose.dev.yml"
   COMPILE_FILE_INFRA="docker-compose.infra.dev.yml"
-  echo "📋 Using Dev/QA Stack:"
+  echo "📋 Using Dev Stack:"
   echo "   - App:   $COMPILE_FILE_APP"
   echo "   - Infra: $COMPILE_FILE_INFRA (PostgreSQL + Redis)"
-else
-  COMPILE_FILE_APP="docker-compose.prod.yml"
-  COMPILE_FILE_INFRA="docker-compose.infra.prod.yml"
-  echo "📋 Using Prod Stack:"
+elif [ "$ENVIRONMENT" == "qa" ]; then
+  COMPILE_FILE_APP="docker-compose.qa.yml"
+  COMPILE_FILE_INFRA="docker-compose.infra.qa.yml"
+  echo "📋 Using QA Stack:"
   echo "   - App:   $COMPILE_FILE_APP"
-  echo "   - Infra: $COMPILE_FILE_INFRA (Redis only, DB is Cloud SQL)"
+  echo "   - Infra: $COMPILE_FILE_INFRA (Redis only, DB is External/Cloud SQL)"
+else
+  # Fallback or Prod (if needed later)
+  echo "❌ Unknown environment: $ENVIRONMENT"
+  exit 1
 fi
 
 # Verify docker-compose files exist
@@ -298,10 +303,8 @@ echo "🏗️  Ensuring infrastructure is running..."
 echo "   File: $COMPILE_FILE_INFRA"
 
 # Check if infra is already running to avoid unnecessary restarts
-# We only want to ensure it UP, we don't force recreate unless user asks (not implemented yet)
 if docker compose -f "$COMPILE_FILE_INFRA" ps --custom-format "{{.State}}" | grep -q "running"; then
   echo "   ✅ Infrastructure seems to be running"
-  # Run 'up -d' anyway to handle any missing containers (idempotent)
   docker compose -f "$COMPILE_FILE_INFRA" up -d
 else
   echo "   🚀 Starting infrastructure..."
@@ -313,8 +316,8 @@ fi
 
 # Wait for Infra Health
 echo "⏳ Waiting for infrastructure health..."
-if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
-  # Wait for DB
+if [ "$ENVIRONMENT" == "dev" ]; then
+  # Wait for DB (Only in Dev where we manage the DB container)
   MAX_RETRIES=30
   echo "   Checking PostgreSQL..."
   until docker exec smile-postgres pg_isready -U smile_user >/dev/null 2>&1 || [ $MAX_RETRIES -eq 0 ]; do
@@ -337,7 +340,6 @@ echo "   File: $COMPILE_FILE_APP"
 echo "   Image: $IMAGE_TAG"
 
 # Stop existing app container to ensure clean state
-# (Docker Compose --force-recreate does this, but explicit stop is safer for network cleanup)
 docker stop "$CONTAINER_NAME" 2>/dev/null || true
 docker rm "$CONTAINER_NAME" 2>/dev/null || true
 
@@ -360,16 +362,19 @@ if ! docker network inspect "$NETWORK_NAME" --format '{{range .Containers}}{{.Na
 fi
 
 # Initialize Database Schema (for Dev/QA)
+# Note: QA might use external DB, but we still might want to push schema if we have access
 if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
     echo "🔍 Checking database initialization logic..."
     
-    # Ensure database exists
-    docker exec smile-postgres psql -U smile_user -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || {
-      echo "📦 Creating database '$DB_NAME'..."
-      docker exec smile-postgres psql -U smile_user -d postgres -c "CREATE DATABASE \"$DB_NAME\";"
-    }
+    # Only try to CREATE database if we are in Dev (managing the DB container)
+    if [ "$ENVIRONMENT" == "dev" ]; then
+      docker exec smile-postgres psql -U smile_user -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || {
+        echo "📦 Creating database '$DB_NAME'..."
+        docker exec smile-postgres psql -U smile_user -d postgres -c "CREATE DATABASE \"$DB_NAME\";"
+      }
+    fi
 
-    # Run Prisma Push
+    # Run Prisma Push (Applies to both Dev and QA if they need schema updates)
     echo "📦 Updating database schema..."
     docker exec "$CONTAINER_NAME" npm run db:push -- --accept-data-loss || echo "⚠️  Prisma push warning (check logs)"
 fi

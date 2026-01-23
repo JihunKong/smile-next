@@ -104,7 +104,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "scripts,docker-compose.dev.yml,docker-compose.prod.yml,docker-compose.infra.dev.yml,docker-compose.infra.prod.yml"
+          source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.infra.dev.yml,docker-compose.infra.qa.yml"
           target: "~/smile-next"
           rm: false
           debug: true
