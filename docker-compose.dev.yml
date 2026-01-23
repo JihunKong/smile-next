@@ -3,14 +3,16 @@
 # Usage: docker-compose -f docker-compose.dev.yml up -d
 
 services:
-  # PostgreSQL Database (local container for dev)
+  # PostgreSQL Database (shared by dev and QA)
+  # Note: POSTGRES_DB creates the initial database, but dev/QA use separate databases
+  # (smile_dev_db and smile_qa_db) created dynamically during deployment
   db:
     image: postgres:15-alpine
     container_name: smile-postgres
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: smile_new_db
+      POSTGRES_DB: smile_new_db  # Initial database (dev/QA use separate DBs: smile_dev_db, smile_qa_db)
       POSTGRES_USER: smile_user
       POSTGRES_PASSWORD: ${DB_PASSWORD:-simple_pass}
       # Enable SSH tunnel access (DBeaver, etc.) with scram-sha-256 auth
@@ -21,7 +23,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smile_user -d smile_new_db"]
+      # Generic healthcheck - checks PostgreSQL is ready (works for any database)
+      test: ["CMD-SHELL", "pg_isready -U smile_user"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -62,7 +65,9 @@ services:
       - "${PORT:-3001}:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/smile_new_db
+      # Use environment-specific database name (dev uses 'smile_dev_db', qa uses 'smile_qa_db')
+      # Both share the same PostgreSQL container but use different databases
+      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/${DB_NAME:-smile_dev_db}
       - REDIS_URL=redis://redis:6379
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
