@@ -168,18 +168,6 @@ jobs:
           echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
           echo "✅ Set app-url: $APP_URL"
 
-  # 2. Provision Infrastructure - Only runs on manual trigger or when infra changes on main branch
-  provision-infra:
-    needs: check-changes
-    if: |
-      needs.check-changes.outputs.should-provision == 'true' &&
-      (github.event_name == 'workflow_dispatch' || 
-       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
-    uses: ./.github/workflows/setup-vm.yml
-    with:
-      environment: ${{ needs.check-changes.outputs.env-name }}
-    secrets: inherit
-
   # 3. Call the Reusable Build Workflow
   call-build:
     needs: check-changes
@@ -228,17 +216,16 @@ jobs:
       image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
-  # 6. Call Deploy (Prod) - ONLY if on main branch and push event
-  deploy-prod:
-    needs: [check-changes, call-build, provision-infra]
+  # 6. Call Deploy (QA) - ONLY if on main branch and push event
+  deploy-qa:
+    needs: [check-changes, call-build]
     if: |
       always() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
       needs.check-changes.outputs.should-build == 'true' &&
-      needs.call-build.result == 'success' &&
-      (needs.provision-infra.result == 'success' || needs.provision-infra.result == 'skipped')
+      needs.call-build.result == 'success'
     uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
     with:
       environment: ${{ needs.check-changes.outputs.env-name }}
@@ -248,3 +235,4 @@ jobs:
       app-url: ${{ needs.check-changes.outputs.app-url }}
       image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
+

@@ -56,7 +56,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "scripts,docker-compose.dev.yml,docker-compose.prod.yml"
+          source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.prod.yml"
           target: "~/smile-next"
           rm: false
           debug: true
@@ -80,7 +80,11 @@ jobs:
             if [ "$ENVIRONMENT" == "dev" ]; then
               COMPOSE_FILE="docker-compose.dev.yml"
               SERVICE_NAME="smile-next-dev"
+            elif [ "$ENVIRONMENT" == "qa" ]; then
+              COMPOSE_FILE="docker-compose.qa.yml"
+              SERVICE_NAME="smile-next-qa"
             else
+              # Fallback for Prod
               COMPOSE_FILE="docker-compose.prod.yml"
               SERVICE_NAME="smile-next-prod"
             fi
