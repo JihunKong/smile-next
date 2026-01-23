@@ -303,14 +303,26 @@ fi
 echo "🏗️  Ensuring infrastructure is running..."
 echo "   File: $COMPILE_FILE_INFRA"
 
-# Check if infra is already running to avoid unnecessary restarts
-if docker compose -f "$COMPILE_FILE_INFRA" ps --custom-format "{{.State}}" | grep -q "running"; then
+# Check if infra is currently running
+# We use standard json format to check status which is more compatible across versions
+if docker compose -f "$COMPILE_FILE_INFRA" ps --format json | grep -q '"State":"running"'; then
   echo "   ✅ Infrastructure seems to be running"
+  # Run 'up -d' to ensure desired state (idempotent)
   docker compose -f "$COMPILE_FILE_INFRA" up -d
 else
   echo "   🚀 Starting infrastructure..."
+  
+  # aggressive cleanup if port 5432 is in use but container isn't recognized as 'running' in this compose project
+  if lsof -i :5432 >/dev/null 2>&1; then
+      echo "   ⚠️  Port 5432 is in use. Attempting to stop conflicting 'smile-postgres'..."
+      docker stop smile-postgres 2>/dev/null || true
+      docker rm smile-postgres 2>/dev/null || true
+  fi
+
   docker compose -f "$COMPILE_FILE_INFRA" up -d || {
     echo "❌ Failed to start infrastructure"
+    echo "   Debug: Port 5432 status:"
+    sudo lsof -i :5432 || echo "Port 5432 free"
     exit 1
   }
 fi
