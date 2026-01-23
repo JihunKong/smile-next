@@ -305,7 +305,7 @@ echo "   File: $COMPILE_FILE_INFRA"
 
 # Check if infra is currently running
 # We use standard json format to check status which is more compatible across versions
-if docker compose -f "$COMPILE_FILE_INFRA" ps --format json | grep -q '"State":"running"'; then
+if docker compose -p smile-infra -f "$COMPILE_FILE_INFRA" ps --format json | grep -q '"State":"running"'; then
   echo "   ✅ Infrastructure seems to be running (Skipping restart to preserve shared state)"
 else
   echo "   🚀 Starting infrastructure..."
@@ -317,7 +317,7 @@ else
       docker rm smile-postgres 2>/dev/null || true
   fi
 
-  docker compose -f "$COMPILE_FILE_INFRA" up -d || {
+  docker compose -p smile-infra -f "$COMPILE_FILE_INFRA" up -d || {
     echo "❌ Failed to start infrastructure"
     echo "   Debug: Port 5432 status:"
     sudo lsof -i :5432 || echo "Port 5432 free"
@@ -355,7 +355,7 @@ docker stop "$CONTAINER_NAME" 2>/dev/null || true
 docker rm "$CONTAINER_NAME" 2>/dev/null || true
 
 # Start App
-docker compose -f "$COMPILE_FILE_APP" up -d --force-recreate || {
+docker compose -p "smile-$ENVIRONMENT" -f "$COMPILE_FILE_APP" up -d --force-recreate || {
   echo "❌ Failed to start application"
   exit 1
 }

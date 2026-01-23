@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - develop
   pull_request:
     branches:
       - develop
@@ -86,12 +87,23 @@ jobs:
             SHOULD_DEPLOY="true"
           elif [ "${{ github.event_name }}" == "pull_request" ]; then
             # PR with relevant changes - build and deploy
-            if [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
+            # SKIP if source branch is 'develop' (to avoid double deploy)
+            if [ "${{ github.head_ref }}" == "develop" ]; then
+              echo "ℹ️  Skipping PR deploy: source branch is 'develop' (already deployed via push)"
+              SHOULD_BUILD="false"
+              SHOULD_DEPLOY="false"
+            elif [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
               SHOULD_BUILD="true"
               SHOULD_DEPLOY="true"
             fi
           elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
             # Main branch push - build and deploy
+            if [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
+              SHOULD_BUILD="true"
+              SHOULD_DEPLOY="true"
+            fi
+          elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            # Develop branch push - build and deploy
             if [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
               SHOULD_BUILD="true"
               SHOULD_DEPLOY="true"
@@ -143,6 +155,12 @@ jobs:
             echo "host-port=$MAIN_PORT" >> $GITHUB_OUTPUT
             echo "container-name=smile-next" >> $GITHUB_OUTPUT
             echo "✅ Set for main branch: port=$MAIN_PORT"
+          elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "env-name=dev" >> $GITHUB_OUTPUT
+            echo "docker-tag=develop" >> $GITHUB_OUTPUT
+            echo "host-port=$DEV_PORT" >> $GITHUB_OUTPUT
+            echo "container-name=smile-next-dev" >> $GITHUB_OUTPUT
+            echo "✅ Set for develop branch: port=$DEV_PORT"
           else
             echo "⚠️  Warning: No matching condition for event=${{ github.event_name }}, ref=${{ github.ref }}"
             echo "   Using default PR port"
@@ -184,41 +202,181 @@ jobs:
   # 4. Deploy PR - Deploys PR to port 3002 (smilealways-blue.seedsofempowerment.org)
   deploy-pr:
     needs: [check-changes, call-build]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.check-changes.outputs.env-name }}
     if: |
       always() &&
       github.event_name == 'pull_request' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
       needs.call-build.result == 'success'
-    uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
-    with:
-      environment: ${{ needs.check-changes.outputs.env-name }}
-      port: ${{ needs.check-changes.outputs.host-port }}
-      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
-      container-name: ${{ needs.check-changes.outputs.container-name }}
-      app-url: ${{ needs.check-changes.outputs.app-url }}
-      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
-    secrets: inherit
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js for Token Script
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get GitHub App Token
+        id: github-token
+        env:
+          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
+          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
+          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
+        run: |
+          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "::add-mask::$TOKEN"
+
+      - name: Prepare Deployment Directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10s
+          script: |
+            echo "🔧 Preparing deployment directory..."
+            mkdir -p "$HOME/smile-next"
+            # Remove old scripts to ensure clean slate
+            rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
+
+      - name: Copy Deploy Scripts and Docker Compose Files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.infra.dev.yml"
+          target: "~/smile-next"
+          rm: false
+
+      - name: Execute Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ENVIRONMENT: ${{ needs.check-changes.outputs.env-name }}
+          DOCKER_TAG: ${{ needs.check-changes.outputs.docker-tag }}
+          IMAGE_NAME: ghcr.io/seeds-smile-the-ultimate/smile-web
+          CONTAINER_NAME: ${{ needs.check-changes.outputs.container-name }}
+          PORT: ${{ needs.check-changes.outputs.host-port }}
+          NEXTAUTH_URL: ${{ needs.check-changes.outputs.app-url }}
+          NEXT_PUBLIC_APP_URL: ${{ needs.check-changes.outputs.app-url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GHCR_PAT: ${{ steps.github-token.outputs.token }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ENVIRONMENT,DOCKER_TAG,IMAGE_NAME,CONTAINER_NAME,PORT,NEXTAUTH_URL,NEXT_PUBLIC_APP_URL,GITHUB_TOKEN,GHCR_PAT,GHCR_USERNAME
+          command_timeout: 120s
+          script: |
+            cd "$HOME/smile-next" || exit 1
+            bash scripts/deploy/update-app.sh "$ENVIRONMENT" "$DOCKER_TAG" "$IMAGE_NAME" "$CONTAINER_NAME" "$PORT"
+
+      - name: Verify Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          CONTAINER_NAME: ${{ needs.check-changes.outputs.container-name }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: CONTAINER_NAME
+          command_timeout: 100s
+          script: |
+            cd "$HOME/smile-next" || exit 1
+            bash scripts/deploy/verify-deployment.sh "$CONTAINER_NAME"
 
   # 5. Manual PR Deploy - Deploy a specific PR image manually
   manual-pr-deploy:
     needs: [check-changes]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.check-changes.outputs.env-name }}
     if: |
       github.event_name == 'workflow_dispatch' &&
       inputs.action == 'deploy-pr' &&
       inputs.pr_number != ''
-    uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
-    with:
-      environment: ${{ needs.check-changes.outputs.env-name }}
-      port: ${{ needs.check-changes.outputs.host-port }}
-      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
-      container-name: ${{ needs.check-changes.outputs.container-name }}
-      app-url: ${{ needs.check-changes.outputs.app-url }}
-      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
-    secrets: inherit
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get GitHub App Token
+        id: github-token
+        env:
+          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
+          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
+          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
+        run: |
+          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "::add-mask::$TOKEN"
+
+      - name: Prepare & Copy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10s
+          script: |
+            mkdir -p "$HOME/smile-next"
+            rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
+
+      - name: Copy Files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.infra.dev.yml"
+          target: "~/smile-next"
+          rm: false
+
+      - name: Execute Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ENVIRONMENT: ${{ needs.check-changes.outputs.env-name }}
+          DOCKER_TAG: ${{ needs.check-changes.outputs.docker-tag }}
+          IMAGE_NAME: ghcr.io/seeds-smile-the-ultimate/smile-web
+          CONTAINER_NAME: ${{ needs.check-changes.outputs.container-name }}
+          PORT: ${{ needs.check-changes.outputs.host-port }}
+          NEXTAUTH_URL: ${{ needs.check-changes.outputs.app-url }}
+          NEXT_PUBLIC_APP_URL: ${{ needs.check-changes.outputs.app-url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GHCR_PAT: ${{ steps.github-token.outputs.token }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ENVIRONMENT,DOCKER_TAG,IMAGE_NAME,CONTAINER_NAME,PORT,NEXTAUTH_URL,NEXT_PUBLIC_APP_URL,GITHUB_TOKEN,GHCR_PAT,GHCR_USERNAME
+          command_timeout: 120s
+          script: |
+            cd "$HOME/smile-next" || exit 1
+            bash scripts/deploy/update-app.sh "$ENVIRONMENT" "$DOCKER_TAG" "$IMAGE_NAME" "$CONTAINER_NAME" "$PORT"
 
   # 6. Call Deploy (QA) - ONLY if on main branch and push event
   deploy-qa:
     needs: [check-changes, call-build]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.check-changes.outputs.env-name }}
     if: |
       always() &&
       github.event_name == 'push' &&
@@ -226,13 +384,180 @@ jobs:
       needs.check-changes.outputs.should-deploy == 'true' &&
       needs.check-changes.outputs.should-build == 'true' &&
       needs.call-build.result == 'success'
-    uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
-    with:
-      environment: ${{ needs.check-changes.outputs.env-name }}
-      port: ${{ needs.check-changes.outputs.host-port }}
-      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
-      container-name: ${{ needs.check-changes.outputs.container-name }}
-      app-url: ${{ needs.check-changes.outputs.app-url }}
-      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
-    secrets: inherit
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get GitHub App Token
+        id: github-token
+        env:
+          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
+          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
+          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
+        run: |
+          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "::add-mask::$TOKEN"
+
+      - name: Prepare Directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10s
+          script: |
+            mkdir -p "$HOME/smile-next"
+            rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
+
+      - name: Copy Files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.infra.dev.yml"
+          target: "~/smile-next"
+          rm: false
+
+      - name: Execute Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ENVIRONMENT: ${{ needs.check-changes.outputs.env-name }}
+          DOCKER_TAG: ${{ needs.check-changes.outputs.docker-tag }}
+          IMAGE_NAME: ghcr.io/seeds-smile-the-ultimate/smile-web
+          CONTAINER_NAME: ${{ needs.check-changes.outputs.container-name }}
+          PORT: ${{ needs.check-changes.outputs.host-port }}
+          NEXTAUTH_URL: ${{ needs.check-changes.outputs.app-url }}
+          NEXT_PUBLIC_APP_URL: ${{ needs.check-changes.outputs.app-url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GHCR_PAT: ${{ steps.github-token.outputs.token }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ENVIRONMENT,DOCKER_TAG,IMAGE_NAME,CONTAINER_NAME,PORT,NEXTAUTH_URL,NEXT_PUBLIC_APP_URL,GITHUB_TOKEN,GHCR_PAT,GHCR_USERNAME
+          command_timeout: 120s
+          script: |
+            cd "$HOME/smile-next" || exit 1
+            bash scripts/deploy/update-app.sh "$ENVIRONMENT" "$DOCKER_TAG" "$IMAGE_NAME" "$CONTAINER_NAME" "$PORT"
+
+      - name: Verify Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          CONTAINER_NAME: ${{ needs.check-changes.outputs.container-name }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: CONTAINER_NAME
+          command_timeout: 100s
+          script: |
+            cd "$HOME/smile-next" || exit 1
+            bash scripts/deploy/verify-deployment.sh "$CONTAINER_NAME"
+
+  # 7. Deploy Dev - Deploys develop branch to port 3002
+  deploy-dev:
+    needs: [check-changes, call-build]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.check-changes.outputs.env-name }}
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/develop' &&
+      needs.check-changes.outputs.should-deploy == 'true' &&
+      needs.check-changes.outputs.should-build == 'true' &&
+      needs.call-build.result == 'success'
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get GitHub App Token
+        id: github-token
+        env:
+          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
+          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
+          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
+        run: |
+          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "::add-mask::$TOKEN"
+
+      - name: Prepare Directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10s
+          script: |
+            mkdir -p "$HOME/smile-next"
+            rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
+
+      - name: Copy Files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.infra.dev.yml"
+          target: "~/smile-next"
+          rm: false
+
+      - name: Execute Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ENVIRONMENT: ${{ needs.check-changes.outputs.env-name }}
+          DOCKER_TAG: ${{ needs.check-changes.outputs.docker-tag }}
+          IMAGE_NAME: ghcr.io/seeds-smile-the-ultimate/smile-web
+          CONTAINER_NAME: ${{ needs.check-changes.outputs.container-name }}
+          PORT: ${{ needs.check-changes.outputs.host-port }}
+          NEXTAUTH_URL: ${{ needs.check-changes.outputs.app-url }}
+          NEXT_PUBLIC_APP_URL: ${{ needs.check-changes.outputs.app-url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GHCR_PAT: ${{ steps.github-token.outputs.token }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ENVIRONMENT,DOCKER_TAG,IMAGE_NAME,CONTAINER_NAME,PORT,NEXTAUTH_URL,NEXT_PUBLIC_APP_URL,GITHUB_TOKEN,GHCR_PAT,GHCR_USERNAME
+          command_timeout: 120s
+          script: |
+            cd "$HOME/smile-next" || exit 1
+            bash scripts/deploy/update-app.sh "$ENVIRONMENT" "$DOCKER_TAG" "$IMAGE_NAME" "$CONTAINER_NAME" "$PORT"
+
+      - name: Verify Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          CONTAINER_NAME: ${{ needs.check-changes.outputs.container-name }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: CONTAINER_NAME
+          command_timeout: 100s
+          script: |
+            cd "$HOME/smile-next" || exit 1
+            bash scripts/deploy/verify-deployment.sh "$CONTAINER_NAME"
