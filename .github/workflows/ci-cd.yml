@@ -168,6 +168,54 @@ jobs:
           echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
           echo "✅ Set app-url: $APP_URL"
 
+  # 3. Call the Reusable Build Workflow
+  call-build:
+    needs: check-changes
+    if: needs.check-changes.outputs.should-build == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-node.yml
+    with:
+      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
+    secrets: inherit
+
+  # 4. Deploy PR - Deploys PR to port 3002 (smilealways-blue.seedsofempowerment.org)
+  deploy-pr:
+    needs: [check-changes, call-build]
+    if: |
+      always() &&
+      github.event_name == 'pull_request' &&
+      needs.check-changes.outputs.should-deploy == 'true' &&
+      needs.call-build.result == 'success'
+    uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
+    with:
+      environment: ${{ needs.check-changes.outputs.env-name }}
+      port: ${{ needs.check-changes.outputs.host-port }}
+      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
+      container-name: ${{ needs.check-changes.outputs.container-name }}
+      app-url: ${{ needs.check-changes.outputs.app-url }}
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
+    secrets: inherit
+
+  # 5. Manual PR Deploy - Deploy a specific PR image manually
+  manual-pr-deploy:
+    needs: [check-changes]
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      inputs.action == 'deploy-pr' &&
+      inputs.pr_number != ''
+    uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
+    with:
+      environment: ${{ needs.check-changes.outputs.env-name }}
+      port: ${{ needs.check-changes.outputs.host-port }}
+      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
+      container-name: ${{ needs.check-changes.outputs.container-name }}
+      app-url: ${{ needs.check-changes.outputs.app-url }}
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
+    secrets: inherit
+
   # 6. Call Deploy (QA) - ONLY if on main branch and push event
   deploy-qa:
     needs: [check-changes, call-build]
