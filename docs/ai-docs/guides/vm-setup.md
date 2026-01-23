@@ -42,7 +42,7 @@ For a new VM, use the automated bootstrap script:
 ```bash
 # SSH into your new VM (use GCP Console SSH or your own key)
 # Then run:
-curl -fsSL https://raw.githubusercontent.com/tedahn-pknic/new_smile_flask/develop/scripts/deploy/bootstrap-vm.sh | bash
+curl -fsSL https://raw.githubusercontent.com/seeds-smile-the-ultimate/smile-web/develop/scripts/deploy/bootstrap-vm.sh | bash
 ```
 
 This script automatically:
@@ -462,10 +462,10 @@ cd ~/smile-next
 echo $GHCR_PAT | docker login ghcr.io -u USERNAME --password-stdin
 
 # Pull image
-docker pull ghcr.io/tedahn-pknic/new_smile_flask:develop
+docker pull ghcr.io/seeds-smile-the-ultimate/smile-web:develop
 
 # Set environment variables
-export DOCKER_IMAGE=ghcr.io/tedahn-pknic/new_smile_flask:develop
+export DOCKER_IMAGE=ghcr.io/seeds-smile-the-ultimate/smile-web:develop
 export PORT=3001
 export CONTAINER_NAME=smile-next-dev
 
@@ -486,7 +486,7 @@ docker compose -f docker-compose.dev.yml ps
 Expected output:
 ```
 NAME             IMAGE                                  STATUS
-smile-app        ghcr.io/.../new_smile_flask:develop   Up (healthy)
+smile-app        ghcr.io/.../smile-web:develop   Up (healthy)
 smile-postgres   postgres:15-alpine                    Up (healthy)
 smile-redis      redis:7-alpine                        Up (healthy)
 ```

@@ -125,7 +125,7 @@ flowchart TB
 
 2. **Verify username matches:**
    ```yaml
-   username: ${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}
+   username: ${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}
    ```
 
 3. **Check package visibility:**
@@ -231,7 +231,7 @@ flowchart TB
 1. **Verify image exists:**
    ```bash
    # On VM
-   docker manifest inspect ghcr.io/tedahn-pknic/new_smile_flask:develop
+   docker manifest inspect ghcr.io/seeds-smile-the-ultimate/smile-web:develop
    ```
 
 2. **Login to GHCR:**
@@ -280,7 +280,7 @@ docker inspect smile-app --format='{{.State.ExitCode}}'
 docker inspect smile-app --format='{{.State.OOMKilled}}'
 
 # Run with shell for debugging
-docker run -it --entrypoint sh ghcr.io/.../new_smile_flask:develop
+docker run -it --entrypoint sh ghcr.io/.../smile-web:develop
 ```
 
 ---

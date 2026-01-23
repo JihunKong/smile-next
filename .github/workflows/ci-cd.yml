@@ -3,7 +3,6 @@ name: Deploy SMILE Next Application
 on:
   push:
     branches:
-      - develop
       - main
   pull_request:
     branches:
@@ -14,19 +13,18 @@ on:
       action:
         description: 'Deployment action'
         required: true
-        default: 'deploy-develop'
+        default: 'deploy-pr'
         type: choice
         options:
-          - deploy-develop
           - deploy-pr
       pr_number:
-        description: 'PR number (only for deploy-pr action)'
-        required: false
+        description: 'PR number (required for deploy-pr action)'
+        required: true
         type: string
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/tedahn-pknic/new_smile_flask
+  IMAGE_NAME: ghcr.io/seeds-smile-the-ultimate/smile-web
 
 # Permissions needed for various actions
 permissions:
@@ -42,12 +40,12 @@ jobs:
       should-build: ${{ steps.decide.outputs.should-build }}
       should-deploy: ${{ steps.decide.outputs.should-deploy }}
       should-provision: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.infra == 'true' }}
-      is-restore-develop: ${{ steps.decide.outputs.is-restore-develop }}
       # Environment variables calculated once and passed to downstream jobs
       env-name: ${{ steps.vars.outputs.env-name }}
       docker-tag: ${{ steps.vars.outputs.docker-tag }}
       host-port: ${{ steps.vars.outputs.host-port }}
       container-name: ${{ steps.vars.outputs.container-name }}
+      app-url: ${{ steps.vars.outputs.app-url }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -81,73 +79,94 @@ jobs:
           # Default values
           SHOULD_BUILD="false"
           SHOULD_DEPLOY="false"
-          IS_RESTORE="false"
           
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            if [ "${{ inputs.action }}" == "deploy-develop" ]; then
-              # Restore develop - skip build, just deploy existing image
-              SHOULD_BUILD="false"
-              SHOULD_DEPLOY="true"
-              IS_RESTORE="true"
-            else
-              # Deploy specific PR - use existing PR image (no rebuild needed)
-              SHOULD_BUILD="false"
+            # Manual PR deploy - use existing PR image (no rebuild needed)
+            SHOULD_BUILD="false"
+            SHOULD_DEPLOY="true"
+          elif [ "${{ github.event_name }}" == "pull_request" ]; then
+            # PR with relevant changes - build and deploy
+            if [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
+              SHOULD_BUILD="true"
               SHOULD_DEPLOY="true"
             fi
-          elif [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
-            # Push or PR with relevant changes
-            SHOULD_BUILD="true"
-            SHOULD_DEPLOY="true"
+          elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            # Main branch push - build and deploy
+            if [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
+              SHOULD_BUILD="true"
+              SHOULD_DEPLOY="true"
+            fi
           fi
           
           echo "should-build=$SHOULD_BUILD" >> $GITHUB_OUTPUT
           echo "should-deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
-          echo "is-restore-develop=$IS_RESTORE" >> $GITHUB_OUTPUT
 
       - name: Set Environment Variables
         id: vars
         env:
-          # Port configuration from secrets (with defaults)
+          # Port configuration from secrets (with defaults matching nginx config)
+          # main branch → smilealways.seedsofempowerment.org (port 3001)
+          # PR → smilealways-blue.seedsofempowerment.org (port 3002)
           PORT_MAIN: ${{ secrets.VM_PORT_MAIN }}
           PORT_DEV: ${{ secrets.VM_PORT_DEV }}
           PORT_PR: ${{ secrets.VM_PORT_PR }}
         run: |
           # Set default ports if secrets are not configured
-          MAIN_PORT="${PORT_MAIN:-3000}"
-          DEV_PORT="${PORT_DEV:-3001}"
+          MAIN_PORT="${PORT_MAIN:-3001}"
+          DEV_PORT="${PORT_DEV:-3002}"
           PR_PORT="${PORT_PR:-3002}"
           
+          echo "🔧 Port configuration:"
+          echo "   MAIN_PORT: $MAIN_PORT"
+          echo "   DEV_PORT: $DEV_PORT"
+          echo "   PR_PORT: $PR_PORT"
+          echo "   Event: ${{ github.event_name }}"
+          echo "   Ref: ${{ github.ref }}"
+          
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            if [ "${{ inputs.action }}" == "deploy-develop" ]; then
-              # Manual restore: deploy develop image
-              echo "env-name=dev" >> $GITHUB_OUTPUT
-              echo "docker-tag=develop" >> $GITHUB_OUTPUT
-              echo "host-port=$DEV_PORT" >> $GITHUB_OUTPUT
-              echo "container-name=smile-next-dev" >> $GITHUB_OUTPUT
-            else
-              # Manual PR deploy: deploy specific PR
-              echo "env-name=dev" >> $GITHUB_OUTPUT
-              echo "docker-tag=pr-${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
-              echo "host-port=$PR_PORT" >> $GITHUB_OUTPUT
-              echo "container-name=smile-next-pr" >> $GITHUB_OUTPUT
-            fi
+            # Manual PR deploy: deploy specific PR
+            echo "env-name=dev" >> $GITHUB_OUTPUT
+            echo "docker-tag=pr-${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
+            echo "host-port=$PR_PORT" >> $GITHUB_OUTPUT
+            echo "container-name=smile-next-pr" >> $GITHUB_OUTPUT
+            echo "✅ Set for workflow_dispatch: port=$PR_PORT"
           elif [ "${{ github.event_name }}" == "pull_request" ]; then
-            # PR: build and deploy to PR port (separate from dev)
+            # PR: build and deploy to PR port
             echo "env-name=dev" >> $GITHUB_OUTPUT
             echo "docker-tag=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
             echo "host-port=$PR_PORT" >> $GITHUB_OUTPUT
             echo "container-name=smile-next-pr" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            echo "env-name=dev" >> $GITHUB_OUTPUT
-            echo "docker-tag=develop" >> $GITHUB_OUTPUT
-            echo "host-port=$DEV_PORT" >> $GITHUB_OUTPUT
-            echo "container-name=smile-next-dev" >> $GITHUB_OUTPUT
+            echo "✅ Set for pull_request: port=$PR_PORT"
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "env-name=prod" >> $GITHUB_OUTPUT
+            echo "env-name=qa" >> $GITHUB_OUTPUT
             echo "docker-tag=latest" >> $GITHUB_OUTPUT
             echo "host-port=$MAIN_PORT" >> $GITHUB_OUTPUT
             echo "container-name=smile-next" >> $GITHUB_OUTPUT
+            echo "✅ Set for main branch: port=$MAIN_PORT"
+          else
+            echo "⚠️  Warning: No matching condition for event=${{ github.event_name }}, ref=${{ github.ref }}"
+            echo "   Using default PR port"
+            echo "env-name=dev" >> $GITHUB_OUTPUT
+            echo "docker-tag=unknown" >> $GITHUB_OUTPUT
+            echo "host-port=$PR_PORT" >> $GITHUB_OUTPUT
+            echo "container-name=smile-next-pr" >> $GITHUB_OUTPUT
           fi
+          
+          # Verify outputs were set
+          echo ""
+          echo "📋 Outputs set:"
+          echo "   env-name: $(cat $GITHUB_OUTPUT | grep '^env-name=' | cut -d'=' -f2 || echo 'NOT SET')"
+          echo "   docker-tag: $(cat $GITHUB_OUTPUT | grep '^docker-tag=' | cut -d'=' -f2 || echo 'NOT SET')"
+          echo "   container-name: $(cat $GITHUB_OUTPUT | grep '^container-name=' | cut -d'=' -f2 || echo 'NOT SET')"
+
+          # Determine APP_URL based on environment
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            APP_URL="https://smilealways.seedsofempowerment.org"
+          else
+            APP_URL="https://smilealways-blue.seedsofempowerment.org"
+          fi
+          echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
+          echo "✅ Set app-url: $APP_URL"
 
   # 2. Provision Infrastructure - Only runs on manual trigger or when infra changes on main branch
   provision-infra:
@@ -171,30 +190,10 @@ jobs:
     uses: ./.github/workflows/build-node.yml
     with:
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
-  # 4. Call Deploy (Dev) - ONLY if on develop branch and push event
-  deploy-dev:
-    needs: [check-changes, call-build, provision-infra]
-    if: |
-      always() &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/develop' &&
-      needs.check-changes.outputs.should-deploy == 'true' &&
-      needs.check-changes.outputs.should-build == 'true' &&
-      needs.call-build.result == 'success' &&
-      (needs.provision-infra.result == 'success' || needs.provision-infra.result == 'skipped')
-    uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
-    with:
-      environment: ${{ needs.check-changes.outputs.env-name }}
-      port: ${{ needs.check-changes.outputs.host-port }}
-      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
-      container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
-    secrets: inherit
-
-  # 5. Deploy PR - Deploys PR to port 3001 (replaces dev temporarily)
+  # 4. Deploy PR - Deploys PR to port 3002 (smilealways-blue.seedsofempowerment.org)
   deploy-pr:
     needs: [check-changes, call-build]
     if: |
@@ -208,26 +207,11 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      app-url: ${{ needs.check-changes.outputs.app-url }}
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
-  # 6. Restore Develop - Manual trigger to restore develop after PR testing
-  restore-develop:
-    needs: [check-changes]
-    if: |
-      github.event_name == 'workflow_dispatch' &&
-      inputs.action == 'deploy-develop' &&
-      needs.check-changes.outputs.is-restore-develop == 'true'
-    uses: ./.github/workflows/deploy-gcp-compute-vm-ssh.yml
-    with:
-      environment: ${{ needs.check-changes.outputs.env-name }}
-      port: ${{ needs.check-changes.outputs.host-port }}
-      docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
-      container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
-    secrets: inherit
-
-  # 7. Manual PR Deploy - Deploy a specific PR image manually
+  # 5. Manual PR Deploy - Deploy a specific PR image manually
   manual-pr-deploy:
     needs: [check-changes]
     if: |
@@ -240,10 +224,11 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      app-url: ${{ needs.check-changes.outputs.app-url }}
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
-  # 8. Call Deploy (Prod) - ONLY if on main branch and push event
+  # 6. Call Deploy (Prod) - ONLY if on main branch and push event
   deploy-prod:
     needs: [check-changes, call-build, provision-infra]
     if: |
@@ -260,5 +245,6 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
-      image-name: ghcr.io/tedahn-pknic/new_smile_flask
+      app-url: ${{ needs.check-changes.outputs.app-url }}
+      image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit

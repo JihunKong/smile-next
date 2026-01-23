@@ -227,7 +227,7 @@ For a new VM, run the bootstrap script:
 
 ```bash
 # SSH into your new VM, then run:
-curl -fsSL https://raw.githubusercontent.com/tedahn-pknic/new_smile_flask/develop/scripts/deploy/bootstrap-vm.sh | bash
+curl -fsSL https://raw.githubusercontent.com/seeds-smile-the-ultimate/smile-web/develop/scripts/deploy/bootstrap-vm.sh | bash
 ```
 
 This script will:

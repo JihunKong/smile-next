@@ -1,5 +1,7 @@
 FROM node:20-alpine AS base
 
+LABEL org.opencontainers.image.source=https://github.com/seeds-smile-the-ultimate/smile-web
+
 # Install dependencies only when needed
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
@@ -18,7 +20,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN npm run db:generate
 
 # Next.js collects completely anonymous telemetry data about general usage.
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -39,6 +41,9 @@ RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 
+# Copy prisma directory for DB commands
+COPY prisma ./prisma/
+
 # Set the correct permission for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
@@ -46,6 +51,10 @@ RUN chown nextjs:nodejs .next
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Install prisma CLI explicitly for migrations since standalone build excludes it
+RUN npm install prisma
+
 
 USER nextjs
 

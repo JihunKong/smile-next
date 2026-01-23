@@ -31,6 +31,8 @@ set +a
 MISSING_VARS=()
 [ -z "$AUTH_SECRET" ] && [ -z "$NEXTAUTH_SECRET" ] && MISSING_VARS+=("AUTH_SECRET or NEXTAUTH_SECRET")
 [ -z "$DATABASE_URL" ] && MISSING_VARS+=("DATABASE_URL")
+[ -z "$NEXTAUTH_URL" ] && MISSING_VARS+=("NEXTAUTH_URL")
+[ -z "$NEXT_PUBLIC_APP_URL" ] && MISSING_VARS+=("NEXT_PUBLIC_APP_URL")
 
 if [ ${#MISSING_VARS[@]} -gt 0 ]; then
   echo "ERROR: Missing required environment variables:"

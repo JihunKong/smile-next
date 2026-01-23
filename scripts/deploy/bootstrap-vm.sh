@@ -13,7 +13,7 @@
 #   6. Outputs credentials for GitHub Secrets
 #
 # Usage (run on the VM as your deploy user):
-#   curl -fsSL https://raw.githubusercontent.com/tedahn-pknic/new_smile_flask/develop/scripts/deploy/bootstrap-vm.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/seeds-smile-the-ultimate/smile-web/develop/scripts/deploy/bootstrap-vm.sh | bash
 #   
 # Or if you have the repo cloned:
 #   bash scripts/deploy/bootstrap-vm.sh

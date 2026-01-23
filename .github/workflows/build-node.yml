@@ -23,15 +23,77 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify GitHub App Secrets
+        env:
+          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
+          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
+          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$DEPLOYER_APP_ID" ]; then
+            echo "❌ DEPLOYER_APP_ID is not set"
+            exit 1
+          fi
+          if [ -z "$DEPLOYER_APP_INSTALLATION_ID" ]; then
+            echo "❌ DEPLOYER_APP_INSTALLATION_ID is not set"
+            exit 1
+          fi
+          if [ -z "$DEPLOYER_APP_PRIVATE_KEY" ]; then
+            echo "❌ DEPLOYER_APP_PRIVATE_KEY is not set"
+            exit 1
+          fi
+          echo "✅ All GitHub App secrets are set"
+          echo "DEPLOYER_APP_ID length: ${#DEPLOYER_APP_ID}"
+          echo "DEPLOYER_APP_INSTALLATION_ID length: ${#DEPLOYER_APP_INSTALLATION_ID}"
+          echo "DEPLOYER_APP_PRIVATE_KEY length: ${#DEPLOYER_APP_PRIVATE_KEY}"
+
+      - name: Get GitHub App Token (for deployment)
+        id: github-token
+        env:
+          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
+          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
+          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
+        run: |
+          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          # Mask token in logs for security
+          echo "::add-mask::$TOKEN"
+          echo "✅ GitHub App token generated successfully (for deployment use)"
+          echo "ℹ️  Note: Using GITHUB_TOKEN for GHCR authentication (better for org packages)"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Verify GHCR Authentication
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          echo "🔍 Verifying GHCR authentication..."
+          echo "📦 Using GITHUB_TOKEN for GHCR (better for organization-level packages)"
+          echo "📦 Package name: ${{ inputs.image-name }}"
+          echo "🏷️  Tag: ${{ inputs.docker-tag }}"
+          echo "👤 Username: ${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}"
+          echo ""
+          echo "ℹ️  Organization workflow permissions:"
+          echo "   - If 'Read and write permissions' is enabled, GITHUB_TOKEN has packages access"
+          echo "   - This is the recommended approach for organization-level packages"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME || 'tedahn-pknic' }}
-          password: ${{ secrets.GHCR_PAT }}
+          # Use GITHUB_TOKEN (has packages access and works better for org-level packages)
+          # Falls back to GitHub App token if GITHUB_TOKEN is not available
+          username: ${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}
+          password: ${{ github.token || steps.github-token.outputs.token }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta

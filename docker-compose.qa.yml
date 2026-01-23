@@ -1,20 +1,19 @@
-# Dev VM Docker Compose (GCP Compute Engine) - App Only
-# Infrastructure (DB, Redis) is managed via docker-compose.infra.dev.yml
-# Usage: docker-compose -f docker-compose.dev.yml up -d
+# QA Docker Compose for AWS EC2/GCP
+# Infrastructure (Redis) is managed via docker-compose.infra.qa.yml
+# Usage: docker-compose -f docker-compose.qa.yml up -d
 
 services:
   # Next.js Application
   app:
     image: ${DOCKER_IMAGE:-smile-next-app:latest}
     # Note: build section removed - image is pulled by GitHub Actions workflow
-    container_name: ${CONTAINER_NAME:-smile-app}
+    container_name: smile-app
     ports:
-      - "${PORT:-3001}:3000"
+      - "80:3000"
     environment:
       - NODE_ENV=production
-      # Use environment-specific database name (dev uses 'smile_dev_db', qa uses 'smile_qa_db')
-      # Connects to smile-postgres container from infra stack
-      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@smile-postgres:5432/${DB_NAME:-smile_dev_db}
+      # Database host 'db' must be resolvable (e.g. Cloud SQL Auth Proxy or internal DNS)
+      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/smile_new_db
       - REDIS_URL=redis://smile-redis:6379
       - NEXTAUTH_URL=${NEXTAUTH_URL:-}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-}
@@ -31,7 +30,6 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - EMAIL_FROM=${EMAIL_FROM:-}
-      - DISABLE_WORKERS=${DISABLE_WORKERS:-false}
     networks:
       - smile-network
     restart: unless-stopped
