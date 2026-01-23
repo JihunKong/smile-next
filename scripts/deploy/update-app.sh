@@ -78,10 +78,11 @@ if [ "$ENVIRONMENT" == "dev" ]; then
   echo "   - Infra: $COMPILE_FILE_INFRA (PostgreSQL + Redis)"
 elif [ "$ENVIRONMENT" == "qa" ]; then
   COMPILE_FILE_APP="docker-compose.qa.yml"
-  COMPILE_FILE_INFRA="docker-compose.infra.qa.yml"
-  echo "📋 Using QA Stack:"
+  # QA shares the same infrastructure (PostgreSQL + Redis) as Dev
+  COMPILE_FILE_INFRA="docker-compose.infra.dev.yml"
+  echo "📋 Using QA Stack (Shared Infra):"
   echo "   - App:   $COMPILE_FILE_APP"
-  echo "   - Infra: $COMPILE_FILE_INFRA (Redis only, DB is External/Cloud SQL)"
+  echo "   - Infra: $COMPILE_FILE_INFRA (PostgreSQL + Redis)"
 else
   # Fallback or Prod (if needed later)
   echo "❌ Unknown environment: $ENVIRONMENT"
@@ -316,8 +317,8 @@ fi
 
 # Wait for Infra Health
 echo "⏳ Waiting for infrastructure health..."
-if [ "$ENVIRONMENT" == "dev" ]; then
-  # Wait for DB (Only in Dev where we manage the DB container)
+if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
+  # Wait for DB (Dev and QA share the managed DB container)
   MAX_RETRIES=30
   echo "   Checking PostgreSQL..."
   until docker exec smile-postgres pg_isready -U smile_user >/dev/null 2>&1 || [ $MAX_RETRIES -eq 0 ]; do
@@ -366,8 +367,8 @@ fi
 if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
     echo "🔍 Checking database initialization logic..."
     
-    # Only try to CREATE database if we are in Dev (managing the DB container)
-    if [ "$ENVIRONMENT" == "dev" ]; then
+    # Ensure database exists (for both Dev and QA sharing the same container)
+    if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
       docker exec smile-postgres psql -U smile_user -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || {
         echo "📦 Creating database '$DB_NAME'..."
         docker exec smile-postgres psql -U smile_user -d postgres -c "CREATE DATABASE \"$DB_NAME\";"

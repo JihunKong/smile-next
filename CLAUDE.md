@@ -164,8 +164,7 @@ docker compose -f docker-compose.dev.yml restart app
 | `prisma/schema.prisma` | Database schema (32 tables) |
 | `docker-compose.dev.yml` | Dev environment Docker config (App only) |
 | `docker-compose.qa.yml` | QA environment Docker config (App only) |
-| `docker-compose.infra.dev.yml` | Dev Infrastructure (DB + Redis) |
-| `docker-compose.infra.qa.yml` | QA Infrastructure (Redis only) |
+| `docker-compose.infra.dev.yml` | Dev/QA Infrastructure (DB + Redis) |
 
 ## Environment Variables
 
