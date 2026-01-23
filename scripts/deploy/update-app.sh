@@ -306,9 +306,7 @@ echo "   File: $COMPILE_FILE_INFRA"
 # Check if infra is currently running
 # We use standard json format to check status which is more compatible across versions
 if docker compose -f "$COMPILE_FILE_INFRA" ps --format json | grep -q '"State":"running"'; then
-  echo "   ✅ Infrastructure seems to be running"
-  # Run 'up -d' to ensure desired state (idempotent)
-  docker compose -f "$COMPILE_FILE_INFRA" up -d
+  echo "   ✅ Infrastructure seems to be running (Skipping restart to preserve shared state)"
 else
   echo "   🚀 Starting infrastructure..."
   
