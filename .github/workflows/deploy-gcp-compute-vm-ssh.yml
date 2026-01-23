@@ -141,7 +141,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 300s
+          command_timeout: 100s
           script: |
             cd "$HOME/smile-next" || { echo "ERROR: $HOME/smile-next not found"; exit 1; }
             export ENVIRONMENT="${{ inputs.environment }}"

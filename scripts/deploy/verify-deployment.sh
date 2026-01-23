@@ -66,6 +66,8 @@ MAX_RETRIES=15
 RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  # Temporarily disable exit-on-error to allow retries if health check fails
+  set +e
   HEALTH_RESULT=$(docker exec "$CONTAINER_NAME" node -e "
     const http = require('http');
     http.get('http://localhost:3000/api/health', (res) => {
@@ -89,8 +91,10 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
       });
     }).on('error', () => process.exit(1));
   " 2>/dev/null)
+  EXIT_CODE=$?
+  set -e
   
-  if [ $? -eq 0 ]; then
+  if [ $EXIT_CODE -eq 0 ]; then
     echo "✓ Health check passed"
     
     # Parse and display database status
