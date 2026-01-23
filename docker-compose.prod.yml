@@ -36,8 +36,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/smile_new_db
       - REDIS_URL=redis://redis:6379
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-}
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_TRUST_HOST=true
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
@@ -52,8 +52,6 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - EMAIL_FROM=${EMAIL_FROM:-}
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -66,7 +64,7 @@ services:
 
 networks:
   smile-network:
-    driver: bridge
+    external: true
 
 volumes:
   postgres_data:

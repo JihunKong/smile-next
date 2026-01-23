@@ -69,8 +69,8 @@ services:
       # Both share the same PostgreSQL container but use different databases
       - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/${DB_NAME:-smile_dev_db}
       - REDIS_URL=redis://redis:6379
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-}
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_TRUST_HOST=true
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
@@ -100,8 +100,7 @@ services:
 
 networks:
   smile-network:
-    name: smile-network  # Explicit name to avoid project prefix
-    driver: bridge
+    external: true
 
 volumes:
   postgres_data:
