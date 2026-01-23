@@ -68,20 +68,25 @@ fi
 cd "$PROJECT_DIR" || { echo "ERROR: Cannot cd to $PROJECT_DIR"; exit 1; }
 echo "📁 Using project directory: $PROJECT_DIR"
 
-# Select docker-compose file based on environment
-# Both dev and QA use docker-compose.dev.yml and share the same PostgreSQL + Redis
+# Select docker-compose files based on environment
 if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
-  COMPOSE_FILE="docker-compose.dev.yml"
-  echo "📋 Using docker-compose.dev.yml (includes PostgreSQL + Redis)"
-  echo "   Note: dev and QA share the same PostgreSQL and Redis instances"
+  COMPILE_FILE_APP="docker-compose.dev.yml"
+  COMPILE_FILE_INFRA="docker-compose.infra.dev.yml"
+  echo "📋 Using Dev/QA Stack:"
+  echo "   - App:   $COMPILE_FILE_APP"
+  echo "   - Infra: $COMPILE_FILE_INFRA (PostgreSQL + Redis)"
 else
-  COMPOSE_FILE="docker-compose.prod.yml"
-  echo "📋 Using docker-compose.prod.yml (Redis only, uses GCP Cloud SQL)"
+  COMPILE_FILE_APP="docker-compose.prod.yml"
+  COMPILE_FILE_INFRA="docker-compose.infra.prod.yml"
+  echo "📋 Using Prod Stack:"
+  echo "   - App:   $COMPILE_FILE_APP"
+  echo "   - Infra: $COMPILE_FILE_INFRA (Redis only, DB is Cloud SQL)"
 fi
 
-# Verify docker-compose file exists
-if [ ! -f "$COMPOSE_FILE" ]; then
-  echo "❌ ERROR: $COMPOSE_FILE not found in $PROJECT_DIR"
+# Verify docker-compose files exist
+if [ ! -f "$COMPILE_FILE_APP" ] || [ ! -f "$COMPILE_FILE_INFRA" ]; then
+  echo "❌ ERROR: Deployment files not found!"
+  echo "   Checked: $COMPILE_FILE_APP and $COMPILE_FILE_INFRA"
   exit 1
 fi
 
@@ -92,17 +97,49 @@ bash scripts/deploy/validate-env.sh "$ENVIRONMENT" || {
   exit 1
 }
 
-# Load environment variables from .env file early (needed for DB_PASSWORD, etc.)
+# Load environment variables
 ENV_FILE="$PROJECT_DIR/.env"
-if [ ! -f "$ENV_FILE" ]; then
-  ENV_FILE="/opt/smile-next/.env"
-fi
+[ -f "/opt/smile-next/.env" ] && ENV_FILE="/opt/smile-next/.env"
+
 if [ -f "$ENV_FILE" ]; then
   set -a
   source "$ENV_FILE"
   set +a
   echo "✅ Environment variables loaded from $ENV_FILE"
 fi
+
+# ... [Login & Pull logic usually goes here, preserving surrounding code] ...
+# (Assuming Login/Pull is handled above this block or I need to preserve it.
+#  The tool `replace_file_content` replaces a block. I must ensure I don't delete the Login logic if it was OUTSIDE my TargetContent range.
+#  Looking at original file, Login/Pull is lines 107-200.
+#  My TargetContent below starts at line 73.
+#  Wait, I should carefully exclude the Login/Pull logic from replacement if I want to keep it simple,
+#  OR re-include it.
+#  Actually, the simpler 'structure' logic (Choosing files) was at lines 71-80.
+#  The 'Deployment' logic was at lines 316-500.
+#  I should do TWO replacements or one massive one.
+#  Let's do the Deployment Logic replacement first (Lines 316-500).
+#  I'll handle the File Selection separately or just hardcode it in the Deployment part if I can't reach the top variables easily?
+#  No, variables are set early.
+#  Let's replace the whole file content related to execution.
+
+# Let's stick to replacing the logic after "Ensure network" (Line 217).
+
+# ---------------------------------------------------------
+# REPLACEMENT STRATEGY
+# ---------------------------------------------------------
+# The previous `update-app.sh` had a lot of complex logic.
+# I want to replace the "Main Logic" starting from line 71 (File Selection) down to line 500.
+# But that includes the "Pull Image" logic (107-197) which I want to KEEP.
+# So I will do 2 edits.
+# Edit 1: File Selection (Lines 71-80)
+# Edit 2: The execution logic (Lines 240-500)
+# ---------------------------------------------------------
+
+# EDIT 1: File Selection
+# ---------------------------------------------------------
+
+
 
 # Log in to GHCR (if credentials are available)
 # Use the same approach as build workflow: prefer GITHUB_TOKEN, fallback to GitHub App token
@@ -227,6 +264,23 @@ if [ -n "$OLD_NETWORK" ] && [ "$OLD_NETWORK" != "$NETWORK_NAME" ]; then
   echo "ℹ️  Found old network: $OLD_NETWORK (containers will be migrated to $NETWORK_NAME on next recreate)"
 fi
 
+# Ensure shared services are connected to the network
+# This fixes connectivity issues if containers were created before the network was added
+# or if they were started manually without the network
+echo "🌐 Checking shared service network connectivity..."
+for SHARED_CONTAINER in "smile-postgres" "smile-redis"; do
+  if docker ps -a --format "{{.Names}}" | grep -q "^${SHARED_CONTAINER}$"; then
+    if ! docker network inspect "$NETWORK_NAME" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep -q "${SHARED_CONTAINER}"; then
+      echo "   Connecting $SHARED_CONTAINER to $NETWORK_NAME..."
+      docker network connect "$NETWORK_NAME" "$SHARED_CONTAINER" 2>/dev/null || {
+        echo "   ⚠️ Failed to connect $SHARED_CONTAINER to $NETWORK_NAME (will let docker-compose handle it)"
+      }
+    else
+      echo "   ✅ $SHARED_CONTAINER is on $NETWORK_NAME"
+    fi
+  fi
+done
+
 # Ensure volumes exist (idempotent - won't recreate if they exist)
 # Dev and QA share the same volumes
 echo "📦 Ensuring volumes exist (data will be preserved)..."
@@ -237,266 +291,87 @@ if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
   docker volume create app_postgres_data 2>/dev/null || echo "✅ Volume app_postgres_data already exists (shared by dev/QA)"
 fi
 
-# Check which services exist (running or stopped)
-echo "🔍 Checking existing services..."
-DB_EXISTS=false
-DB_RUNNING=false
-REDIS_EXISTS=false
-REDIS_RUNNING=false
-APP_EXISTS=false
-APP_RUNNING=false
+# ------------------------------------------------------------------------------
+# 1. DEPLOY INFRASTRUCTURE
+# ------------------------------------------------------------------------------
+echo "🏗️  Ensuring infrastructure is running..."
+echo "   File: $COMPILE_FILE_INFRA"
 
-# Check for PostgreSQL (dev and QA share the same instance)
-if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
-  if docker ps -a --format "{{.Names}}" | grep -q "^smile-postgres$"; then
-    DB_EXISTS=true
-    if docker ps --format "{{.Names}}" | grep -q "^smile-postgres$"; then
-      DB_RUNNING=true
-      echo "   ✅ PostgreSQL is already running (shared by dev/QA, will keep it running)"
-    else
-      echo "   ℹ️  PostgreSQL container exists but is stopped (will start it)"
-    fi
-  fi
-fi
-
-if docker ps -a --format "{{.Names}}" | grep -q "^smile-redis$"; then
-  REDIS_EXISTS=true
-  if docker ps --format "{{.Names}}" | grep -q "^smile-redis$"; then
-    REDIS_RUNNING=true
-    echo "   ✅ Redis is already running (will keep it running)"
-  else
-    echo "   ℹ️  Redis container exists but is stopped (will start it)"
-  fi
-fi
-
-if docker ps -a --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
-  APP_EXISTS=true
-  if docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
-    APP_RUNNING=true
-    echo "   ℹ️  App container is running (will recreate with new image)"
-  else
-    echo "   ℹ️  App container exists but is stopped (will recreate with new image)"
-  fi
-fi
-
-# Start stopped db/redis containers if they exist but aren't running
-if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
-  if [ "$DB_EXISTS" = true ] && [ "$DB_RUNNING" = false ]; then
-    echo "🔄 Starting existing PostgreSQL container..."
-    docker start smile-postgres || {
-      echo "⚠️  Failed to start PostgreSQL container, will let docker-compose handle it"
-    }
-    sleep 2
-  fi
-fi
-
-if [ "$REDIS_EXISTS" = true ] && [ "$REDIS_RUNNING" = false ]; then
-  echo "🔄 Starting existing Redis container..."
-  docker start smile-redis || {
-    echo "⚠️  Failed to start Redis container, will let docker-compose handle it"
-  }
-  sleep 2
-fi
-
-# Stop and remove app container (will be recreated with new image)
-if [ "$APP_EXISTS" = true ]; then
-  echo "🛑 Stopping app container for update (db/redis stay running)..."
-  docker stop "$CONTAINER_NAME" 2>/dev/null || true
-  docker rm "$CONTAINER_NAME" 2>/dev/null || true
-fi
-
-# Re-export docker-compose variables
-export DOCKER_IMAGE="$IMAGE_TAG"
-export CONTAINER_NAME="$CONTAINER_NAME"
-export PORT="$PORT"
-
-# Start or update services
-# If db/redis containers exist and are running, only start the app (using --no-deps to skip dependencies)
-# If they don't exist or aren't running, start everything with docker-compose
-if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
-  # Re-check running status after starting stopped containers
-  DB_RUNNING_NOW=$(docker ps --format "{{.Names}}" | grep -q "^smile-postgres$" && echo "true" || echo "false")
-  REDIS_RUNNING_NOW=$(docker ps --format "{{.Names}}" | grep -q "^smile-redis$" && echo "true" || echo "false")
-  
-  if [ "$DB_RUNNING_NOW" = "true" ] && [ "$REDIS_RUNNING_NOW" = "true" ]; then
-    # Both db and redis are running, only update the app
-    echo "🚀 Updating app container (db and redis stay running - shared by dev/QA)..."
-    docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate app || {
-      echo "❌ Failed to recreate app container"
-      exit 1
-    }
-    
-    # Wait for app container to be ready
-    echo "⏳ Waiting for app container to be ready..."
-    sleep 3
-    
-    # Verify app container is on the correct network (smile-network)
-    # Docker-compose should have connected it, but verify and fix if needed
-    if ! docker network inspect "$NETWORK_NAME" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep -q "${CONTAINER_NAME}"; then
-      echo "⚠️  App container not on $NETWORK_NAME, connecting it..."
-      docker network connect "$NETWORK_NAME" "${CONTAINER_NAME}" 2>/dev/null || {
-        echo "⚠️  Could not connect container to network (may already be connected or docker-compose will handle it)"
-      }
-      echo "✅ App container connected to $NETWORK_NAME"
-    else
-      echo "✅ App container is on $NETWORK_NAME"
-    fi
-    
-    # Ensure database exists and initialize schema if needed
-    echo "🔍 Ensuring database '$DB_NAME' exists..."
-    docker exec smile-postgres psql -U smile_user -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || {
-      echo "📦 Creating database '$DB_NAME'..."
-      docker exec smile-postgres psql -U smile_user -d postgres -c "CREATE DATABASE \"$DB_NAME\";" || {
-        echo "⚠️  Could not create database (may already exist or need permissions)"
-      }
-    }
-    
-    # Check if app container is running and initialize Prisma schema if needed
-    if docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
-      echo "🔍 Checking if database schema needs initialization..."
-      TABLE_COUNT=$(docker exec smile-postgres psql -U smile_user -d "$DB_NAME" -tc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ' || echo "0")
-      
-      if [ "$TABLE_COUNT" = "0" ] || [ -z "$TABLE_COUNT" ]; then
-        echo "📦 Database schema not initialized. Running Prisma db push..."
-        docker exec "$CONTAINER_NAME" npx prisma db push --accept-data-loss || {
-          echo "⚠️  Prisma db push failed (schema may already be initialized or container not ready)"
-        }
-        echo "✅ Database schema initialized"
-      else
-        echo "✅ Database schema already exists ($TABLE_COUNT tables found)"
-      fi
-    fi
-  else
-    # Start all services with docker-compose
-    # If containers exist, docker-compose will start them without recreating (unless --force-recreate is used)
-    echo "🚀 Starting all services with docker-compose..."
-    
-    # If containers exist but aren't running, start them first to avoid recreation conflicts
-    if [ "$DB_EXISTS" = true ] && [ "$DB_RUNNING_NOW" != "true" ]; then
-      echo "   Starting existing PostgreSQL container..."
-      docker start smile-postgres 2>/dev/null || true
-    fi
-    
-    if [ "$REDIS_EXISTS" = true ] && [ "$REDIS_RUNNING_NOW" != "true" ]; then
-      echo "   Starting existing Redis container..."
-      docker start smile-redis 2>/dev/null || true
-    fi
-    
-    # Use docker-compose to ensure all services are up and configured correctly
-    # This will start any stopped containers and create missing ones
-    docker compose -f "$COMPOSE_FILE" up -d || {
-      echo "❌ Failed to start services"
-      echo "   Checking port 5432 (PostgreSQL)..."
-      docker ps --format "table {{.Names}}\t{{.Ports}}" | grep -E "(5432|postgres)" || true
-      echo ""
-      echo "   Troubleshooting:"
-      echo "   1. Check if another process is using port 5432: sudo lsof -i :5432"
-      echo "   2. Stop conflicting containers: docker stop <container-name>"
-      echo "   3. Remove conflicting containers: docker rm <container-name>"
-      exit 1
-    }
-    
-    # Wait for dependencies to be healthy
-    echo "⏳ Waiting for dependencies to be healthy..."
-    sleep 5
-    
-    # Verify all containers are on the correct network
-    echo "🌐 Verifying network connectivity..."
-    if docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
-      if ! docker network inspect "$NETWORK_NAME" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep -q "${CONTAINER_NAME}"; then
-        echo "⚠️  App container not on $NETWORK_NAME, connecting it..."
-        docker network connect "$NETWORK_NAME" "${CONTAINER_NAME}" 2>/dev/null || {
-          echo "⚠️  Could not connect container to network (may already be connected or docker-compose will handle it)"
-        }
-        echo "✅ App container connected to $NETWORK_NAME"
-      else
-        echo "✅ App container is on $NETWORK_NAME"
-      fi
-    fi
-    
-    # Verify PostgreSQL is ready (dev and QA)
-    for i in {1..20}; do
-      if docker exec smile-postgres pg_isready -U smile_user > /dev/null 2>&1; then
-        echo "✅ PostgreSQL is ready (shared by dev/QA)"
-        break
-      fi
-      if [ $i -eq 20 ]; then
-        echo "⚠️  PostgreSQL health check timeout (may still be starting)"
-      fi
-      sleep 1
-    done
-    
-    # Ensure the environment-specific database exists
-    echo "🔍 Ensuring database '$DB_NAME' exists..."
-    docker exec smile-postgres psql -U smile_user -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || {
-      echo "📦 Creating database '$DB_NAME'..."
-      docker exec smile-postgres psql -U smile_user -d postgres -c "CREATE DATABASE \"$DB_NAME\";" || {
-        echo "⚠️  Could not create database (may already exist or need permissions)"
-      }
-    }
-    echo "✅ Database '$DB_NAME' is ready"
-    
-    # Re-encode password with scram-sha-256 for SSH tunnel access (DBeaver, etc.)
-    echo "🔐 Ensuring PostgreSQL password uses scram-sha-256 encoding..."
-    docker exec smile-postgres psql -U smile_user -d postgres -c "ALTER USER smile_user PASSWORD '${DB_PASSWORD:-simple_pass}';" > /dev/null 2>&1 || {
-      echo "⚠️  Could not re-encode password (may need manual reset for DBeaver access)"
-    }
-    echo "✅ PostgreSQL password configured for scram-sha-256 auth"
-  fi
-  
-  # Wait for app container to be ready before running Prisma commands
-  echo "⏳ Waiting for app container to be ready..."
-  sleep 3
-  
-  # Check if app container is running before running Prisma commands
-  if docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
-    # Initialize Prisma schema if database is empty (for new databases)
-    echo "🔍 Checking if database schema needs initialization..."
-    
-    # Check if database has any tables
-    TABLE_COUNT=$(docker exec smile-postgres psql -U smile_user -d "$DB_NAME" -tc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ' || echo "0")
-    
-    if [ "$TABLE_COUNT" = "0" ] || [ -z "$TABLE_COUNT" ]; then
-      echo "📦 Database schema not initialized. Running Prisma db push..."
-      # Run Prisma db push inside the app container
-      # The container has DATABASE_URL set from docker-compose, so it will use the correct database
-      docker exec "$CONTAINER_NAME" npx prisma db push --accept-data-loss || {
-        echo "⚠️  Prisma db push failed (schema may already be initialized or container not ready)"
-        echo "   This is normal if the database already has tables"
-      }
-      echo "✅ Database schema initialized"
-    else
-      echo "✅ Database schema already exists ($TABLE_COUNT tables found)"
-      echo "   Skipping schema initialization"
-    fi
-    
-    # Optionally run migrations if using Prisma migrations (commented out by default)
-    # Uncomment if you switch to using Prisma migrations instead of db push
-    # echo "🔄 Running Prisma migrations..."
-    # docker exec "$CONTAINER_NAME" npx prisma migrate deploy || {
-    #   echo "⚠️  Prisma migrations failed (may not have migrations)"
-    # }
-  else
-    echo "⚠️  App container '$CONTAINER_NAME' not running yet, skipping Prisma setup"
-    echo "   Schema will be initialized on first app startup or next deployment"
-  fi
+# Check if infra is already running to avoid unnecessary restarts
+# We only want to ensure it UP, we don't force recreate unless user asks (not implemented yet)
+if docker compose -f "$COMPILE_FILE_INFRA" ps --custom-format "{{.State}}" | grep -q "running"; then
+  echo "   ✅ Infrastructure seems to be running"
+  # Run 'up -d' anyway to handle any missing containers (idempotent)
+  docker compose -f "$COMPILE_FILE_INFRA" up -d
 else
-  # Prod: Check if redis is running
-  if [ "$REDIS_RUNNING" = true ]; then
-    echo "🚀 Updating app container (redis stays running)..."
-    docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate app || {
-      echo "❌ Failed to recreate app container"
-      exit 1
+  echo "   🚀 Starting infrastructure..."
+  docker compose -f "$COMPILE_FILE_INFRA" up -d || {
+    echo "❌ Failed to start infrastructure"
+    exit 1
+  }
+fi
+
+# Wait for Infra Health
+echo "⏳ Waiting for infrastructure health..."
+if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
+  # Wait for DB
+  MAX_RETRIES=30
+  echo "   Checking PostgreSQL..."
+  until docker exec smile-postgres pg_isready -U smile_user >/dev/null 2>&1 || [ $MAX_RETRIES -eq 0 ]; do
+    echo -n "."
+    sleep 1
+    MAX_RETRIES=$((MAX_RETRIES - 1))
+  done
+  echo ""
+  if [ $MAX_RETRIES -eq 0 ]; then echo "⚠️  PostgreSQL timed out but proceeding..."; else echo "   ✅ PostgreSQL is ready"; fi
+  
+  # Ensure DB password compatibility
+  docker exec smile-postgres psql -U smile_user -d postgres -c "ALTER USER smile_user PASSWORD '${DB_PASSWORD:-simple_pass}';" >/dev/null 2>&1 || true
+fi
+
+# ------------------------------------------------------------------------------
+# 2. DEPLOY APPLICATION
+# ------------------------------------------------------------------------------
+echo "🚀 Deploying Application..."
+echo "   File: $COMPILE_FILE_APP"
+echo "   Image: $IMAGE_TAG"
+
+# Stop existing app container to ensure clean state
+# (Docker Compose --force-recreate does this, but explicit stop is safer for network cleanup)
+docker stop "$CONTAINER_NAME" 2>/dev/null || true
+docker rm "$CONTAINER_NAME" 2>/dev/null || true
+
+# Start App
+docker compose -f "$COMPILE_FILE_APP" up -d --force-recreate || {
+  echo "❌ Failed to start application"
+  exit 1
+}
+
+# ------------------------------------------------------------------------------
+# 3. POST-DEPLOYMENT CHECKS
+# ------------------------------------------------------------------------------
+echo "⏳ Waiting for app to be ready..."
+sleep 5
+
+# Ensure App is on the network (Safety Check)
+if ! docker network inspect "$NETWORK_NAME" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep -q "${CONTAINER_NAME}"; then
+   echo "⚠️  App container not on $NETWORK_NAME, connecting explicitly..."
+   docker network connect "$NETWORK_NAME" "${CONTAINER_NAME}" 2>/dev/null
+fi
+
+# Initialize Database Schema (for Dev/QA)
+if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
+    echo "🔍 Checking database initialization logic..."
+    
+    # Ensure database exists
+    docker exec smile-postgres psql -U smile_user -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || {
+      echo "📦 Creating database '$DB_NAME'..."
+      docker exec smile-postgres psql -U smile_user -d postgres -c "CREATE DATABASE \"$DB_NAME\";"
     }
-  else
-    # Start redis and app
-    docker compose -f "$COMPOSE_FILE" up -d || {
-      echo "❌ Failed to start services"
-      exit 1
-    }
-    echo "⏳ Waiting for Redis to be ready..."
-    sleep 3
-  fi
+
+    # Run Prisma Push
+    echo "📦 Updating database schema..."
+    docker exec "$CONTAINER_NAME" npm run db:push -- --accept-data-loss || echo "⚠️  Prisma push warning (check logs)"
 fi
 
 # Verify Redis is ready (if it's running - shared by dev/QA)
@@ -525,7 +400,7 @@ if systemctl list-unit-files | grep -q "^${SERVICE_NAME}.service"; then
   echo "✅ Systemd service $SERVICE_NAME reloaded - now managing all containers"
 else
   echo "ℹ️  Systemd service not found, containers managed directly by docker-compose"
-  echo "💡 Consider running: bash scripts/deploy/setup-systemd-service.sh $ENVIRONMENT $COMPOSE_FILE $SERVICE_NAME"
+  echo "💡 Consider running: bash scripts/deploy/setup-systemd-service.sh $ENVIRONMENT $COMPILE_FILE_APP $SERVICE_NAME"
 fi
 
 # Clean up old images

@@ -72,6 +72,16 @@ sudo -u digitalschema -i
 # Deploy (dev environment)
 cd ~/smile-next
 git pull origin main
+
+# OPTION 1: Automated Script (Recommended)
+# This handles the split stack (Infra + App) automatically
+bash scripts/deploy/update-app.sh dev "latest" "ghcr.io/seeds-smile-the-ultimate/smile-next-app" "smile-app" "3001"
+
+# OPTION 2: Manual (Split Stack Deployment)
+# 1. Start Infrastructure (Postgres + Redis)
+docker compose -f docker-compose.infra.dev.yml up -d
+
+# 2. Start Application (depends on Infra)
 docker compose -f docker-compose.dev.yml up -d
 
 # Verify
@@ -152,8 +162,10 @@ docker compose -f docker-compose.dev.yml restart app
 | `src/lib/ai/openai.ts` | OpenAI integration |
 | `src/lib/ai/prompts.ts` | AI prompts (Bloom's Taxonomy) |
 | `prisma/schema.prisma` | Database schema (32 tables) |
-| `docker-compose.dev.yml` | Dev environment Docker config |
-| `docker-compose.prod.yml` | Production Docker config |
+| `docker-compose.dev.yml` | Dev environment Docker config (App only) |
+| `docker-compose.prod.yml` | Production Docker config (App only) |
+| `docker-compose.infra.dev.yml` | Dev/QA Infrastructure (DB + Redis) |
+| `docker-compose.infra.prod.yml` | Production Infrastructure (Redis) |
 
 ## Environment Variables
 

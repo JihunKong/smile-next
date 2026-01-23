@@ -1,0 +1,33 @@
+# Infrastructure Docker Compose for Production
+# Includes Redis container (PostgreSQL is GCP Cloud SQL)
+# Usage: docker-compose -f docker-compose.infra.prod.yml up -d
+
+services:
+  # Redis for Bull Queue
+  redis:
+    image: redis:7-alpine
+    container_name: smile-redis
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smile-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+networks:
+  smile-network:
+    external: true
+
+volumes:
+  redis_data:
+    external: true
+    name: app_redis_data

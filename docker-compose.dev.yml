@@ -1,61 +1,8 @@
-# Dev VM Docker Compose (GCP Compute Engine)
-# Includes PostgreSQL and Redis containers
+# Dev VM Docker Compose (GCP Compute Engine) - App Only
+# Infrastructure (DB, Redis) is managed via docker-compose.infra.dev.yml
 # Usage: docker-compose -f docker-compose.dev.yml up -d
 
 services:
-  # PostgreSQL Database (shared by dev and QA)
-  # Note: POSTGRES_DB creates the initial database, but dev/QA use separate databases
-  # (smile_dev_db and smile_qa_db) created dynamically during deployment
-  db:
-    image: postgres:15-alpine
-    container_name: smile-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: smile_new_db  # Initial database (dev/QA use separate DBs: smile_dev_db, smile_qa_db)
-      POSTGRES_USER: smile_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-simple_pass}
-      # Enable SSH tunnel access (DBeaver, etc.) with scram-sha-256 auth
-      # Note: For existing volumes, you may need to reset the password after deploy:
-      #   docker exec smile-postgres psql -U smile_user -d postgres -c "ALTER USER smile_user PASSWORD 'simple_pass';"
-      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
-      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      # Generic healthcheck - checks PostgreSQL is ready (works for any database)
-      test: ["CMD-SHELL", "pg_isready -U smile_user"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - smile-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-
-  # Redis for Bull Queue
-  redis:
-    image: redis:7-alpine
-    container_name: smile-redis
-    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - smile-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 64M
-
   # Next.js Application
   app:
     image: ${DOCKER_IMAGE:-smile-next-app:latest}
@@ -66,8 +13,8 @@ services:
     environment:
       - NODE_ENV=production
       # Use environment-specific database name (dev uses 'smile_dev_db', qa uses 'smile_qa_db')
-      # Both share the same PostgreSQL container but use different databases
-      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/${DB_NAME:-smile_dev_db}
+      # Connects to smile-postgres container from infra stack
+      - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@smile-postgres:5432/${DB_NAME:-smile_dev_db}
       - REDIS_URL=redis://smile-redis:6379
       - NEXTAUTH_URL=${NEXTAUTH_URL:-}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-}
@@ -85,11 +32,6 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - EMAIL_FROM=${EMAIL_FROM:-}
       - DISABLE_WORKERS=${DISABLE_WORKERS:-false}
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     networks:
       - smile-network
     restart: unless-stopped
@@ -101,11 +43,3 @@ services:
 networks:
   smile-network:
     external: true
-
-volumes:
-  postgres_data:
-    external: true
-    name: app_postgres_data
-  redis_data:
-    external: true
-    name: app_redis_data
