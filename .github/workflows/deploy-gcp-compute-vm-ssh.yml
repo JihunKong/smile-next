@@ -18,6 +18,9 @@ on:
       image-name:
         required: true
         type: string
+      app-url:
+        required: true
+        type: string
 
 jobs:
   deploy:
@@ -118,7 +121,11 @@ jobs:
             export DOCKER_TAG="${{ inputs.docker-tag }}"
             export IMAGE_NAME="${{ inputs.image-name }}"
             export CONTAINER_NAME="${{ inputs.container-name }}"
+            export CONTAINER_NAME="${{ inputs.container-name }}"
             export PORT="${{ inputs.port }}"
+            # Export APP_URL for environment validation
+            export NEXTAUTH_URL="${{ inputs.app-url }}"
+            export NEXT_PUBLIC_APP_URL="${{ inputs.app-url }}"
             # Use GITHUB_TOKEN (same as build workflow) - better for org-level packages
             # Fall back to GitHub App token if GITHUB_TOKEN not available
             export GITHUB_TOKEN="${{ github.token }}"
@@ -134,7 +141,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 30s
+          command_timeout: 300s
           script: |
             cd "$HOME/smile-next" || { echo "ERROR: $HOME/smile-next not found"; exit 1; }
             export ENVIRONMENT="${{ inputs.environment }}"

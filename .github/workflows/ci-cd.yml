@@ -45,6 +45,7 @@ jobs:
       docker-tag: ${{ steps.vars.outputs.docker-tag }}
       host-port: ${{ steps.vars.outputs.host-port }}
       container-name: ${{ steps.vars.outputs.container-name }}
+      app-url: ${{ steps.vars.outputs.app-url }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -156,8 +157,16 @@ jobs:
           echo "📋 Outputs set:"
           echo "   env-name: $(cat $GITHUB_OUTPUT | grep '^env-name=' | cut -d'=' -f2 || echo 'NOT SET')"
           echo "   docker-tag: $(cat $GITHUB_OUTPUT | grep '^docker-tag=' | cut -d'=' -f2 || echo 'NOT SET')"
-          echo "   host-port: $(cat $GITHUB_OUTPUT | grep '^host-port=' | cut -d'=' -f2 || echo 'NOT SET')"
           echo "   container-name: $(cat $GITHUB_OUTPUT | grep '^container-name=' | cut -d'=' -f2 || echo 'NOT SET')"
+
+          # Determine APP_URL based on environment
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            APP_URL="https://smilealways.seedsofempowerment.org"
+          else
+            APP_URL="https://smilealways-blue.seedsofempowerment.org"
+          fi
+          echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
+          echo "✅ Set app-url: $APP_URL"
 
   # 2. Provision Infrastructure - Only runs on manual trigger or when infra changes on main branch
   provision-infra:
@@ -198,6 +207,7 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
+      app-url: ${{ needs.check-changes.outputs.app-url }}
       image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
@@ -214,6 +224,7 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
+      app-url: ${{ needs.check-changes.outputs.app-url }}
       image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
 
@@ -234,5 +245,6 @@ jobs:
       port: ${{ needs.check-changes.outputs.host-port }}
       docker-tag: ${{ needs.check-changes.outputs.docker-tag }}
       container-name: ${{ needs.check-changes.outputs.container-name }}
+      app-url: ${{ needs.check-changes.outputs.app-url }}
       image-name: ghcr.io/seeds-smile-the-ultimate/smile-web
     secrets: inherit
