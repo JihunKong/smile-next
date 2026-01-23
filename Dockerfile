@@ -52,6 +52,10 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Install prisma CLI explicitly for migrations since standalone build excludes it
+RUN npm install prisma
+
+
 USER nextjs
 
 EXPOSE 3000
