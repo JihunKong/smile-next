@@ -369,7 +369,7 @@ sleep 5
 # Ensure App is on the network (Safety Check)
 if ! docker network inspect "$NETWORK_NAME" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep -q "${CONTAINER_NAME}"; then
    echo "⚠️  App container not on $NETWORK_NAME, connecting explicitly..."
-   docker network connect "$NETWORK_NAME" "${CONTAINER_NAME}" 2>/dev/null
+   docker network connect "$NETWORK_NAME" "${CONTAINER_NAME}" || true
 fi
 
 # Initialize Database Schema (for Dev/QA)
