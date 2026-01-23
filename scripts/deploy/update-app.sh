@@ -103,28 +103,96 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 # Log in to GHCR (if credentials are available)
-if [ -n "$GHCR_PAT" ] && [ -n "$GHCR_USERNAME" ]; then
-  echo "🔐 Logging in to GitHub Container Registry..."
-  echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin || {
-    echo "⚠️  Warning: Failed to login to GHCR (may need credentials)"
-  }
+# Use the same approach as build workflow: prefer GITHUB_TOKEN, fallback to GitHub App token
+GHCR_USER="${GHCR_USERNAME:-seeds-smile-the-ultimate}"
+
+# Determine which token to use (match build workflow: prefer GITHUB_TOKEN)
+GHCR_TOKEN=""
+if [ -n "$GITHUB_TOKEN" ]; then
+  GHCR_TOKEN="$GITHUB_TOKEN"
+  echo "🔐 Using GITHUB_TOKEN for GHCR authentication (same as build workflow)"
 elif [ -n "$GHCR_PAT" ]; then
-  # Try with default username if only PAT is provided
-  echo "🔐 Logging in to GitHub Container Registry (using default username)..."
-  echo "$GHCR_PAT" | docker login ghcr.io -u "seeds-smile-the-ultimate" --password-stdin || {
-    echo "⚠️  Warning: Failed to login to GHCR"
-  }
+  GHCR_TOKEN="$GHCR_PAT"
+  echo "🔐 Using GitHub App token for GHCR authentication (fallback)"
 else
-  echo "ℹ️  Skipping GHCR login (credentials not provided)"
+  echo "ℹ️  No GHCR credentials provided, attempting to pull image (may work if image is public)..."
 fi
 
-# Pull the image
+if [ -n "$GHCR_TOKEN" ]; then
+  echo "   Username: $GHCR_USER"
+  echo "   Registry: ghcr.io"
+  echo "   Image: $IMAGE_NAME:$DOCKER_TAG"
+  
+  # Login with retry logic
+  MAX_LOGIN_RETRIES=3
+  LOGIN_RETRY=0
+  LOGIN_SUCCESS=false
+  
+  while [ $LOGIN_RETRY -lt $MAX_LOGIN_RETRIES ]; do
+    if echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin 2>&1; then
+      LOGIN_SUCCESS=true
+      echo "✅ Successfully logged in to GHCR"
+      break
+    else
+      LOGIN_RETRY=$((LOGIN_RETRY + 1))
+      if [ $LOGIN_RETRY -lt $MAX_LOGIN_RETRIES ]; then
+        echo "⚠️  Login attempt $LOGIN_RETRY failed, retrying in 2 seconds..."
+        sleep 2
+      fi
+    fi
+  done
+  
+  if [ "$LOGIN_SUCCESS" = false ]; then
+    echo "❌ Failed to login to GHCR after $MAX_LOGIN_RETRIES attempts"
+    if [ -n "$GITHUB_TOKEN" ]; then
+      echo "   Using GITHUB_TOKEN - this may indicate:"
+      echo "   1. Workflow doesn't have 'packages: read' permission"
+      echo "   2. Organization workflow permissions not enabled"
+    else
+      echo "   Using GitHub App token - this may indicate:"
+      echo "   1. GitHub App token doesn't have 'read:packages' permission"
+      echo "   2. Token has expired or is invalid"
+      echo "   3. Username format is incorrect"
+    fi
+    echo "   Checking if image is publicly accessible..."
+  fi
+fi
+
+# Pull the image with retry logic
 IMAGE_TAG="$IMAGE_NAME:$DOCKER_TAG"
 echo "📥 Pulling Docker image: $IMAGE_TAG"
-docker pull "$IMAGE_TAG" || {
-  echo "❌ Failed to pull image: $IMAGE_TAG"
+
+MAX_PULL_RETRIES=3
+PULL_RETRY=0
+PULL_SUCCESS=false
+
+while [ $PULL_RETRY -lt $MAX_PULL_RETRIES ]; do
+  if docker pull "$IMAGE_TAG" 2>&1; then
+    PULL_SUCCESS=true
+    echo "✅ Successfully pulled image: $IMAGE_TAG"
+    break
+  else
+    PULL_RETRY=$((PULL_RETRY + 1))
+    if [ $PULL_RETRY -lt $MAX_PULL_RETRIES ]; then
+      echo "⚠️  Pull attempt $PULL_RETRY failed, retrying in 5 seconds..."
+      sleep 5
+    fi
+  fi
+done
+
+if [ "$PULL_SUCCESS" = false ]; then
+  echo "❌ Failed to pull image after $MAX_PULL_RETRIES attempts: $IMAGE_TAG"
+  echo ""
+  echo "Troubleshooting steps:"
+  echo "1. Verify the GitHub App has 'read:packages' permission:"
+  echo "   https://github.com/settings/apps"
+  echo "2. Check that the installation has accepted updated permissions:"
+  echo "   https://github.com/settings/installations"
+  echo "3. Verify the package exists and is accessible:"
+  echo "   https://github.com/orgs/seeds-smile-the-ultimate/packages/container/smile-web"
+  echo "4. Ensure the token was generated correctly (check workflow logs)"
   exit 1
-}
+fi
 
 # Tag the image for docker-compose
 docker tag "$IMAGE_TAG" "$IMAGE_NAME:latest" || true

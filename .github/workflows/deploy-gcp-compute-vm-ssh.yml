@@ -119,6 +119,9 @@ jobs:
             export IMAGE_NAME="${{ inputs.image-name }}"
             export CONTAINER_NAME="${{ inputs.container-name }}"
             export PORT="${{ inputs.port }}"
+            # Use GITHUB_TOKEN (same as build workflow) - better for org-level packages
+            # Fall back to GitHub App token if GITHUB_TOKEN not available
+            export GITHUB_TOKEN="${{ github.token }}"
             export GHCR_PAT="${{ steps.github-token.outputs.token }}"
             export GHCR_USERNAME="${{ secrets.GHCR_USERNAME || 'seeds-smile-the-ultimate' }}"
             
