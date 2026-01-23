@@ -68,7 +68,7 @@ services:
       # Use environment-specific database name (dev uses 'smile_dev_db', qa uses 'smile_qa_db')
       # Both share the same PostgreSQL container but use different databases
       - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/${DB_NAME:-smile_dev_db}
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://smile-redis:6379
       - NEXTAUTH_URL=${NEXTAUTH_URL:-}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-}
       - AUTH_SECRET=${AUTH_SECRET}

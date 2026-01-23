@@ -35,7 +35,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://smile_user:${DB_PASSWORD:-simple_pass}@db:5432/smile_new_db
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://smile-redis:6379
       - NEXTAUTH_URL=${NEXTAUTH_URL:-}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-}
       - AUTH_SECRET=${AUTH_SECRET}
