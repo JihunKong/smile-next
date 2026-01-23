@@ -138,7 +138,7 @@ jobs:
             echo "container-name=smile-next-pr" >> $GITHUB_OUTPUT
             echo "✅ Set for pull_request: port=$PR_PORT"
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "env-name=prod" >> $GITHUB_OUTPUT
+            echo "env-name=qa" >> $GITHUB_OUTPUT
             echo "docker-tag=latest" >> $GITHUB_OUTPUT
             echo "host-port=$MAIN_PORT" >> $GITHUB_OUTPUT
             echo "container-name=smile-next" >> $GITHUB_OUTPUT
