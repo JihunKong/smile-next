@@ -7,7 +7,7 @@ services:
   app:
     image: ${DOCKER_IMAGE:-smile-next-app:latest}
     # Note: build section removed - image is pulled by GitHub Actions workflow
-    container_name: smile-app
+    container_name: ${CONTAINER_NAME:-smile-app}
     ports:
       - "${PORT:-3001}:3000"
     environment:
@@ -40,4 +40,4 @@ services:
 
 networks:
   smile-network:
-    external: true
+    name: smile-network
