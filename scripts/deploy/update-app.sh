@@ -224,32 +224,69 @@ if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
   docker volume create app_postgres_data 2>/dev/null || echo "✅ Volume app_postgres_data already exists (shared by dev/QA)"
 fi
 
-# Check which services are already running
+# Check which services exist (running or stopped)
 echo "🔍 Checking existing services..."
+DB_EXISTS=false
 DB_RUNNING=false
+REDIS_EXISTS=false
 REDIS_RUNNING=false
+APP_EXISTS=false
 APP_RUNNING=false
 
 # Check for PostgreSQL (dev and QA share the same instance)
 if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
-  if docker ps --format "{{.Names}}" | grep -q "^smile-postgres$"; then
-    DB_RUNNING=true
-    echo "   ✅ PostgreSQL is already running (shared by dev/QA, will keep it running)"
+  if docker ps -a --format "{{.Names}}" | grep -q "^smile-postgres$"; then
+    DB_EXISTS=true
+    if docker ps --format "{{.Names}}" | grep -q "^smile-postgres$"; then
+      DB_RUNNING=true
+      echo "   ✅ PostgreSQL is already running (shared by dev/QA, will keep it running)"
+    else
+      echo "   ℹ️  PostgreSQL container exists but is stopped (will start it)"
+    fi
   fi
 fi
 
-if docker ps --format "{{.Names}}" | grep -q "^smile-redis$"; then
-  REDIS_RUNNING=true
-  echo "   ✅ Redis is already running (will keep it running)"
+if docker ps -a --format "{{.Names}}" | grep -q "^smile-redis$"; then
+  REDIS_EXISTS=true
+  if docker ps --format "{{.Names}}" | grep -q "^smile-redis$"; then
+    REDIS_RUNNING=true
+    echo "   ✅ Redis is already running (will keep it running)"
+  else
+    echo "   ℹ️  Redis container exists but is stopped (will start it)"
+  fi
 fi
 
-if docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
-  APP_RUNNING=true
-  echo "   ℹ️  App container is running (will recreate with new image)"
+if docker ps -a --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+  APP_EXISTS=true
+  if docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+    APP_RUNNING=true
+    echo "   ℹ️  App container is running (will recreate with new image)"
+  else
+    echo "   ℹ️  App container exists but is stopped (will recreate with new image)"
+  fi
 fi
 
-# Stop only the app container (keep db/redis running)
-if [ "$APP_RUNNING" = true ]; then
+# Start stopped db/redis containers if they exist but aren't running
+if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
+  if [ "$DB_EXISTS" = true ] && [ "$DB_RUNNING" = false ]; then
+    echo "🔄 Starting existing PostgreSQL container..."
+    docker start smile-postgres || {
+      echo "⚠️  Failed to start PostgreSQL container, will let docker-compose handle it"
+    }
+    sleep 2
+  fi
+fi
+
+if [ "$REDIS_EXISTS" = true ] && [ "$REDIS_RUNNING" = false ]; then
+  echo "🔄 Starting existing Redis container..."
+  docker start smile-redis || {
+    echo "⚠️  Failed to start Redis container, will let docker-compose handle it"
+  }
+  sleep 2
+fi
+
+# Stop and remove app container (will be recreated with new image)
+if [ "$APP_EXISTS" = true ]; then
   echo "🛑 Stopping app container for update (db/redis stay running)..."
   docker stop "$CONTAINER_NAME" 2>/dev/null || true
   docker rm "$CONTAINER_NAME" 2>/dev/null || true
@@ -261,10 +298,14 @@ export CONTAINER_NAME="$CONTAINER_NAME"
 export PORT="$PORT"
 
 # Start or update services
-# If db/redis are running, only start the app (using --no-deps to skip dependencies)
-# If they're not running, start everything
+# If db/redis containers exist and are running, only start the app (using --no-deps to skip dependencies)
+# If they don't exist or aren't running, start everything with docker-compose
 if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
-  if [ "$DB_RUNNING" = true ] && [ "$REDIS_RUNNING" = true ]; then
+  # Re-check running status after starting stopped containers
+  DB_RUNNING_NOW=$(docker ps --format "{{.Names}}" | grep -q "^smile-postgres$" && echo "true" || echo "false")
+  REDIS_RUNNING_NOW=$(docker ps --format "{{.Names}}" | grep -q "^smile-redis$" && echo "true" || echo "false")
+  
+  if [ "$DB_RUNNING_NOW" = "true" ] && [ "$REDIS_RUNNING_NOW" = "true" ]; then
     # Both db and redis are running, only update the app
     echo "🚀 Updating app container (db and redis stay running - shared by dev/QA)..."
     docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate app || {
@@ -301,12 +342,32 @@ if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
       fi
     fi
   else
-    # Start all services (docker-compose will handle existing containers gracefully)
+    # Start all services with docker-compose
+    # If containers exist, docker-compose will start them without recreating (unless --force-recreate is used)
     echo "🚀 Starting all services with docker-compose..."
+    
+    # If containers exist but aren't running, start them first to avoid recreation conflicts
+    if [ "$DB_EXISTS" = true ] && [ "$DB_RUNNING_NOW" != "true" ]; then
+      echo "   Starting existing PostgreSQL container..."
+      docker start smile-postgres 2>/dev/null || true
+    fi
+    
+    if [ "$REDIS_EXISTS" = true ] && [ "$REDIS_RUNNING_NOW" != "true" ]; then
+      echo "   Starting existing Redis container..."
+      docker start smile-redis 2>/dev/null || true
+    fi
+    
+    # Use docker-compose to ensure all services are up and configured correctly
+    # This will start any stopped containers and create missing ones
     docker compose -f "$COMPOSE_FILE" up -d || {
       echo "❌ Failed to start services"
       echo "   Checking port 5432 (PostgreSQL)..."
       docker ps --format "table {{.Names}}\t{{.Ports}}" | grep -E "(5432|postgres)" || true
+      echo ""
+      echo "   Troubleshooting:"
+      echo "   1. Check if another process is using port 5432: sudo lsof -i :5432"
+      echo "   2. Stop conflicting containers: docker stop <container-name>"
+      echo "   3. Remove conflicting containers: docker rm <container-name>"
       exit 1
     }
     
