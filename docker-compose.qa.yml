@@ -40,4 +40,4 @@ services:
 
 networks:
   smile-network:
-    external: true
+    name: smile-network
