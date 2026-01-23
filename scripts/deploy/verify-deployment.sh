@@ -26,15 +26,39 @@ if systemctl list-unit-files | grep -q "^${SERVICE_NAME}.service"; then
   fi
 fi
 
-# Wait for container to start
-sleep 5
+# Wait for container to start (with retries)
+MAX_WAIT_RETRIES=10
+WAIT_RETRY=0
+CONTAINER_RUNNING=false
 
-# Check if container is running
-if ! docker ps | grep -q "$CONTAINER_NAME"; then
-  echo "❌ Container is not running!"
-  echo "Container logs:"
-  docker logs "$CONTAINER_NAME" --tail 50 2>/dev/null || true
-  exit 1
+while [ $WAIT_RETRY -lt $MAX_WAIT_RETRIES ]; do
+  if docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+    CONTAINER_RUNNING=true
+    echo "✅ Container is running"
+    break
+  fi
+  
+  WAIT_RETRY=$((WAIT_RETRY + 1))
+  echo "⏳ Waiting for container to start... ($WAIT_RETRY/$MAX_WAIT_RETRIES)"
+  sleep 3
+done
+
+# Check if container exists (even if stopped)
+if [ "$CONTAINER_RUNNING" = false ]; then
+  if docker ps -a --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+    echo "❌ Container exists but is not running!"
+    echo "Container status:"
+    docker ps -a --filter "name=${CONTAINER_NAME}" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+    echo ""
+    echo "Container logs:"
+    docker logs "$CONTAINER_NAME" --tail 50 2>/dev/null || true
+    exit 1
+  else
+    echo "❌ Container '$CONTAINER_NAME' does not exist!"
+    echo "Available containers:"
+    docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | head -10
+    exit 1
+  fi
 fi
 
 # Check health endpoint

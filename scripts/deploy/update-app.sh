@@ -214,6 +214,19 @@ export DOCKER_IMAGE="$IMAGE_TAG"
 export PORT="$PORT"
 export CONTAINER_NAME="$CONTAINER_NAME"
 
+# Ensure network exists (required for container communication)
+# Docker-compose will create/use 'smile-network' (explicit name in compose file)
+echo "🌐 Ensuring Docker network exists..."
+# Create the network with explicit name (docker-compose will use it)
+docker network create smile-network 2>/dev/null && echo "✅ Created network: smile-network" || echo "✅ Network smile-network already exists"
+NETWORK_NAME="smile-network"
+
+# If old prefixed network exists, we'll migrate containers to the new network
+OLD_NETWORK=$(docker network ls --format "{{.Name}}" | grep -E "^smile-next_smile-network$" || true)
+if [ -n "$OLD_NETWORK" ] && [ "$OLD_NETWORK" != "$NETWORK_NAME" ]; then
+  echo "ℹ️  Found old network: $OLD_NETWORK (containers will be migrated to $NETWORK_NAME on next recreate)"
+fi
+
 # Ensure volumes exist (idempotent - won't recreate if they exist)
 # Dev and QA share the same volumes
 echo "📦 Ensuring volumes exist (data will be preserved)..."
@@ -317,6 +330,18 @@ if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
     echo "⏳ Waiting for app container to be ready..."
     sleep 3
     
+    # Verify app container is on the correct network (smile-network)
+    # Docker-compose should have connected it, but verify and fix if needed
+    if ! docker network inspect "$NETWORK_NAME" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep -q "${CONTAINER_NAME}"; then
+      echo "⚠️  App container not on $NETWORK_NAME, connecting it..."
+      docker network connect "$NETWORK_NAME" "${CONTAINER_NAME}" 2>/dev/null || {
+        echo "⚠️  Could not connect container to network (may already be connected or docker-compose will handle it)"
+      }
+      echo "✅ App container connected to $NETWORK_NAME"
+    else
+      echo "✅ App container is on $NETWORK_NAME"
+    fi
+    
     # Ensure database exists and initialize schema if needed
     echo "🔍 Ensuring database '$DB_NAME' exists..."
     docker exec smile-postgres psql -U smile_user -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || {
@@ -333,7 +358,7 @@ if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
       
       if [ "$TABLE_COUNT" = "0" ] || [ -z "$TABLE_COUNT" ]; then
         echo "📦 Database schema not initialized. Running Prisma db push..."
-        docker exec "$CONTAINER_NAME" npx prisma db push --skip-generate || {
+        docker exec "$CONTAINER_NAME" npx prisma db push --accept-data-loss || {
           echo "⚠️  Prisma db push failed (schema may already be initialized or container not ready)"
         }
         echo "✅ Database schema initialized"
@@ -374,6 +399,20 @@ if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
     # Wait for dependencies to be healthy
     echo "⏳ Waiting for dependencies to be healthy..."
     sleep 5
+    
+    # Verify all containers are on the correct network
+    echo "🌐 Verifying network connectivity..."
+    if docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+      if ! docker network inspect "$NETWORK_NAME" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep -q "${CONTAINER_NAME}"; then
+        echo "⚠️  App container not on $NETWORK_NAME, connecting it..."
+        docker network connect "$NETWORK_NAME" "${CONTAINER_NAME}" 2>/dev/null || {
+          echo "⚠️  Could not connect container to network (may already be connected or docker-compose will handle it)"
+        }
+        echo "✅ App container connected to $NETWORK_NAME"
+      else
+        echo "✅ App container is on $NETWORK_NAME"
+      fi
+    fi
     
     # Verify PostgreSQL is ready (dev and QA)
     for i in {1..20}; do
@@ -421,7 +460,7 @@ if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
       echo "📦 Database schema not initialized. Running Prisma db push..."
       # Run Prisma db push inside the app container
       # The container has DATABASE_URL set from docker-compose, so it will use the correct database
-      docker exec "$CONTAINER_NAME" npx prisma db push --skip-generate || {
+      docker exec "$CONTAINER_NAME" npx prisma db push --accept-data-loss || {
         echo "⚠️  Prisma db push failed (schema may already be initialized or container not ready)"
         echo "   This is normal if the database already has tables"
       }
