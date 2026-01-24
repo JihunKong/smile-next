@@ -81,34 +81,65 @@ jobs:
           SHOULD_BUILD="false"
           SHOULD_DEPLOY="false"
           
+          # Determine what changed
+          SRC_CHANGED="${{ steps.filter.outputs.src }}"
+          INFRA_CHANGED="${{ steps.filter.outputs.infra }}"
+          
+          echo "📋 Change detection:"
+          echo "   Source code changed: $SRC_CHANGED"
+          echo "   Infrastructure changed: $INFRA_CHANGED"
+          
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Manual PR deploy - use existing PR image (no rebuild needed)
             SHOULD_BUILD="false"
             SHOULD_DEPLOY="true"
           elif [ "${{ github.event_name }}" == "pull_request" ]; then
-            # PR with relevant changes - build and deploy
+            # PR with relevant changes
             # SKIP if source branch is 'develop' (to avoid double deploy)
             if [ "${{ github.head_ref }}" == "develop" ]; then
               echo "ℹ️  Skipping PR deploy: source branch is 'develop' (already deployed via push)"
               SHOULD_BUILD="false"
               SHOULD_DEPLOY="false"
-            elif [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
-              SHOULD_BUILD="true"
-              SHOULD_DEPLOY="true"
+            else
+              # Build only if source code changed
+              if [ "$SRC_CHANGED" == "true" ]; then
+                SHOULD_BUILD="true"
+                SHOULD_DEPLOY="true"
+              elif [ "$INFRA_CHANGED" == "true" ]; then
+                # Infra only changed - deploy without rebuild (use existing image)
+                SHOULD_BUILD="false"
+                SHOULD_DEPLOY="true"
+                echo "ℹ️  Infra-only change: will deploy using existing image"
+              fi
             fi
           elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            # Main branch push - build and deploy
-            if [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
+            # Main branch push
+            if [ "$SRC_CHANGED" == "true" ]; then
               SHOULD_BUILD="true"
               SHOULD_DEPLOY="true"
+            elif [ "$INFRA_CHANGED" == "true" ]; then
+              # Infra only - redeploy with existing image
+              SHOULD_BUILD="false"
+              SHOULD_DEPLOY="true"
+              echo "ℹ️  Infra-only change: will deploy using existing image"
             fi
           elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            # Develop branch push - build and deploy
-            if [ "${{ steps.filter.outputs.src }}" == "true" ] || [ "${{ steps.filter.outputs.infra }}" == "true" ]; then
+            # Develop branch push
+            if [ "$SRC_CHANGED" == "true" ]; then
               SHOULD_BUILD="true"
               SHOULD_DEPLOY="true"
+            elif [ "$INFRA_CHANGED" == "true" ]; then
+              # Infra only - redeploy with existing image
+              SHOULD_BUILD="false"
+              SHOULD_DEPLOY="true"
+              echo "ℹ️  Infra-only change: will deploy using existing image"
             fi
           fi
+          
+          echo ""
+          echo "📋 Decision:"
+          echo "   should-build: $SHOULD_BUILD"
+          echo "   should-deploy: $SHOULD_DEPLOY"
           
           echo "should-build=$SHOULD_BUILD" >> $GITHUB_OUTPUT
           echo "should-deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
@@ -208,7 +239,7 @@ jobs:
       always() &&
       github.event_name == 'pull_request' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
-      needs.call-build.result == 'success'
+      (needs.call-build.result == 'success' || needs.call-build.result == 'skipped')
     
     steps:
       - name: Checkout Code
@@ -358,8 +389,7 @@ jobs:
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
-      needs.check-changes.outputs.should-build == 'true' &&
-      needs.call-build.result == 'success'
+      (needs.call-build.result == 'success' || needs.call-build.result == 'skipped')
     
     steps:
       - name: Checkout Code
@@ -441,8 +471,7 @@ jobs:
       github.event_name == 'push' &&
       github.ref == 'refs/heads/develop' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
-      needs.check-changes.outputs.should-build == 'true' &&
-      needs.call-build.result == 'success'
+      (needs.call-build.result == 'success' || needs.call-build.result == 'skipped')
     
     steps:
       - name: Checkout Code
