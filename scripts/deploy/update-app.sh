@@ -217,11 +217,54 @@ echo ""
 # ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
-# DEPLOY: Single declarative docker-compose command
+# DEPLOY: Two-phase deployment to avoid project name conflicts
+# Phase 1: Ensure infrastructure is running (shared project: smile-infra)
+# Phase 2: Deploy app (environment-specific project: smile-dev or smile-qa)
 # ------------------------------------------------------------------------------
-echo "🚀 Starting deployment..."
+
+# Phase 1: Ensure infrastructure is up (shared by dev/QA)
+INFRA_PROJECT="smile-infra"
+echo "🔧 Phase 1: Ensuring infrastructure is running..."
+
+# Check if infra containers are healthy
+POSTGRES_HEALTHY=false
+REDIS_HEALTHY=false
+
+if docker ps --format "{{.Names}}" | grep -q "smile-postgres"; then
+  if docker exec smile-postgres pg_isready -U smile_user >/dev/null 2>&1; then
+    POSTGRES_HEALTHY=true
+  fi
+fi
+
+if docker ps --format "{{.Names}}" | grep -q "smile-redis"; then
+  if docker exec smile-redis redis-cli ping >/dev/null 2>&1; then
+    REDIS_HEALTHY=true
+  fi
+fi
+
+if [ "$POSTGRES_HEALTHY" = true ] && [ "$REDIS_HEALTHY" = true ]; then
+  echo "   ✅ Infrastructure already running and healthy"
+else
+  echo "   🚀 Starting infrastructure (postgres + redis)..."
+  docker compose -p "$INFRA_PROJECT" \
+    -f "$COMPOSE_FILE_INFRA" \
+    up -d || {
+      echo "❌ Failed to start infrastructure"
+      exit 1
+    }
+  
+  # Wait for infra to be ready
+  echo "   ⏳ Waiting for infrastructure to be ready..."
+  sleep 5
+fi
+
+# Phase 2: Deploy app only (environment-specific project)
+echo ""
+echo "🚀 Phase 2: Deploying application..."
+echo "   Project: $COMPOSE_PROJECT"
+echo "   Image:   $IMAGE_TAG"
+
 docker compose -p "$COMPOSE_PROJECT" \
-  -f "$COMPOSE_FILE_INFRA" \
   -f "$COMPOSE_FILE_APP" \
   up -d --force-recreate --remove-orphans || {
     echo "❌ Failed to deploy with docker-compose"
@@ -239,7 +282,7 @@ echo "✅ Docker compose deployment complete"
 echo ""
 echo "⏳ Waiting for services to be ready..."
 
-# Wait for PostgreSQL (shared by dev/QA)
+# Wait for PostgreSQL (should already be running from Phase 1)
 echo "   Checking PostgreSQL..."
 MAX_RETRIES=30
 RETRY=0

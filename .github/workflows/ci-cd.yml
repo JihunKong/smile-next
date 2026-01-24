@@ -513,3 +513,38 @@ jobs:
           script: |
             cd "$HOME/smile-next" || exit 1
             bash scripts/deploy/verify-deployment.sh "$CONTAINER_NAME"
+
+  # 8. Cleanup old package versions after successful deployment
+  cleanup:
+    needs: [deploy-qa, deploy-dev, deploy-pr, manual-pr-deploy]
+    if: |
+      always() &&
+      (needs.deploy-qa.result == 'success' || 
+       needs.deploy-dev.result == 'success' || 
+       needs.deploy-pr.result == 'success' ||
+       needs.manual-pr-deploy.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Delete old untagged versions
+        uses: actions/delete-package-versions@v5
+        continue-on-error: true
+        with:
+          package-name: 'smile-web'
+          package-type: 'container'
+          min-versions-to-keep: 5
+          delete-only-untagged-versions: 'true'
+          owner: 'seeds-smile-the-ultimate'
+
+      - name: Delete old PR versions (older than 7 days)
+        uses: actions/delete-package-versions@v5
+        continue-on-error: true
+        with:
+          package-name: 'smile-web'
+          package-type: 'container'
+          min-versions-to-keep: 10
+          ignore-versions: '^(latest|develop)$'
+          delete-only-pre-release-versions: 'true'
+          owner: 'seeds-smile-the-ultimate'

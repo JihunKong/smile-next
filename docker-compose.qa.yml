@@ -41,3 +41,4 @@ services:
 networks:
   smile-network:
     name: smile-network
+    external: true
