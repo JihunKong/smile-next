@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { ExamTimer } from '@/components/modes/ExamTimer'
 import { TabSwitchWarning } from '@/components/modes/TabSwitchWarning'
 import { useAntiCheat, type AntiCheatStats } from '@/hooks/useAntiCheat'
@@ -41,6 +42,7 @@ export function InquiryTakeClient({
   submittedQuestions: initialQuestions,
 }: InquiryTakeClientProps) {
   const router = useRouter()
+  const t = useTranslations('inquiry')
   const [submittedQuestions, setSubmittedQuestions] = useState<SubmittedQuestion[]>(initialQuestions)
   const [currentQuestion, setCurrentQuestion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -184,37 +186,24 @@ export function InquiryTakeClient({
     return colors[level || ''] || 'bg-gray-100 text-gray-700'
   }
 
-  function getBloomsKorean(level: string | null): string {
-    const translations: Record<string, string> = {
-      remember: '기억',
-      understand: '이해',
-      apply: '적용',
-      analyze: '분석',
-      evaluate: '평가',
-      create: '창조',
-    }
-    return translations[level || ''] || level || '평가중'
+  function getBloomsLabel(level: string | null): string {
+    if (!level) return t('blooms.evaluating')
+    const key = level.toLowerCase() as 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create'
+    return t(`blooms.${key}`)
   }
 
   function getBloomsDescription(level: string | null): string {
-    const descriptions: Record<string, string> = {
-      remember: '사실이나 개념을 회상하는 수준',
-      understand: '개념의 의미를 파악하는 수준',
-      apply: '배운 내용을 새로운 상황에 적용하는 수준',
-      analyze: '정보를 분석하고 관계를 파악하는 수준',
-      evaluate: '기준에 따라 판단하고 평가하는 수준',
-      create: '새로운 것을 만들어내는 최고 수준',
-    }
-    return descriptions[level || ''] || ''
+    if (!level) return ''
+    const key = level.toLowerCase() as 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create'
+    return t(`blooms.descriptions.${key}`)
   }
 
   if (showResults && finalResults) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-          <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
-            finalResults.passed ? 'bg-green-100' : 'bg-yellow-100'
-          }`}>
+          <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${finalResults.passed ? 'bg-green-100' : 'bg-yellow-100'
+            }`}>
             {finalResults.passed ? (
               <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -227,18 +216,18 @@ export function InquiryTakeClient({
           </div>
 
           <h1 className={`text-2xl font-bold mb-2 ${finalResults.passed ? 'text-green-600' : 'text-yellow-600'}`}>
-            {finalResults.passed ? 'Great Job!' : 'Good Effort!'}
+            {finalResults.passed ? t('results.greatJob') : t('results.goodEffort')}
           </h1>
 
           <p className="text-gray-600 mb-6">
-            You generated {finalResults.questionsGenerated} questions with an average score of {finalResults.averageScore.toFixed(1)}.
+            {t('results.summary', { count: finalResults.questionsGenerated, score: finalResults.averageScore.toFixed(1) })}
           </p>
 
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <div className="text-4xl font-bold mb-2" style={{ color: finalResults.passed ? '#16a34a' : '#ca8a04' }}>
               {finalResults.averageScore.toFixed(1)} / 10
             </div>
-            <div className="text-gray-600">Average Score</div>
+            <div className="text-gray-600">{t('results.averageScore')}</div>
           </div>
 
           <div className="space-y-3">
@@ -246,13 +235,13 @@ export function InquiryTakeClient({
               href={`/activities/${activityId}/inquiry/${attemptId}/results`}
               className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
-              View Detailed Results
+              {t('results.viewResults')}
             </Link>
             <Link
               href={`/activities/${activityId}`}
               className="block w-full px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition"
             >
-              Back to Activity
+              {t('results.backToActivity')}
             </Link>
           </div>
         </div>
@@ -275,13 +264,13 @@ export function InquiryTakeClient({
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm text-gray-500">탐구 학습 모드</p>
+              <p className="text-sm text-gray-500">{t('header.mode')}</p>
               <h1 className="font-semibold text-gray-900">{activityName}</h1>
             </div>
 
             <div className="flex items-center gap-4">
               <div className="text-sm text-gray-600">
-                질문 {Math.min(submittedQuestions.length + 1, questionsRequired)} / {questionsRequired}
+                {t('header.progress', { current: Math.min(submittedQuestions.length + 1, questionsRequired), total: questionsRequired })}
               </div>
 
               {!isComplete && (
@@ -303,8 +292,8 @@ export function InquiryTakeClient({
             />
           </div>
           <div className="flex justify-between mt-1 text-xs text-gray-500">
-            <span>{submittedQuestions.length}개 완료</span>
-            <span>{questionsRemaining}개 남음</span>
+            <span>{t('status.completed', { count: submittedQuestions.length })}</span>
+            <span>{t('status.remaining', { count: questionsRemaining })}</span>
           </div>
         </div>
       </header>
@@ -317,14 +306,14 @@ export function InquiryTakeClient({
               <svg className="w-5 h-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              <h3 className="font-medium text-gray-800">질문 힌트: 아래 키워드를 활용해보세요</h3>
+              <h3 className="font-medium text-gray-800">{t('keywords.hint')}</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {keywordPool1.length > 0 && (
                 <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
                   <h4 className="font-medium text-yellow-800 mb-2 text-sm flex items-center gap-1">
                     <span className="w-2 h-2 bg-yellow-500 rounded-full" />
-                    개념 키워드
+                    {t('keywords.concepts')}
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {keywordPool1.map((kw, i) => (
@@ -333,7 +322,7 @@ export function InquiryTakeClient({
                         type="button"
                         onClick={() => setCurrentQuestion((prev) => prev + (prev ? ' ' : '') + kw)}
                         className="px-3 py-1 bg-white text-yellow-800 rounded-full text-sm font-medium border border-yellow-300 hover:bg-yellow-200 hover:border-yellow-400 transition cursor-pointer"
-                        title="클릭하여 추가"
+                        title={t('keywords.clickToAdd')}
                       >
                         {kw}
                       </button>
@@ -345,7 +334,7 @@ export function InquiryTakeClient({
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
                   <h4 className="font-medium text-orange-800 mb-2 text-sm flex items-center gap-1">
                     <span className="w-2 h-2 bg-orange-500 rounded-full" />
-                    행동 키워드
+                    {t('keywords.actions')}
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {keywordPool2.map((kw, i) => (
@@ -354,7 +343,7 @@ export function InquiryTakeClient({
                         type="button"
                         onClick={() => setCurrentQuestion((prev) => prev + (prev ? ' ' : '') + kw)}
                         className="px-3 py-1 bg-white text-orange-800 rounded-full text-sm font-medium border border-orange-300 hover:bg-orange-200 hover:border-orange-400 transition cursor-pointer"
-                        title="클릭하여 추가"
+                        title={t('keywords.clickToAdd')}
                       >
                         {kw}
                       </button>
@@ -367,7 +356,7 @@ export function InquiryTakeClient({
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              팁: 키워드를 클릭하면 질문에 자동으로 추가됩니다
+              {t('keywords.tip')}
             </p>
           </div>
         )}
@@ -376,17 +365,17 @@ export function InquiryTakeClient({
         {!isComplete && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              질문을 작성하세요
+              {t('input.title')}
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              위의 키워드를 활용하여 창의적인 질문을 만들어보세요. 더 높은 수준의 질문일수록 높은 점수를 받습니다.
+              {t('input.description')}
             </p>
 
             <textarea
               name="question"
               value={currentQuestion}
               onChange={(e) => setCurrentQuestion(e.target.value)}
-              placeholder="예: '광합성'과 '비교'를 연결하여 - 광합성과 호흡의 차이점은 무엇인가요?"
+              placeholder={t('input.placeholder')}
               rows={4}
               maxLength={500}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent outline-none transition resize-none"
@@ -395,14 +384,14 @@ export function InquiryTakeClient({
             <div className="flex items-center justify-between mt-4">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-500">
-                  {currentQuestion.length} / 500자
+                  {t('input.charCount', { count: currentQuestion.length })}
                 </span>
                 {currentQuestion.length > 20 && (
                   <span className="text-xs text-green-600 flex items-center gap-1">
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    제출 가능
+                    {t('input.canSubmit')}
                   </span>
                 )}
               </div>
@@ -417,14 +406,14 @@ export function InquiryTakeClient({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    제출 중...
+                    {t('submit.submitting')}
                   </>
                 ) : (
                   <>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
-                    질문 제출
+                    {t('submit.button')}
                   </>
                 )}
               </button>
@@ -437,17 +426,17 @@ export function InquiryTakeClient({
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                제출한 질문 ({submittedQuestions.length}/{questionsRequired})
+                {t('submitted.title', { count: submittedQuestions.length, total: questionsRequired })}
               </h2>
               {submittedQuestions.length > 0 && (
                 <div className="text-sm text-gray-500">
-                  평균 점수:{' '}
+                  {t('submitted.averageScore')}{' '}
                   <span className="font-semibold text-gray-900">
                     {(
                       submittedQuestions
                         .filter((q) => q.score !== null)
                         .reduce((sum, q) => sum + (q.score || 0), 0) /
-                        (submittedQuestions.filter((q) => q.score !== null).length || 1)
+                      (submittedQuestions.filter((q) => q.score !== null).length || 1)
                     ).toFixed(1)}
                   </span>
                 </div>
@@ -458,13 +447,12 @@ export function InquiryTakeClient({
               {submittedQuestions.map((q, index) => (
                 <div
                   key={q.id}
-                  className={`border rounded-lg p-4 transition-all ${
-                    q.evaluationStatus === 'evaluating'
+                  className={`border rounded-lg p-4 transition-all ${q.evaluationStatus === 'evaluating'
                       ? 'border-yellow-300 bg-yellow-50 animate-pulse'
                       : q.evaluationStatus === 'error'
-                      ? 'border-red-300 bg-red-50'
-                      : 'border-gray-200'
-                  }`}
+                        ? 'border-red-300 bg-red-50'
+                        : 'border-gray-200'
+                    }`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -478,12 +466,12 @@ export function InquiryTakeClient({
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                             </svg>
-                            AI 평가 중...
+                            {t('submitted.evaluating')}
                           </span>
                         )}
                         {q.evaluationStatus === 'error' && (
                           <span className="px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-medium">
-                            오류 발생
+                            {t('submitted.error')}
                           </span>
                         )}
                         {q.bloomsLevel && q.evaluationStatus !== 'evaluating' && (
@@ -491,7 +479,7 @@ export function InquiryTakeClient({
                             className={`px-2 py-1 rounded text-xs font-medium capitalize ${getBloomsBadgeColor(q.bloomsLevel)}`}
                             title={getBloomsDescription(q.bloomsLevel)}
                           >
-                            {getBloomsKorean(q.bloomsLevel)}
+                            {getBloomsLabel(q.bloomsLevel)}
                           </span>
                         )}
                       </div>
@@ -511,24 +499,24 @@ export function InquiryTakeClient({
                       {q.evaluationStatus === 'evaluating' ? (
                         <div className="flex flex-col items-center">
                           <div className="w-10 h-10 border-4 border-yellow-200 border-t-yellow-500 rounded-full animate-spin" />
-                          <p className="text-xs text-yellow-600 mt-1">평가중</p>
+                          <p className="text-xs text-yellow-600 mt-1">{t('score.evaluating')}</p>
                         </div>
                       ) : q.evaluationStatus === 'error' ? (
                         <div className="flex flex-col items-center">
                           <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <p className="text-xs text-red-600 mt-1">오류</p>
+                          <p className="text-xs text-red-600 mt-1">{t('submitted.error')}</p>
                         </div>
                       ) : (
                         <>
                           <span className={`text-2xl font-bold ${getScoreColor(q.score)}`}>
                             {q.score !== null ? q.score.toFixed(1) : '-'}
                           </span>
-                          <p className="text-xs text-gray-500">/ 10</p>
+                          <p className="text-xs text-gray-500">{t('score.outOf')}</p>
                           {q.score !== null && (
                             <div className={`mt-1 text-xs font-medium ${getScoreColor(q.score)}`}>
-                              {q.score >= 8 ? '훌륭해요!' : q.score >= 6 ? '좋아요' : '개선 필요'}
+                              {q.score >= 8 ? t('feedback.excellent') : q.score >= 6 ? t('feedback.good') : t('feedback.needsImprovement')}
                             </div>
                           )}
                         </>
@@ -549,10 +537,10 @@ export function InquiryTakeClient({
                     </svg>
                   </div>
                   <p className="text-green-800 font-medium mb-2">
-                    모든 질문을 제출했습니다!
+                    {t('complete.title')}
                   </p>
                   <p className="text-sm text-green-600 mb-4">
-                    총 {questionsRequired}개의 질문을 성공적으로 제출했습니다. 결과를 확인하세요.
+                    {t('complete.description', { count: questionsRequired })}
                   </p>
                   <button
                     onClick={handleComplete}
@@ -565,14 +553,14 @@ export function InquiryTakeClient({
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        처리 중...
+                        {t('complete.processing')}
                       </>
                     ) : (
                       <>
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        결과 확인하기
+                        {t('complete.button')}
                       </>
                     )}
                   </button>

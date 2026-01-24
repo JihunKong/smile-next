@@ -4,6 +4,8 @@ import Providers from "@/components/Providers";
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import Script from "next/script";
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, getLocale } from 'next-intl/server';
 
 export const metadata: Metadata = {
   title: "SMILE - Student-Made Interactive Learning Environment",
@@ -13,13 +15,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         {/* Font Awesome CDN - matching Flask */}
         <link
@@ -31,11 +36,13 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased">
-        <Providers>
-          <Navigation />
-          <main>{children}</main>
-          <Footer />
-        </Providers>
+        <NextIntlClientProvider messages={messages}>
+          <Providers>
+            <Navigation />
+            <main>{children}</main>
+            <Footer />
+          </Providers>
+        </NextIntlClientProvider>
         {/* Load Font Awesome script for icons */}
         <Script
           src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"

@@ -1,17 +1,49 @@
 ---
 id: VIBE-0004
 title: Refactor Exam Mode pages for AI-friendly development (2498 total lines)
-status: backlog
+status: in-progress
 priority: critical
 category: refactoring
 component: ui
 created: 2026-01-17
-updated: 2026-01-17
+updated: 2026-01-23
 effort: l
 assignee: ai-agent
 ---
 
 # Refactor Exam Mode Pages for Vibe Coding
+
+> **Parent Item**: This has been broken into 4 sub-tasks. See individual items below.
+
+## Sub-Items
+
+| ID | Title | Effort | Status | Description |
+|----|-------|--------|--------|-------------|
+| [VIBE-0004A](./VIBE-0004A-exam-unit-tests.md) | Unit Tests for Exam Server Actions | M | ✅ done | TDD: Write unit tests before refactoring (45 tests) |
+| [VIBE-0004B](./VIBE-0004B-exam-types-foundation.md) | Exam Mode Types & Foundation | S | ✅ done | Create feature module structure, consolidate types |
+| [VIBE-0004C](./VIBE-0004C-exam-results-analytics.md) | Results & Analytics Refactor | M | ✅ done | Extract results/analytics components |
+| [VIBE-0004D](./VIBE-0004D-exam-take-experience.md) | Take Experience Refactor | L | ✅ done | Extract hooks and components from take client |
+
+## Execution Order
+
+```mermaid
+graph TD
+    A[VIBE-0004A: Unit Tests] --> B[VIBE-0004B: Types & Foundation]
+    B --> C[VIBE-0004C: Results & Analytics]
+    B --> D[VIBE-0004D: Take Experience]
+    C --> E[E2E Verification]
+    D --> E
+```
+
+```
+VIBE-0004A (Unit Tests - TDD Foundation)
+    ↓
+VIBE-0004B (Types & Foundation)
+    ↓
+VIBE-0004C (Results/Analytics)  ←→  VIBE-0004D (Take Experience)
+    ↓                                    ↓
+         [E2E Tests Verification]
+```
 
 ## Summary
 

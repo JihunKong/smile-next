@@ -6,12 +6,48 @@ priority: high
 category: refactoring
 component: ui
 created: 2026-01-17
-updated: 2026-01-17
-effort: m
+updated: 2026-01-23
+effort: l
 assignee: ai-agent
+children: [VIBE-0006A, VIBE-0006B, VIBE-0006C, VIBE-0006D, VIBE-0006E, VIBE-0006F]
 ---
 
 # Refactor Groups Pages for Vibe Coding
+
+## Work Items Breakdown
+
+This epic has been broken down into **6 work items** for TDD-based implementation:
+
+| ID | Title | Effort | Status | Description |
+|----|-------|--------|--------|-------------|
+| **VIBE-0006A** | Unit Tests (TDD Foundation) | M | backlog | Write unit tests for groups utils and server actions **before** refactoring |
+| **VIBE-0006B** | Types & Feature Module Foundation | S | backlog | Set up `src/features/groups/` structure with types and barrel exports |
+| **VIBE-0006C** | Member Management Components | M | backlog | Extract MemberCard, MemberList, MemberActions + useGroupMembers hook |
+| **VIBE-0006D** | Groups List & Detail Components | M | backlog | Extract GroupHeader, InviteLink, GroupStats, MemberPreview + useGroup/useGroups hooks |
+| **VIBE-0006E** | Group Forms (Edit & Activity Create) | M | backlog | Extract GroupForm, GroupImageUpload + useGroupForm hook; reuse ActivityForm |
+| **VIBE-0006F** | Final Cleanup & Documentation | S | backlog | Update imports, remove deprecated code, add feature README |
+
+### Dependency Graph
+
+```
+VIBE-0006A (Tests) ─────────────┐
+                                ▼
+VIBE-0006B (Types) ───────────────┬──────────────────┐
+                                  ▼                  ▼
+VIBE-0006C (Members)         VIBE-0006D (List/Detail)
+                                  │                  │
+                                  └────────┬─────────┘
+                                           ▼
+                               VIBE-0006E (Forms)
+                                           │
+                                           ▼
+                               VIBE-0006F (Cleanup)
+```
+
+### External Dependency
+- **VIBE-0005** (Activity Pages) - VIBE-0006E requires ActivityForm from VIBE-0005
+
+---
 
 ## Summary
 

@@ -66,7 +66,7 @@ test.describe('Exam Mode', () => {
     await expect(page).toHaveURL(/.*exam\/take.*/, { timeout: 15000 })
 
     // Should see first question - use first() to avoid strict mode
-    const questionContent = page.locator('.question-content, [data-testid="question"]').first()
+    const questionContent = page.locator('#question-content, .question-text, [data-testid="question"]').first()
     await expect(questionContent).toBeVisible({ timeout: 10000 })
 
     // Find next button
