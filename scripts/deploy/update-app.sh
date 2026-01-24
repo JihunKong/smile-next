@@ -266,7 +266,7 @@ echo "   Image:   $IMAGE_TAG"
 
 docker compose -p "$COMPOSE_PROJECT" \
   -f "$COMPOSE_FILE_APP" \
-  up -d --force-recreate --remove-orphans || {
+  up -d --force-recreate || {
     echo "❌ Failed to deploy with docker-compose"
     echo ""
     echo "📋 Debug: Container status:"
