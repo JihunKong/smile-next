@@ -7,6 +7,9 @@
  * Usage: npx prisma db seed
  *
  * Test Accounts Password: Test1234!
+ *
+ * SEED_VERSION: Increment this when seed data changes significantly.
+ * The deployment script checks this version to determine if re-seeding is needed.
  */
 
 import { PrismaClient } from '@prisma/client'
@@ -24,6 +27,9 @@ import {
 
 const prisma = new PrismaClient()
 const TEST_PASSWORD = 'Test1234!'
+
+// Increment this version when seed data changes require re-seeding
+export const SEED_VERSION = '1.0.0'
 
 async function main() {
   console.log('🌱 Starting database seed...\n')
@@ -50,6 +56,14 @@ async function main() {
 
   // 7. Seed Attempts (exams, inquiries, cases, leaderboards)
   await seedAttempts(prisma, users, activities, questions)
+
+  // 8. Update seed metadata with current version
+  await prisma.seedMetadata.upsert({
+    where: { id: 'seed_version' },
+    update: { version: SEED_VERSION },
+    create: { id: 'seed_version', version: SEED_VERSION },
+  })
+  console.log(`\n📋 Seed version recorded: ${SEED_VERSION}`)
 
   // Print Summary
   console.log('\n' + '='.repeat(60))

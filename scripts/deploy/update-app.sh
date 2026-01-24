@@ -302,12 +302,63 @@ else
   echo "   ⚠️ App container may not be running yet"
 fi
 
-# Run Prisma migrations
+# Run Prisma migrations or db:push
 echo ""
 echo "📦 Updating database schema..."
-docker exec "$CONTAINER_NAME" npm run db:push -- --accept-data-loss 2>&1 || {
-  echo "⚠️ Prisma push had issues (check logs)"
-}
+
+# Check if migrations folder exists (indicates we're using Prisma Migrate)
+if docker exec "$CONTAINER_NAME" test -d /app/prisma/migrations 2>/dev/null; then
+  echo "   Using Prisma Migrate..."
+  docker exec "$CONTAINER_NAME" npx prisma migrate deploy 2>&1 || {
+    echo "⚠️ Prisma migrate had issues (check logs)"
+  }
+else
+  echo "   Using Prisma db push (no migrations found)..."
+  docker exec "$CONTAINER_NAME" npm run db:push -- --accept-data-loss 2>&1 || {
+    echo "⚠️ Prisma push had issues (check logs)"
+  }
+fi
+
+# Conditional database seeding (dev/QA only)
+# Seeds if: database is empty OR seed version doesn't match
+if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
+  echo ""
+  echo "🔍 Checking if database needs seeding..."
+
+  # Get expected seed version from the seed.ts file
+  EXPECTED_VERSION=$(docker exec "$CONTAINER_NAME" sh -c "grep 'SEED_VERSION' /app/prisma/seed.ts | sed \"s/.*['\\\"]\\([^'\\\"]*\\)['\\\"].*/\\1/\"" 2>/dev/null || echo "1.0.0")
+
+  # Get current seed version from database (returns empty if table/record doesn't exist)
+  CURRENT_VERSION=$(docker exec smile-postgres psql -U smile_user -d "$DB_NAME" -t -c "SELECT version FROM seed_metadata WHERE id='seed_version';" 2>/dev/null | tr -d ' ' || echo "")
+
+  # Check if users table is empty
+  USER_COUNT=$(docker exec smile-postgres psql -U smile_user -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM users;" 2>/dev/null | tr -d ' ' || echo "0")
+
+  echo "   Expected seed version: $EXPECTED_VERSION"
+  echo "   Current seed version:  ${CURRENT_VERSION:-'(none)'}"
+  echo "   User count: $USER_COUNT"
+
+  if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
+    echo "📦 Database is empty - running seed..."
+    docker exec "$CONTAINER_NAME" npx prisma db seed 2>&1 || {
+      echo "⚠️ Database seeding had issues (check logs)"
+    }
+    echo "✅ Database seeded successfully"
+  elif [ "$CURRENT_VERSION" != "$EXPECTED_VERSION" ]; then
+    echo "📦 Seed version mismatch - re-seeding database..."
+    # Clear existing data before re-seeding
+    docker exec smile-postgres psql -U smile_user -d "$DB_NAME" -c "TRUNCATE users, groups, activities, questions, responses CASCADE;" 2>/dev/null || true
+    docker exec "$CONTAINER_NAME" npx prisma db seed 2>&1 || {
+      echo "⚠️ Database seeding had issues (check logs)"
+    }
+    echo "✅ Database re-seeded to version $EXPECTED_VERSION"
+  else
+    echo "✅ Seed version matches ($CURRENT_VERSION) - skipping seed"
+  fi
+else
+  echo ""
+  echo "ℹ️  Skipping seed check (production environment)"
+fi
 
 # Clean up old images
 echo ""
