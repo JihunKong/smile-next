@@ -549,10 +549,10 @@ export function ExamTakeClient({
                   key={q.id}
                   onClick={() => goToQuestion(index)}
                   className={`w-10 h-10 rounded-full border-2 transition-colors flex items-center justify-center text-sm font-medium ${isCurrent
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : isAnswered
-                        ? 'bg-green-500 text-white border-green-600'
-                        : 'bg-yellow-100 text-yellow-800 border-yellow-400'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : isAnswered
+                      ? 'bg-green-500 text-white border-green-600'
+                      : 'bg-yellow-100 text-yellow-800 border-yellow-400'
                     }`}
                   title={`Question ${index + 1}${isFlagged ? ' (Flagged)' : ''}`}
                 >
@@ -596,7 +596,7 @@ export function ExamTakeClient({
 
           {/* Question Content */}
           <div className="mb-8 question-text">
-            <p className="text-xl text-gray-900 leading-relaxed" id="question-content">
+            <p className="text-xl text-gray-900 leading-relaxed" id="question-content" data-testid="question">
               {currentQuestion.content}
             </p>
           </div>
@@ -619,8 +619,8 @@ export function ExamTakeClient({
                     key={displayIndex}
                     onClick={() => handleAnswerChange(originalIndex)}
                     className={`answer-choice w-full text-left border-2 rounded-lg p-4 cursor-pointer transition-all ${isSelected
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                       }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -673,8 +673,8 @@ export function ExamTakeClient({
               onClick={goNext}
               disabled={currentIndex === questions.length - 1}
               className={`font-medium py-3 px-6 rounded-lg transition-colors flex items-center gap-2 ${currentIndex === questions.length - 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
             >
               Next
