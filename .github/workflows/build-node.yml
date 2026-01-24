@@ -23,14 +23,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Use GitHub Action for App Token instead of custom script (saves ~30s npm ci)
-      - name: Get GitHub App Token
-        id: github-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.DEPLOYER_APP_ID }}
-          private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -39,7 +31,8 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ steps.github-token.outputs.token }}
+          # Use GITHUB_TOKEN for pushing (has packages:write from workflow permissions)
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
