@@ -17,6 +17,7 @@ export function BasicInfoFields({ values, onChange, errors }: Props) {
                 </label>
                 <input
                     id="activity-name"
+                    name="name"
                     value={values.name}
                     onChange={(e) => onChange('name', e.target.value)}
                     className="mt-1 block w-full rounded-md border-gray-300"
