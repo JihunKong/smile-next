@@ -301,7 +301,7 @@ if docker exec "$CONTAINER_NAME" test -d /app/prisma/migrations 2>/dev/null; the
   }
 else
   echo "   Using Prisma db push (no migrations found)..."
-  docker exec "$CONTAINER_NAME" npm run db:push -- --accept-data-loss 2>&1 || {
+  docker exec "$CONTAINER_NAME" npx prisma db push --skip-generate --accept-data-loss 2>&1 || {
     echo "⚠️ Prisma push had issues (check logs)"
   }
 fi
@@ -312,8 +312,8 @@ if [ "$ENVIRONMENT" == "dev" ] || [ "$ENVIRONMENT" == "qa" ]; then
   echo ""
   echo "🔍 Checking if database needs seeding..."
 
-  # Get expected seed version from the seed.ts file
-  EXPECTED_VERSION=$(docker exec "$CONTAINER_NAME" sh -c "grep 'SEED_VERSION' /app/prisma/seed.ts | sed \"s/.*['\\\"]\\([^'\\\"]*\\)['\\\"].*/\\1/\"" 2>/dev/null || echo "1.0.0")
+  # Get expected seed version from the seed.ts file (only match the export line)
+  EXPECTED_VERSION=$(docker exec "$CONTAINER_NAME" sh -c "grep -E '^export const SEED_VERSION' /app/prisma/seed.ts | sed \"s/.*['\\\"]\\([^'\\\"]*\\)['\\\"].*/\\1/\"" 2>/dev/null || echo "1.0.0")
 
   # Get current seed version from database (returns empty if table/record doesn't exist)
   CURRENT_VERSION=$(docker exec smile-postgres psql -U smile_user -d "$DB_NAME" -t -c "SELECT version FROM seed_metadata WHERE id='seed_version';" 2>/dev/null | tr -d ' ' || echo "")

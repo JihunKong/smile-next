@@ -53,8 +53,8 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Install prisma CLI explicitly for migrations since standalone build excludes it
-RUN npm install prisma
+# Install prisma CLI and tsx for migrations/seeding, with correct ownership for nextjs user
+RUN npm install prisma tsx && chown -R nextjs:nodejs node_modules
 
 
 USER nextjs
