@@ -214,25 +214,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js for Token Script
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
+      # Use GitHub Action for App Token instead of custom script (saves ~30s)
       - name: Get GitHub App Token
         id: github-token
-        env:
-          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
-          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
-          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
-        run: |
-          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-          echo "::add-mask::$TOKEN"
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DEPLOYER_APP_ID }}
+          private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
       - name: Prepare Deployment Directory
         uses: appleboy/ssh-action@v1.0.3
@@ -308,25 +296,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
+      # Use GitHub Action for App Token instead of custom script (saves ~30s)
       - name: Get GitHub App Token
         id: github-token
-        env:
-          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
-          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
-          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
-        run: |
-          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-          echo "::add-mask::$TOKEN"
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DEPLOYER_APP_ID }}
+          private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
       - name: Prepare & Copy
         uses: appleboy/ssh-action@v1.0.3
@@ -389,25 +365,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
+      # Use GitHub Action for App Token instead of custom script (saves ~30s)
       - name: Get GitHub App Token
         id: github-token
-        env:
-          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
-          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
-          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
-        run: |
-          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-          echo "::add-mask::$TOKEN"
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DEPLOYER_APP_ID }}
+          private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
       - name: Prepare Directory
         uses: appleboy/ssh-action@v1.0.3
@@ -484,25 +448,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
+      # Use GitHub Action for App Token instead of custom script (saves ~30s)
       - name: Get GitHub App Token
         id: github-token
-        env:
-          DEPLOYER_APP_ID: ${{ secrets.DEPLOYER_APP_ID }}
-          DEPLOYER_APP_INSTALLATION_ID: ${{ secrets.DEPLOYER_APP_INSTALLATION_ID }}
-          DEPLOYER_APP_PRIVATE_KEY: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
-        run: |
-          TOKEN=$(npx tsx scripts/github/get-github-app-token.ts)
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-          echo "::add-mask::$TOKEN"
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DEPLOYER_APP_ID }}
+          private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
       - name: Prepare Directory
         uses: appleboy/ssh-action@v1.0.3

@@ -11,7 +11,10 @@ WORKDIR /app
 # Copy prisma schema first for postinstall script
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
-RUN npm ci
+
+# Use BuildKit cache mount for npm cache (significantly speeds up builds)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -53,7 +56,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Install prisma CLI explicitly for migrations since standalone build excludes it
-RUN npm install prisma
+RUN --mount=type=cache,target=/root/.npm \
+    npm install prisma
 
 
 USER nextjs

@@ -211,23 +211,10 @@ echo "   Image:   $IMAGE_TAG"
 echo ""
 
 # ------------------------------------------------------------------------------
-# ONE-TIME MIGRATION: Clean up orphaned containers from old deployment approach
-# This runs only if old-style containers exist outside of compose management
+# NOTE: One-time migration cleanup removed - was causing cross-environment conflicts
+# The old cleanup code would accidentally remove containers from other environments
+# (e.g., deploying QA would remove the dev container smile-next-dev)
 # ------------------------------------------------------------------------------
-OLD_CONTAINERS=$(docker ps -a --format '{{.Names}}' | grep -E '^smile-(postgres|redis|next|app)' | grep -v "^$COMPOSE_PROJECT" || true)
-if [ -n "$OLD_CONTAINERS" ]; then
-  echo "🧹 Cleaning up old containers from previous deployment approach..."
-  echo "$OLD_CONTAINERS" | xargs -r docker stop 2>/dev/null || true
-  echo "$OLD_CONTAINERS" | xargs -r docker rm 2>/dev/null || true
-  echo "   Cleaned up: $(echo "$OLD_CONTAINERS" | tr '\n' ' ')"
-fi
-
-# Remove old networks if they exist (from before compose-managed networks)
-OLD_NETWORK=$(docker network ls --format "{{.Name}}" | grep -E "^smile-next_smile-network$" || true)
-if [ -n "$OLD_NETWORK" ]; then
-  echo "🧹 Removing old network: $OLD_NETWORK"
-  docker network rm "$OLD_NETWORK" 2>/dev/null || true
-fi
 
 # ------------------------------------------------------------------------------
 # DEPLOY: Single declarative docker-compose command
