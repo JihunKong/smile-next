@@ -5,27 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAntiCheat, type AntiCheatStats } from '@/hooks/useAntiCheat'
 import { saveExamAnswer, submitExamAttempt, updateExamCheatingStats } from '../actions'
-
-interface Question {
-  id: string
-  content: string
-  choices: string[]
-}
-
-interface ExamTakeClientProps {
-  activityId: string
-  activityName: string
-  groupName: string
-  attemptId: string
-  questions: Question[]
-  existingAnswers: Record<string, string[]>
-  remainingSeconds: number
-  totalQuestions: number
-  timeLimitMinutes: number
-  instructions?: string
-  description?: string
-  choiceShuffles?: Record<string, number[]>
-}
+import type { Question, ExamTakeClientProps } from '@/features/exam-mode'
 
 // Submit Confirmation Modal Component
 function SubmitConfirmationModal({
@@ -320,9 +300,8 @@ export function ExamTakeClient({
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-          <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
-            results.passed ? 'bg-green-100' : 'bg-red-100'
-          }`}>
+          <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${results.passed ? 'bg-green-100' : 'bg-red-100'
+            }`}>
             {results.passed ? (
               <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -569,13 +548,12 @@ export function ExamTakeClient({
                 <button
                   key={q.id}
                   onClick={() => goToQuestion(index)}
-                  className={`w-10 h-10 rounded-full border-2 transition-colors flex items-center justify-center text-sm font-medium ${
-                    isCurrent
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : isAnswered
-                        ? 'bg-green-500 text-white border-green-600'
-                        : 'bg-yellow-100 text-yellow-800 border-yellow-400'
-                  }`}
+                  className={`w-10 h-10 rounded-full border-2 transition-colors flex items-center justify-center text-sm font-medium ${isCurrent
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : isAnswered
+                      ? 'bg-green-500 text-white border-green-600'
+                      : 'bg-yellow-100 text-yellow-800 border-yellow-400'
+                    }`}
                   title={`Question ${index + 1}${isFlagged ? ' (Flagged)' : ''}`}
                 >
                   {index + 1}
@@ -618,7 +596,7 @@ export function ExamTakeClient({
 
           {/* Question Content */}
           <div className="mb-8 question-text">
-            <p className="text-xl text-gray-900 leading-relaxed" id="question-content">
+            <p className="text-xl text-gray-900 leading-relaxed" id="question-content" data-testid="question">
               {currentQuestion.content}
             </p>
           </div>
@@ -640,16 +618,14 @@ export function ExamTakeClient({
                   <button
                     key={displayIndex}
                     onClick={() => handleAnswerChange(originalIndex)}
-                    className={`answer-choice w-full text-left border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                    }`}
+                    className={`answer-choice w-full text-left border-2 rounded-lg p-4 cursor-pointer transition-all ${isSelected
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                      }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                      }`}>
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                        }`}>
                         {isSelected ? (
                           <svg className="w-4 h-4 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -696,11 +672,10 @@ export function ExamTakeClient({
             <button
               onClick={goNext}
               disabled={currentIndex === questions.length - 1}
-              className={`font-medium py-3 px-6 rounded-lg transition-colors flex items-center gap-2 ${
-                currentIndex === questions.length - 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
+              className={`font-medium py-3 px-6 rounded-lg transition-colors flex items-center gap-2 ${currentIndex === questions.length - 1
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
             >
               Next
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

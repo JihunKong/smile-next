@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { GroupCard } from '@/components/groups/GroupCard'
+import { GroupCard } from '@/features/groups'
 import { LoadingState } from '@/components/ui'
 import type { GroupRole } from '@/types/groups'
 
@@ -38,7 +38,7 @@ interface GroupsClientProps {
 }
 
 type SortOption = 'name-asc' | 'name-desc' | 'created_at-desc' | 'created_at-asc' |
-                  'members_count-desc' | 'members_count-asc' | 'activities_count-desc' | 'activities_count-asc'
+  'members_count-desc' | 'members_count-asc' | 'activities_count-desc' | 'activities_count-asc'
 
 export function GroupsClient({ initialMyGroups, initialPublicGroups, isAdmin }: GroupsClientProps) {
   const [searchQuery, setSearchQuery] = useState('')

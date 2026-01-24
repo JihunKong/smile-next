@@ -1077,3 +1077,16 @@ model VerificationToken {
   @@unique([identifier, token])
   @@map("verification_tokens")
 }
+
+// ============================================================================
+// Seed Metadata (for tracking seed versions in dev/QA environments)
+// ============================================================================
+
+model SeedMetadata {
+  id        String   @id @default("seed_version")
+  version   String   // Semantic version matching SEED_VERSION in seed.ts
+  seededAt  DateTime @default(now()) @map("seeded_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("seed_metadata")
+}

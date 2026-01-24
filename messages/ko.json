@@ -1,0 +1,82 @@
+{
+    "common": {
+        "loading": "로딩 중...",
+        "save": "저장",
+        "cancel": "취소",
+        "error": "오류가 발생했습니다"
+    },
+    "inquiry": {
+        "header": {
+            "mode": "탐구 학습 모드",
+            "progress": "질문 {current} / {total}"
+        },
+        "status": {
+            "completed": "{count}개 완료",
+            "remaining": "{count}개 남음"
+        },
+        "keywords": {
+            "hint": "질문 힌트: 아래 키워드를 활용해보세요",
+            "concepts": "개념 키워드",
+            "actions": "행동 키워드",
+            "tip": "팁: 키워드를 클릭하면 질문에 자동으로 추가됩니다",
+            "clickToAdd": "클릭하여 추가"
+        },
+        "input": {
+            "title": "질문을 작성하세요",
+            "description": "위의 키워드를 활용하여 창의적인 질문을 만들어보세요. 더 높은 수준의 질문일수록 높은 점수를 받습니다.",
+            "placeholder": "예: '광합성'과 '비교'를 연결하여 - 광합성과 호흡의 차이점은 무엇인가요?",
+            "charCount": "{count} / 500자",
+            "canSubmit": "제출 가능"
+        },
+        "submit": {
+            "button": "질문 제출",
+            "submitting": "제출 중..."
+        },
+        "submitted": {
+            "title": "제출한 질문 ({count}/{total})",
+            "averageScore": "평균 점수:",
+            "evaluating": "AI 평가 중...",
+            "error": "오류 발생"
+        },
+        "complete": {
+            "title": "모든 질문을 제출했습니다!",
+            "description": "총 {count}개의 질문을 성공적으로 제출했습니다. 결과를 확인하세요.",
+            "button": "결과 확인하기",
+            "processing": "처리 중..."
+        },
+        "results": {
+            "greatJob": "훌륭해요!",
+            "goodEffort": "잘했어요!",
+            "summary": "총 {count}개의 질문을 생성하고 평균 점수 {score}점을 받았습니다.",
+            "averageScore": "평균 점수",
+            "viewResults": "결과 자세히 보기",
+            "backToActivity": "활동으로 돌아가기"
+        },
+        "feedback": {
+            "excellent": "훌륭해요!",
+            "good": "좋아요",
+            "needsImprovement": "개선 필요"
+        },
+        "blooms": {
+            "remember": "기억",
+            "understand": "이해",
+            "apply": "적용",
+            "analyze": "분석",
+            "evaluate": "평가",
+            "create": "창조",
+            "evaluating": "평가중",
+            "descriptions": {
+                "remember": "사실이나 개념을 회상하는 수준",
+                "understand": "개념의 의미를 파악하는 수준",
+                "apply": "배운 내용을 새로운 상황에 적용하는 수준",
+                "analyze": "정보를 분석하고 관계를 파악하는 수준",
+                "evaluate": "기준에 따라 판단하고 평가하는 수준",
+                "create": "새로운 것을 만들어내는 최고 수준"
+            }
+        },
+        "score": {
+            "outOf": "/ 10",
+            "evaluating": "평가중"
+        }
+    }
+}

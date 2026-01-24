@@ -1,0 +1,82 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "save": "Save",
+        "cancel": "Cancel",
+        "error": "An error occurred"
+    },
+    "inquiry": {
+        "header": {
+            "mode": "Inquiry Mode",
+            "progress": "Question {current} of {total}"
+        },
+        "status": {
+            "completed": "{count} completed",
+            "remaining": "{count} remaining"
+        },
+        "keywords": {
+            "hint": "Question Hint: Use the keywords below",
+            "concepts": "Concept Keywords",
+            "actions": "Action Keywords",
+            "tip": "Tip: Click a keyword to add it to your question",
+            "clickToAdd": "Click to add"
+        },
+        "input": {
+            "title": "Write Your Question",
+            "description": "Create a creative question using the keywords above. Higher level questions earn more points.",
+            "placeholder": "Example: Connect 'photosynthesis' and 'compare' - What are the differences between photosynthesis and respiration?",
+            "charCount": "{count} / 500 characters",
+            "canSubmit": "Ready to submit"
+        },
+        "submit": {
+            "button": "Submit Question",
+            "submitting": "Submitting..."
+        },
+        "submitted": {
+            "title": "Submitted Questions ({count}/{total})",
+            "averageScore": "Average Score:",
+            "evaluating": "AI Evaluating...",
+            "error": "Error occurred"
+        },
+        "complete": {
+            "title": "All questions submitted!",
+            "description": "You have successfully submitted {count} questions. Check your results.",
+            "button": "View Results",
+            "processing": "Processing..."
+        },
+        "results": {
+            "greatJob": "Great Job!",
+            "goodEffort": "Good Effort!",
+            "summary": "You generated {count} questions with an average score of {score}.",
+            "averageScore": "Average Score",
+            "viewResults": "View Detailed Results",
+            "backToActivity": "Back to Activity"
+        },
+        "feedback": {
+            "excellent": "Excellent!",
+            "good": "Good",
+            "needsImprovement": "Needs improvement"
+        },
+        "blooms": {
+            "remember": "Remember",
+            "understand": "Understand",
+            "apply": "Apply",
+            "analyze": "Analyze",
+            "evaluate": "Evaluate",
+            "create": "Create",
+            "evaluating": "Evaluating",
+            "descriptions": {
+                "remember": "Recalling facts or basic concepts",
+                "understand": "Grasping the meaning of concepts",
+                "apply": "Applying knowledge to new situations",
+                "analyze": "Analyzing information and identifying relationships",
+                "evaluate": "Making judgments based on criteria",
+                "create": "Creating something new - the highest level"
+            }
+        },
+        "score": {
+            "outOf": "/ 10",
+            "evaluating": "Evaluating"
+        }
+    }
+}
