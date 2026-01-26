@@ -411,20 +411,20 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 120s
+          command_timeout: 300s
           script: |
             echo "=== Disk Space Before Cleanup ==="
             df -h / | head -5
 
             echo ""
-            echo "=== Docker Cleanup ==="
-            # Remove unused Docker resources (dangling images, stopped containers, unused networks)
-            docker system prune -f 2>/dev/null || true
+            echo "=== Aggressive Docker Cleanup ==="
+            # Remove all unused images, not just dangling ones
+            docker system prune -af --volumes 2>/dev/null || true
 
-            # Remove old Docker images (keep only last 3)
-            docker images --format "{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedAt}}" | \
-              grep -v "none" | sort -k3 -r | tail -n +4 | awk '{print $2}' | \
-              xargs -r docker rmi -f 2>/dev/null || true
+            echo ""
+            echo "=== Clean up old logs ==="
+            # Clear Docker container logs (they can be huge)
+            truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null || true
 
             echo ""
             echo "=== Disk Space After Cleanup ==="
@@ -437,7 +437,7 @@ jobs:
 
             echo ""
             echo "Write test:"
-            touch "$HOME/smile-next/test-write" && echo "Write OK" && rm "$HOME/smile-next/test-write" || echo "WRITE FAILED - Disk full"
+            touch "$HOME/smile-next/test-write" && echo "Write OK" && rm "$HOME/smile-next/test-write" || echo "WRITE FAILED - Disk still full"
 
       - name: Copy Files
         uses: appleboy/scp-action@v0.1.7
