@@ -392,7 +392,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       needs.check-changes.outputs.should-deploy == 'true' &&
       (needs.call-build.result == 'success' || needs.call-build.result == 'skipped')
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -405,16 +405,36 @@ jobs:
           app-id: ${{ secrets.DEPLOYER_APP_ID }}
           private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
-      - name: Prepare Directory
+      - name: Prepare Directory (with diagnostics)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 10s
+          command_timeout: 30s
           script: |
+            echo "=== Server Diagnostics ==="
+            echo "User: $(whoami)"
+            echo "Home: $HOME"
+            echo ""
+            echo "Disk space:"
+            df -h | head -5
+            echo ""
+            echo "smile-next directory before:"
+            ls -la "$HOME/smile-next" 2>/dev/null || echo "Directory does not exist"
+            echo ""
+            echo "tar version:"
+            tar --version | head -1
+            echo ""
+            echo "Creating directory..."
             mkdir -p "$HOME/smile-next"
             rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
+            echo ""
+            echo "Directory permissions after:"
+            ls -la "$HOME/smile-next"
+            echo ""
+            echo "Write test:"
+            touch "$HOME/smile-next/test-write" && echo "Write OK" && rm "$HOME/smile-next/test-write"
 
       - name: Copy Files
         uses: appleboy/scp-action@v0.1.7
