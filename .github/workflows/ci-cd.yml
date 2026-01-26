@@ -253,17 +253,41 @@ jobs:
           app-id: ${{ secrets.DEPLOYER_APP_ID }}
           private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
+      - name: Check Server Resources (PR)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30s
+          script: |
+            echo "=== Pre-Deployment Resource Check (PR) ==="
+            df -h / | tail -1
+            DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+            free -h | grep Mem
+            echo ""
+            if [ "$DISK_USAGE" -gt 80 ]; then
+              echo "::warning::Disk usage is ${DISK_USAGE}%"
+            else
+              echo "Disk usage (${DISK_USAGE}%) OK"
+            fi
+
       - name: Prepare Deployment Directory
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 10s
+          command_timeout: 60s
           script: |
-            echo "🔧 Preparing deployment directory..."
+            echo "=== Lightweight Cleanup ==="
+            # Quick cleanup for PR deployments
+            docker image prune -f 2>/dev/null || true
+            docker container prune -f 2>/dev/null || true
+
+            echo ""
+            echo "=== Preparing deployment directory ==="
             mkdir -p "$HOME/smile-next"
-            # Remove old scripts to ensure clean slate
             rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
 
       - name: Copy Deploy Scripts and Docker Compose Files
@@ -336,14 +360,26 @@ jobs:
           app-id: ${{ secrets.DEPLOYER_APP_ID }}
           private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
-      - name: Prepare & Copy
+      - name: Check Resources & Prepare
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 10s
+          command_timeout: 60s
           script: |
+            echo "=== Pre-Deployment Resource Check (Manual PR) ==="
+            df -h / | tail -1
+            DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+            if [ "$DISK_USAGE" -gt 80 ]; then
+              echo "::warning::Disk usage is ${DISK_USAGE}%"
+              echo "Running cleanup..."
+              docker image prune -f 2>/dev/null || true
+              docker container prune -f 2>/dev/null || true
+            fi
+
+            echo ""
+            echo "=== Preparing directory ==="
             mkdir -p "$HOME/smile-next"
             rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
 
@@ -405,6 +441,42 @@ jobs:
           app-id: ${{ secrets.DEPLOYER_APP_ID }}
           private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
+      - name: Check Server Resources
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30s
+          script: |
+            echo "=============================================="
+            echo "   Pre-Deployment Resource Check"
+            echo "=============================================="
+            echo ""
+            echo "=== Disk Usage ==="
+            df -h / | tail -1
+            DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+            echo ""
+            echo "=== Memory Usage ==="
+            free -h | grep Mem
+            echo ""
+            echo "=== Docker Status ==="
+            docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | head -10
+            echo ""
+            docker ps -a --format "table {{.Names}}\t{{.Status}}" | head -10
+            echo ""
+            docker system df 2>/dev/null || true
+            echo ""
+
+            # Threshold warnings
+            if [ "$DISK_USAGE" -gt 85 ]; then
+              echo "::error::CRITICAL: Disk usage is ${DISK_USAGE}% - deployment may fail!"
+            elif [ "$DISK_USAGE" -gt 70 ]; then
+              echo "::warning::Disk usage is ${DISK_USAGE}% - approaching threshold"
+            else
+              echo "Disk usage (${DISK_USAGE}%) is within acceptable range"
+            fi
+
       - name: Cleanup Disk and Prepare Directory
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -413,22 +485,40 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 300s
           script: |
+            echo "=============================================="
+            echo "   Resource Cleanup"
+            echo "=============================================="
+            echo ""
             echo "=== Disk Space Before Cleanup ==="
-            df -h / | head -5
+            df -h / | tail -1
+            BEFORE_USAGE=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
 
             echo ""
-            echo "=== Aggressive Docker Cleanup ==="
-            # Remove all unused images, not just dangling ones
+            echo "=== Docker Cleanup ==="
+            # Remove all unused images, containers, volumes
             docker system prune -af --volumes 2>/dev/null || true
+            # Remove build cache
+            docker builder prune -af 2>/dev/null || true
 
             echo ""
-            echo "=== Clean up old logs ==="
+            echo "=== Log Cleanup ==="
             # Clear Docker container logs (they can be huge)
-            truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null || true
+            sudo truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null || true
+            # Vacuum journal logs
+            sudo journalctl --vacuum-size=100M 2>/dev/null || true
+
+            echo ""
+            echo "=== Temp Files Cleanup ==="
+            rm -rf /tmp/smile-* 2>/dev/null || true
+            rm -rf ~/smile-next/*.tar.gz 2>/dev/null || true
+            rm -rf ~/smile-next/*.bak 2>/dev/null || true
 
             echo ""
             echo "=== Disk Space After Cleanup ==="
-            df -h / | head -5
+            df -h / | tail -1
+            AFTER_USAGE=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+            FREED=$((BEFORE_USAGE - AFTER_USAGE))
+            echo "Space freed: ${FREED}%"
 
             echo ""
             echo "=== Preparing directory ==="
@@ -438,6 +528,12 @@ jobs:
             echo ""
             echo "Write test:"
             touch "$HOME/smile-next/test-write" && echo "Write OK" && rm "$HOME/smile-next/test-write" || echo "WRITE FAILED - Disk still full"
+
+            # Final threshold check
+            if [ "$AFTER_USAGE" -gt 80 ]; then
+              echo ""
+              echo "::warning::Post-cleanup disk usage is still ${AFTER_USAGE}%"
+            fi
 
       - name: Copy Files
         uses: appleboy/scp-action@v0.1.7
@@ -486,6 +582,39 @@ jobs:
           script: |
             cd "$HOME/smile-next" || exit 1
             bash scripts/deploy/verify-deployment.sh "$CONTAINER_NAME"
+
+      - name: Post-Deployment Resource Report (QA)
+        if: always()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30s
+          script: |
+            echo "=============================================="
+            echo "   Post-Deployment Resource Report"
+            echo "=============================================="
+            echo ""
+            echo "=== Disk Status ==="
+            df -h / | tail -1
+            DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+            echo ""
+            echo "=== Memory Status ==="
+            free -h | grep Mem
+            echo ""
+            echo "=== Docker Status ==="
+            docker system df 2>/dev/null || true
+            echo ""
+
+            # Threshold alerts
+            if [ "$DISK_USAGE" -gt 80 ]; then
+              echo "::warning::Post-deployment disk usage is ${DISK_USAGE}% - consider manual cleanup"
+            elif [ "$DISK_USAGE" -gt 70 ]; then
+              echo "Disk usage is ${DISK_USAGE}% - acceptable but monitor closely"
+            else
+              echo "Disk usage (${DISK_USAGE}%) is healthy"
+            fi
 
   # 7. Deploy Dev - Deploys develop branch to port 3002
   deploy-dev:
@@ -511,16 +640,44 @@ jobs:
           app-id: ${{ secrets.DEPLOYER_APP_ID }}
           private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
-      - name: Prepare Directory
+      - name: Check Server Resources (Dev)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 10s
+          command_timeout: 30s
           script: |
+            echo "=== Pre-Deployment Resource Check (Dev) ==="
+            df -h / | tail -1
+            DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+            free -h | grep Mem
+            echo ""
+            if [ "$DISK_USAGE" -gt 80 ]; then
+              echo "::warning::Disk usage is ${DISK_USAGE}%"
+            else
+              echo "Disk usage (${DISK_USAGE}%) OK"
+            fi
+
+      - name: Cleanup and Prepare Directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 120s
+          script: |
+            echo "=== Docker Cleanup ==="
+            docker system prune -af --volumes 2>/dev/null || true
+            docker builder prune -af 2>/dev/null || true
+
+            echo ""
+            echo "=== Preparing directory ==="
             mkdir -p "$HOME/smile-next"
             rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
+
+            echo ""
+            df -h / | tail -1
 
       - name: Copy Files
         uses: appleboy/scp-action@v0.1.7
@@ -569,6 +726,22 @@ jobs:
           script: |
             cd "$HOME/smile-next" || exit 1
             bash scripts/deploy/verify-deployment.sh "$CONTAINER_NAME"
+
+      - name: Post-Deployment Resource Report (Dev)
+        if: always()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30s
+          script: |
+            echo "=== Post-Deployment Resource Status ==="
+            df -h / | tail -1
+            DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+            if [ "$DISK_USAGE" -gt 80 ]; then
+              echo "::warning::Post-deployment disk usage is ${DISK_USAGE}%"
+            fi
 
   # 8. Cleanup old package versions after successful deployment
   cleanup:
