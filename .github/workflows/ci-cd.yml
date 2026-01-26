@@ -405,36 +405,39 @@ jobs:
           app-id: ${{ secrets.DEPLOYER_APP_ID }}
           private-key: ${{ secrets.DEPLOYER_APP_PRIVATE_KEY }}
 
-      - name: Prepare Directory (with diagnostics)
+      - name: Cleanup Disk and Prepare Directory
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 30s
+          command_timeout: 120s
           script: |
-            echo "=== Server Diagnostics ==="
-            echo "User: $(whoami)"
-            echo "Home: $HOME"
+            echo "=== Disk Space Before Cleanup ==="
+            df -h / | head -5
+
             echo ""
-            echo "Disk space:"
-            df -h | head -5
+            echo "=== Docker Cleanup ==="
+            # Remove unused Docker resources (dangling images, stopped containers, unused networks)
+            docker system prune -f 2>/dev/null || true
+
+            # Remove old Docker images (keep only last 3)
+            docker images --format "{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedAt}}" | \
+              grep -v "none" | sort -k3 -r | tail -n +4 | awk '{print $2}' | \
+              xargs -r docker rmi -f 2>/dev/null || true
+
             echo ""
-            echo "smile-next directory before:"
-            ls -la "$HOME/smile-next" 2>/dev/null || echo "Directory does not exist"
+            echo "=== Disk Space After Cleanup ==="
+            df -h / | head -5
+
             echo ""
-            echo "tar version:"
-            tar --version | head -1
-            echo ""
-            echo "Creating directory..."
+            echo "=== Preparing directory ==="
             mkdir -p "$HOME/smile-next"
             rm -rf "$HOME/smile-next/scripts" 2>/dev/null || true
-            echo ""
-            echo "Directory permissions after:"
-            ls -la "$HOME/smile-next"
+
             echo ""
             echo "Write test:"
-            touch "$HOME/smile-next/test-write" && echo "Write OK" && rm "$HOME/smile-next/test-write"
+            touch "$HOME/smile-next/test-write" && echo "Write OK" && rm "$HOME/smile-next/test-write" || echo "WRITE FAILED - Disk full"
 
       - name: Copy Files
         uses: appleboy/scp-action@v0.1.7
