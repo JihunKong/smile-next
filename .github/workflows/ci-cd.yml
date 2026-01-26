@@ -275,6 +275,7 @@ jobs:
           source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.infra.dev.yml"
           target: "~/smile-next"
           rm: false
+          debug: true
 
       - name: Execute Deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -355,6 +356,7 @@ jobs:
           source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.infra.dev.yml"
           target: "~/smile-next"
           rm: false
+          debug: true
 
       - name: Execute Deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -423,6 +425,7 @@ jobs:
           source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.infra.dev.yml"
           target: "~/smile-next"
           rm: false
+          debug: true
 
       - name: Execute Deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -505,6 +508,7 @@ jobs:
           source: "scripts,docker-compose.dev.yml,docker-compose.qa.yml,docker-compose.infra.dev.yml"
           target: "~/smile-next"
           rm: false
+          debug: true
 
       - name: Execute Deploy
         uses: appleboy/ssh-action@v1.0.3
