@@ -4,31 +4,12 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 
-interface StudentCertificate {
-  id: string
-  status: string
-  enrollmentDate: string
-  completionDate: string | null
-  verificationCode: string
-  certificate: {
-    id: string
-    name: string
-    organizationName: string | null
-    logoImageUrl: string | null
-    _count: {
-      activities: number
-    }
-  }
-  progress: {
-    completed: number
-    total: number
-    percentage: number
-  }
-}
+// Feature module imports for types
+import type { StudentCertificateEnrollment } from '@/features/certificates'
 
 export default function MyCertificatesPage() {
   const { data: session } = useSession()
-  const [certificates, setCertificates] = useState<StudentCertificate[]>([])
+  const [certificates, setCertificates] = useState<StudentCertificateEnrollment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'in_progress' | 'completed'>('all')
 

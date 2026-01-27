@@ -174,6 +174,31 @@ export interface CertificateProgress {
   }
 }
 
+/**
+ * Student certificate enrollment for list view (my-certificates page)
+ */
+export interface StudentCertificateEnrollment {
+  id: string
+  status: EnrollmentStatus | string
+  enrollmentDate: string
+  completionDate: string | null
+  verificationCode: string
+  certificate: {
+    id: string
+    name: string
+    organizationName: string | null
+    logoImageUrl: string | null
+    _count: {
+      activities: number
+    }
+  }
+  progress: {
+    completed: number
+    total: number
+    percentage: number
+  }
+}
+
 // =============================================================================
 // Form Types
 // =============================================================================
