@@ -14,3 +14,6 @@
 // export { ProgressTracker } from './ProgressTracker'
 // export { RequirementProgress } from './RequirementProgress'
 // export { CertificateFilters } from './CertificateFilters'
+
+// Placeholder export to make this a valid module
+export {}

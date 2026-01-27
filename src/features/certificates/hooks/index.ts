@@ -10,8 +10,12 @@ export type { UseCertificatesOptions, UseCertificatesReturn } from './useCertifi
 export { useCertificate } from './useCertificate'
 export type { UseCertificateReturn } from './useCertificate'
 
+export { useCertificateProgress } from './useCertificateProgress'
+export type {
+  UseCertificateProgressOptions,
+  UseCertificateProgressReturn,
+} from './useCertificateProgress'
+
 // Future hooks:
-// export { useCertificate } from './useCertificate'
-// export { useCertificateProgress } from './useCertificateProgress'
 // export { useCertificateForm } from './useCertificateForm'
 // export { useCertificateDesigner } from './useCertificateDesigner'
