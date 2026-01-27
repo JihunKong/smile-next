@@ -4,16 +4,17 @@
  * Reusable UI components for the certificates feature.
  */
 
-// Components will be exported here as they are created
-// Example:
-// export { CertificateCard } from './CertificateCard'
-// export { CertificateForm } from './CertificateForm'
-// export { CertificatePreview } from './CertificatePreview'
-// export { BadgePlacer } from './BadgePlacer'
-// export { ActivitySelector } from './ActivitySelector'
-// export { ProgressTracker } from './ProgressTracker'
-// export { RequirementProgress } from './RequirementProgress'
-// export { CertificateFilters } from './CertificateFilters'
+export { CertificateCard } from './CertificateCard'
+export type { CertificateCardProps } from './CertificateCard'
 
-// Placeholder export to make this a valid module
-export {}
+export { CertificateGrid } from './CertificateGrid'
+export type { CertificateGridProps } from './CertificateGrid'
+
+export { CertificateFilters } from './CertificateFilters'
+export type { CertificateFiltersProps } from './CertificateFilters'
+
+export { ProgressTracker } from './ProgressTracker'
+export type { ProgressTrackerProps } from './ProgressTracker'
+
+// Future components:
+// export { ActivitySelector } from './ActivitySelector'
