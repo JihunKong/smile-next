@@ -1,13 +1,18 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import CertificatePreview from './components/CertificatePreview'
 import ActivitySelector from './components/ActivitySelector'
 
-interface SelectedActivity {
+// Feature module imports
+import { useCertificateForm, CertificateFormFields } from '@/features/certificates'
+
+type ImageType = 'logo' | 'watermark' | 'signature'
+
+interface DesignerActivity {
   activityId: string
   name: string
   activityType: string
@@ -16,8 +21,6 @@ interface SelectedActivity {
   required: boolean
   groupName?: string
 }
-
-type ImageType = 'logo' | 'watermark' | 'signature'
 
 const LOGO_POSITIONS = [
   { value: 'top-left', label: 'Top Left' },
@@ -35,15 +38,15 @@ export default function CertificateDesignerPage() {
   const router = useRouter()
   const { data: session } = useSession()
 
-  // Form state
-  const [name, setName] = useState('')
-  const [organizationName, setOrganizationName] = useState('')
-  const [programName, setProgramName] = useState('')
-  const [signatoryName, setSignatoryName] = useState('')
-  const [certificateStatement, setCertificateStatement] = useState('')
-  const [studentInstructions, setStudentInstructions] = useState('')
+  // Use the certificate form hook for form state management
+  const {
+    formData,
+    errors,
+    setField,
+    validate,
+  } = useCertificateForm()
 
-  // Design state
+  // Design state (not in form hook - specific to designer)
   const [logoImageUrl, setLogoImageUrl] = useState<string | null>(null)
   const [watermarkImageUrl, setWatermarkImageUrl] = useState<string | null>(null)
   const [signatureImageUrl, setSignatureImageUrl] = useState<string | null>(null)
@@ -51,15 +54,15 @@ export default function CertificateDesignerPage() {
   const [qrCodeEnabled, setQrCodeEnabled] = useState(true)
   const [qrCodePosition, setQrCodePosition] = useState('bottom-right')
 
-  // Activities state
-  const [selectedActivities, setSelectedActivities] = useState<SelectedActivity[]>([])
+  // Activities state (with mode field for designer)
+  const [selectedActivities, setSelectedActivities] = useState<DesignerActivity[]>([])
 
   // UI state
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [certificateId, setCertificateId] = useState<string | null>(null)
-  const [activeSection, setActiveSection] = useState<'basic' | 'content' | 'design' | 'activities' | 'qr'>('basic')
+  const [activeSection, setActiveSection] = useState<'basic' | 'design' | 'activities' | 'qr'>('basic')
 
   // File input refs
   const logoInputRef = useRef<HTMLInputElement>(null)
@@ -78,21 +81,19 @@ export default function CertificateDesignerPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: name || 'Untitled Certificate',
+            name: formData.name || 'Untitled Certificate',
             status: 'draft',
-            organizationName: organizationName || null,
-            programName: programName || null,
-            signatoryName: signatoryName || null,
-            certificateStatement: certificateStatement || null,
-            studentInstructions: studentInstructions || null,
+            organizationName: formData.organizationName || null,
+            programName: formData.programName || null,
+            signatoryName: formData.signatoryName || null,
+            certificateStatement: formData.certificateStatement || null,
+            studentInstructions: formData.studentInstructions || null,
             activities: [],
           }),
         })
         if (!res.ok) throw new Error('Failed to create draft certificate')
         const data = await res.json()
         setCertificateId(data.certificate.id)
-
-        // Now upload the image
         await uploadImage(data.certificate.id, file, type)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to upload image')
@@ -103,14 +104,14 @@ export default function CertificateDesignerPage() {
   }
 
   const uploadImage = async (certId: string, file: File, type: ImageType) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('type', type)
+    const formDataObj = new FormData()
+    formDataObj.append('file', file)
+    formDataObj.append('type', type)
 
     try {
       const res = await fetch(`/api/certificates/${certId}/images`, {
         method: 'POST',
-        body: formData,
+        body: formDataObj,
       })
 
       if (!res.ok) {
@@ -165,9 +166,28 @@ export default function CertificateDesignerPage() {
     }
   }
 
+  // Build payload for API
+  const buildPayload = (status: string) => ({
+    name: formData.name,
+    status,
+    organizationName: formData.organizationName || null,
+    programName: formData.programName || null,
+    signatoryName: formData.signatoryName || null,
+    certificateStatement: formData.certificateStatement || null,
+    studentInstructions: formData.studentInstructions || null,
+    logoPosition,
+    qrCodeEnabled,
+    qrCodePosition,
+    activities: selectedActivities.map((a) => ({
+      activityId: a.activityId,
+      sequenceOrder: a.sequenceOrder,
+      required: a.required,
+    })),
+  })
+
   // Save as draft
   const handleSaveDraft = async () => {
-    if (!name.trim()) {
+    if (!formData.name.trim()) {
       setError('Certificate name is required')
       return
     }
@@ -176,23 +196,7 @@ export default function CertificateDesignerPage() {
     setError(null)
 
     try {
-      const payload = {
-        name,
-        status: 'draft',
-        organizationName: organizationName || null,
-        programName: programName || null,
-        signatoryName: signatoryName || null,
-        certificateStatement: certificateStatement || null,
-        studentInstructions: studentInstructions || null,
-        logoPosition,
-        qrCodeEnabled,
-        qrCodePosition,
-        activities: selectedActivities.map((a) => ({
-          activityId: a.activityId,
-          sequenceOrder: a.sequenceOrder,
-          required: a.required,
-        })),
-      }
+      const payload = buildPayload('draft')
 
       let res: Response
       if (certificateId) {
@@ -227,7 +231,7 @@ export default function CertificateDesignerPage() {
 
   // Submit for approval
   const handleSubmit = async () => {
-    if (!name.trim()) {
+    if (!formData.name.trim()) {
       setError('Certificate name is required')
       return
     }
@@ -241,23 +245,7 @@ export default function CertificateDesignerPage() {
     setError(null)
 
     try {
-      const payload = {
-        name,
-        status: 'pending_approval',
-        organizationName: organizationName || null,
-        programName: programName || null,
-        signatoryName: signatoryName || null,
-        certificateStatement: certificateStatement || null,
-        studentInstructions: studentInstructions || null,
-        logoPosition,
-        qrCodeEnabled,
-        qrCodePosition,
-        activities: selectedActivities.map((a) => ({
-          activityId: a.activityId,
-          sequenceOrder: a.sequenceOrder,
-          required: a.required,
-        })),
-      }
+      const payload = buildPayload('pending_approval')
 
       let res: Response
       if (certificateId) {
@@ -311,10 +299,9 @@ export default function CertificateDesignerPage() {
 
   const sections = [
     { id: 'basic' as const, label: 'Basic Info', icon: '1' },
-    { id: 'content' as const, label: 'Content', icon: '2' },
-    { id: 'design' as const, label: 'Design', icon: '3' },
-    { id: 'activities' as const, label: 'Activities', icon: '4' },
-    { id: 'qr' as const, label: 'QR Code', icon: '5' },
+    { id: 'design' as const, label: 'Design', icon: '2' },
+    { id: 'activities' as const, label: 'Activities', icon: '3' },
+    { id: 'qr' as const, label: 'QR Code', icon: '4' },
   ]
 
   return (
@@ -385,308 +372,133 @@ export default function CertificateDesignerPage() {
               </div>
             </div>
 
-            {/* Basic Information Section */}
+            {/* Basic Information Section - Using Feature Component */}
             {activeSection === 'basic' && (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Basic Information</h2>
-
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                      Certificate Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      maxLength={200}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8C1515] focus:border-transparent outline-none transition"
-                      placeholder="e.g., Data Science Fundamentals Certificate"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="organizationName" className="block text-sm font-medium text-gray-700 mb-1">
-                      Organization Name
-                    </label>
-                    <input
-                      id="organizationName"
-                      type="text"
-                      value={organizationName}
-                      onChange={(e) => setOrganizationName(e.target.value)}
-                      maxLength={200}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8C1515] focus:border-transparent outline-none transition"
-                      placeholder="e.g., Stanford University"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="programName" className="block text-sm font-medium text-gray-700 mb-1">
-                      Program Name
-                    </label>
-                    <input
-                      id="programName"
-                      type="text"
-                      value={programName}
-                      onChange={(e) => setProgramName(e.target.value)}
-                      maxLength={200}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8C1515] focus:border-transparent outline-none transition"
-                      placeholder="e.g., Online Learning Program"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="signatoryName" className="block text-sm font-medium text-gray-700 mb-1">
-                      Signatory Name
-                    </label>
-                    <input
-                      id="signatoryName"
-                      type="text"
-                      value={signatoryName}
-                      onChange={(e) => setSignatoryName(e.target.value)}
-                      maxLength={200}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8C1515] focus:border-transparent outline-none transition"
-                      placeholder="e.g., Dr. John Smith"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Content Section */}
-            {activeSection === 'content' && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Content</h2>
-
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="certificateStatement" className="block text-sm font-medium text-gray-700 mb-1">
-                      Certificate Statement
-                    </label>
-                    <textarea
-                      id="certificateStatement"
-                      value={certificateStatement}
-                      onChange={(e) => setCertificateStatement(e.target.value)}
-                      rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8C1515] focus:border-transparent outline-none transition resize-none"
-                      placeholder="e.g., This is to certify that the above-named student has successfully completed all requirements for the program..."
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      This text appears on the certificate after the student&apos;s name
-                    </p>
-                  </div>
-
-                  <div>
-                    <label htmlFor="studentInstructions" className="block text-sm font-medium text-gray-700 mb-1">
-                      Student Instructions
-                    </label>
-                    <textarea
-                      id="studentInstructions"
-                      value={studentInstructions}
-                      onChange={(e) => setStudentInstructions(e.target.value)}
-                      rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8C1515] focus:border-transparent outline-none transition resize-none"
-                      placeholder="Instructions for students on how to complete this certificate program..."
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      These instructions are shown to students on the enrollment page
-                    </p>
-                  </div>
-                </div>
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Basic Information & Content</h2>
+                <CertificateFormFields
+                  formData={formData}
+                  errors={errors}
+                  onChange={setField}
+                  disabled={loading || saving}
+                />
               </div>
             )}
 
             {/* Design Section */}
             {activeSection === 'design' && (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Design</h2>
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Visual Design</h2>
 
                 <div className="space-y-6">
                   {/* Logo Upload */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Logo Image
-                    </label>
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
-                        {logoImageUrl ? (
-                          <div className="relative">
-                            <img
-                              src={logoImageUrl}
-                              alt="Logo"
-                              className="w-24 h-24 object-contain border border-gray-200 rounded-lg bg-gray-50"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveImage('logo')}
-                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <input
-                          ref={logoInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) handleImageUpload(file, 'logo')
-                          }}
-                        />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Logo Image</label>
+                    <input
+                      type="file"
+                      ref={logoInputRef}
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'logo')}
+                      className="hidden"
+                    />
+                    {logoImageUrl ? (
+                      <div className="flex items-center gap-4">
+                        <img src={logoImageUrl} alt="Logo" className="w-20 h-20 object-contain border rounded" />
                         <button
                           type="button"
-                          onClick={() => logoInputRef.current?.click()}
-                          className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                          onClick={() => handleRemoveImage('logo')}
+                          className="text-red-600 hover:text-red-800 text-sm"
                         >
-                          {logoImageUrl ? 'Change Logo' : 'Upload Logo'}
+                          Remove
                         </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Recommended: PNG or JPEG, max 5MB
-                        </p>
-                        {logoImageUrl && (
-                          <div className="mt-2">
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Position</label>
-                            <select
-                              value={logoPosition}
-                              onChange={(e) => setLogoPosition(e.target.value)}
-                              className="text-sm border border-gray-300 rounded px-2 py-1"
-                            >
-                              {LOGO_POSITIONS.map((pos) => (
-                                <option key={pos.value} value={pos.value}>{pos.label}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
                       </div>
-                    </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        className="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 text-gray-600 text-sm"
+                      >
+                        Upload Logo
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Logo Position */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Logo Position</label>
+                    <select
+                      value={logoPosition}
+                      onChange={(e) => setLogoPosition(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8C1515] focus:border-transparent outline-none transition"
+                    >
+                      {LOGO_POSITIONS.map((pos) => (
+                        <option key={pos.value} value={pos.value}>{pos.label}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Watermark Upload */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Watermark Image (Optional)
-                    </label>
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
-                        {watermarkImageUrl ? (
-                          <div className="relative">
-                            <img
-                              src={watermarkImageUrl}
-                              alt="Watermark"
-                              className="w-24 h-24 object-contain border border-gray-200 rounded-lg bg-gray-50"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveImage('watermark')}
-                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <input
-                          ref={watermarkInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) handleImageUpload(file, 'watermark')
-                          }}
-                        />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Watermark Image</label>
+                    <input
+                      type="file"
+                      ref={watermarkInputRef}
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'watermark')}
+                      className="hidden"
+                    />
+                    {watermarkImageUrl ? (
+                      <div className="flex items-center gap-4">
+                        <img src={watermarkImageUrl} alt="Watermark" className="w-20 h-20 object-contain border rounded" />
                         <button
                           type="button"
-                          onClick={() => watermarkInputRef.current?.click()}
-                          className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                          onClick={() => handleRemoveImage('watermark')}
+                          className="text-red-600 hover:text-red-800 text-sm"
                         >
-                          {watermarkImageUrl ? 'Change Watermark' : 'Upload Watermark'}
+                          Remove
                         </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Will be displayed as a faded background image
-                        </p>
                       </div>
-                    </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => watermarkInputRef.current?.click()}
+                        className="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 text-gray-600 text-sm"
+                      >
+                        Upload Watermark
+                      </button>
+                    )}
                   </div>
 
                   {/* Signature Upload */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Signature Image
-                    </label>
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
-                        {signatureImageUrl ? (
-                          <div className="relative">
-                            <img
-                              src={signatureImageUrl}
-                              alt="Signature"
-                              className="w-24 h-16 object-contain border border-gray-200 rounded-lg bg-gray-50"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveImage('signature')}
-                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-24 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                            <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <input
-                          ref={signatureInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) handleImageUpload(file, 'signature')
-                          }}
-                        />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Signature Image</label>
+                    <input
+                      type="file"
+                      ref={signatureInputRef}
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'signature')}
+                      className="hidden"
+                    />
+                    {signatureImageUrl ? (
+                      <div className="flex items-center gap-4">
+                        <img src={signatureImageUrl} alt="Signature" className="w-20 h-20 object-contain border rounded" />
                         <button
                           type="button"
-                          onClick={() => signatureInputRef.current?.click()}
-                          className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                          onClick={() => handleRemoveImage('signature')}
+                          className="text-red-600 hover:text-red-800 text-sm"
                         >
-                          {signatureImageUrl ? 'Change Signature' : 'Upload Signature'}
+                          Remove
                         </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Transparent PNG recommended for best results
-                        </p>
                       </div>
-                    </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => signatureInputRef.current?.click()}
+                        className="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 text-gray-600 text-sm"
+                      >
+                        Upload Signature
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -827,11 +639,11 @@ export default function CertificateDesignerPage() {
               </p>
 
               <CertificatePreview
-                name={name}
-                organizationName={organizationName}
-                programName={programName}
-                certificateStatement={certificateStatement}
-                signatoryName={signatoryName}
+                name={formData.name}
+                organizationName={formData.organizationName}
+                programName={formData.programName}
+                certificateStatement={formData.certificateStatement}
+                signatoryName={formData.signatoryName}
                 logoImageUrl={logoImageUrl}
                 watermarkImageUrl={watermarkImageUrl}
                 signatureImageUrl={signatureImageUrl}
