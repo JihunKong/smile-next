@@ -23,5 +23,11 @@ export type {
   AddActivityInput,
 } from './useCertificateForm'
 
-// Future hooks:
-// export { useCertificateDesigner } from './useCertificateDesigner'
+export { useCertificateDesigner } from './useCertificateDesigner'
+export type {
+  UseCertificateDesignerOptions,
+  UseCertificateDesignerReturn,
+  AddBadgeInput,
+  LogoPosition,
+  QrPosition,
+} from './useCertificateDesigner'
