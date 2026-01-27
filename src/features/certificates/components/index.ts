@@ -16,5 +16,11 @@ export type { CertificateFiltersProps } from './CertificateFilters'
 export { ProgressTracker } from './ProgressTracker'
 export type { ProgressTrackerProps } from './ProgressTracker'
 
-// Future components:
-// export { ActivitySelector } from './ActivitySelector'
+export { ActivitySelector } from './ActivitySelector'
+export type { ActivitySelectorProps } from './ActivitySelector'
+
+export { CertificateFormFields } from './CertificateFormFields'
+export type { CertificateFormFieldsProps } from './CertificateFormFields'
+
+export { BadgePlacer } from './BadgePlacer'
+export type { BadgePlacerProps, BadgeType } from './BadgePlacer'
