@@ -5,39 +5,19 @@ import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-interface CertificateActivity {
-  id: string
-  activity: {
-    id: string
-    name: string
-    description: string | null
-    activityType: string
-  }
-  sequenceOrder: number
-  required: boolean
-}
+// Feature module imports for types
+import type { CertificateDetails, CertificateActivity } from '@/features/certificates'
 
-interface Certificate {
-  id: string
-  name: string
-  organizationName: string | null
-  programName: string | null
-  signatoryName: string | null
-  certificateStatement: string | null
-  studentInstructions: string | null
-  logoImageUrl: string | null
-  status: string
-  programAvailableDate: string | null
-  activities: CertificateActivity[]
-  _count: {
-    studentCertificates: number
-  }
-}
-
+// Local type for enrollment status (page-specific)
 interface EnrollmentStatus {
   isEnrolled: boolean
   enrollmentId?: string
   status?: string
+}
+
+// Extended certificate type with page-specific fields
+interface CertificateWithDetails extends CertificateDetails {
+  programAvailableDate?: string | null
 }
 
 export default function CertificateDetailPage() {
@@ -46,7 +26,7 @@ export default function CertificateDetailPage() {
   const router = useRouter()
   const certificateId = params.id as string
 
-  const [certificate, setCertificate] = useState<Certificate | null>(null)
+  const [certificate, setCertificate] = useState<CertificateWithDetails | null>(null)
   const [enrollment, setEnrollment] = useState<EnrollmentStatus>({ isEnrolled: false })
   const [isLoading, setIsLoading] = useState(true)
   const [isEnrolling, setIsEnrolling] = useState(false)
