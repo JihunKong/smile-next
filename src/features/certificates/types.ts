@@ -240,7 +240,7 @@ export interface CertificateProgressResponse {
 /**
  * Certificate filter options
  */
-export interface CertificateFilters {
+export interface CertificateFilterOptions {
   search?: string
   status?: CertificateStatus | 'all'
   sortBy?: SortOption
