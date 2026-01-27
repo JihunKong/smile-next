@@ -16,6 +16,12 @@ export type {
   UseCertificateProgressReturn,
 } from './useCertificateProgress'
 
+export { useCertificateForm } from './useCertificateForm'
+export type {
+  UseCertificateFormOptions,
+  UseCertificateFormReturn,
+  AddActivityInput,
+} from './useCertificateForm'
+
 // Future hooks:
-// export { useCertificateForm } from './useCertificateForm'
 // export { useCertificateDesigner } from './useCertificateDesigner'
