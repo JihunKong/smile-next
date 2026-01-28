@@ -45,10 +45,11 @@ export {
 // export { useInquiryAttempt } from './hooks'
 // export { useInquiryResults } from './hooks'
 
-// Components (to be added in WI-02 through WI-08)
-// export { BloomsBadge } from './components'
-// export { QualityScoreDisplay } from './components'
-// export { KeywordBadge, KeywordInput } from './components'
-// export { QuestionSubmissionCard } from './components'
-// export { InquiryProgress } from './components'
-// export { InquiryResultCard } from './components'
+// Components
+export { BloomsBadge } from './components'
+export { QualityScoreDisplay } from './components'
+export { KeywordBadge, KeywordPool } from './components'
+export { QuestionSubmissionCard } from './components'
+export { InquiryProgress } from './components'
+export { InquiryResultCard } from './components'
+// More components to be added in WI-08

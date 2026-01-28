@@ -4,4 +4,12 @@
  * Export all inquiry-related UI components.
  */
 
-// Components will be added in WI-02 through WI-08
+export { BloomsBadge } from './BloomsBadge'
+export { QualityScoreDisplay } from './QualityScoreDisplay'
+export { KeywordBadge } from './KeywordBadge'
+export { KeywordPool } from './KeywordPool'
+export { QuestionSubmissionCard } from './QuestionSubmissionCard'
+export { InquiryProgress } from './InquiryProgress'
+export { InquiryResultCard } from './InquiryResultCard'
+
+// More components will be added in WI-08
