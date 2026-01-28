@@ -52,4 +52,4 @@ export { KeywordBadge, KeywordPool } from './components'
 export { QuestionSubmissionCard } from './components'
 export { InquiryProgress } from './components'
 export { InquiryResultCard } from './components'
-// More components to be added in WI-08
+export { DimensionScoreGrid } from './components'

@@ -11,5 +11,4 @@ export { KeywordPool } from './KeywordPool'
 export { QuestionSubmissionCard } from './QuestionSubmissionCard'
 export { InquiryProgress } from './InquiryProgress'
 export { InquiryResultCard } from './InquiryResultCard'
-
-// More components will be added in WI-08
+export { DimensionScoreGrid } from './DimensionScoreGrid'
