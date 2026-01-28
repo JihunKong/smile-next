@@ -41,9 +41,9 @@ export {
   calculateAverageScore,
 } from './utils'
 
-// Hooks (to be added in WI-09, WI-10)
-// export { useInquiryAttempt } from './hooks'
-// export { useInquiryResults } from './hooks'
+// Hooks
+export { useInquiryAttempt } from './hooks'
+export { useInquiryResults } from './hooks'
 
 // Components
 export { BloomsBadge } from './components'
