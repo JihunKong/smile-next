@@ -68,3 +68,10 @@ export { PassingCriteriaInfo } from './components'
 export { LeaderboardStats } from './components'
 export { LeaderboardTable } from './components'
 export { UserPerformanceCard } from './components'
+
+// Results Page Components
+export { ResultsHeader } from './components'
+export { OverallScoreCard } from './components'
+export { BloomsDistributionCard } from './components'
+export { QuestionResultsList } from './components'
+export { ResultsActionButtons } from './components'

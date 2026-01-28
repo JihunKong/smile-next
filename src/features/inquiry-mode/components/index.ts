@@ -36,3 +36,10 @@ export { PassingCriteriaInfo } from './PassingCriteriaInfo'
 export { LeaderboardStats } from './LeaderboardStats'
 export { LeaderboardTable } from './LeaderboardTable'
 export { UserPerformanceCard } from './UserPerformanceCard'
+
+// Results page components
+export { ResultsHeader } from './ResultsHeader'
+export { OverallScoreCard } from './OverallScoreCard'
+export { BloomsDistributionCard } from './BloomsDistributionCard'
+export { QuestionResultsList } from './QuestionResultsList'
+export { ResultsActionButtons } from './ResultsActionButtons'
