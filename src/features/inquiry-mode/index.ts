@@ -45,7 +45,7 @@ export {
 export { useInquiryAttempt } from './hooks'
 export { useInquiryResults } from './hooks'
 
-// Components
+// Core Components
 export { BloomsBadge } from './components'
 export { QualityScoreDisplay } from './components'
 export { KeywordBadge, KeywordPool } from './components'
@@ -53,3 +53,11 @@ export { QuestionSubmissionCard } from './components'
 export { InquiryProgress } from './components'
 export { InquiryResultCard } from './components'
 export { DimensionScoreGrid } from './components'
+
+// Take Page Components
+export { InquiryTakeHeader } from './components'
+export { KeywordPools } from './components'
+export { QuestionInput } from './components'
+export { SubmittedQuestionsList } from './components'
+export { CompletionPrompt } from './components'
+export { InquiryCompletionModal } from './components'

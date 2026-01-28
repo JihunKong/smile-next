@@ -6,6 +6,10 @@ interface InquiryProgressProps {
   showCurrentQuestion?: boolean
   averageScore?: number
   compact?: boolean
+  labels?: {
+    completed: string
+    remaining: string
+  }
 }
 
 export function InquiryProgress({
@@ -14,10 +18,14 @@ export function InquiryProgress({
   showCurrentQuestion = false,
   averageScore,
   compact = false,
+  labels,
 }: InquiryProgressProps) {
   const percentage = total > 0 ? (current / total) * 100 : 0
   const remaining = total - current
   const currentQuestion = Math.min(current + 1, total)
+
+  const completedText = labels?.completed.replace('{count}', String(current)) ?? `${current} completed`
+  const remainingText = labels?.remaining.replace('{count}', String(remaining)) ?? `${remaining} remaining`
 
   if (compact) {
     return (
@@ -45,8 +53,8 @@ export function InquiryProgress({
 
       {/* Progress Details */}
       <div className="flex justify-between mt-1 text-xs text-gray-500">
-        <span>{current} completed</span>
-        <span>{remaining} remaining</span>
+        <span>{completedText}</span>
+        <span>{remainingText}</span>
       </div>
 
       {/* Optional Current Question Display */}
