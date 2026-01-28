@@ -9,3 +9,6 @@ export * from './settings'
 
 // Profile components
 export * from './profile'
+
+// Shared components
+export * from './shared'
