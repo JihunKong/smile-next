@@ -29,3 +29,10 @@ export { QuestionInput } from './QuestionInput'
 export { SubmittedQuestionsList } from './SubmittedQuestionsList'
 export { CompletionPrompt } from './CompletionPrompt'
 export { InquiryCompletionModal } from './InquiryCompletionModal'
+
+// Leaderboard components
+export { LeaderboardHeader } from './LeaderboardHeader'
+export { PassingCriteriaInfo } from './PassingCriteriaInfo'
+export { LeaderboardStats } from './LeaderboardStats'
+export { LeaderboardTable } from './LeaderboardTable'
+export { UserPerformanceCard } from './UserPerformanceCard'

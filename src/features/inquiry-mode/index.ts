@@ -61,3 +61,10 @@ export { QuestionInput } from './components'
 export { SubmittedQuestionsList } from './components'
 export { CompletionPrompt } from './components'
 export { InquiryCompletionModal } from './components'
+
+// Leaderboard Components
+export { LeaderboardHeader } from './components'
+export { PassingCriteriaInfo } from './components'
+export { LeaderboardStats } from './components'
+export { LeaderboardTable } from './components'
+export { UserPerformanceCard } from './components'
