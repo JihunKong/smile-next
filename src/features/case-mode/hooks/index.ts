@@ -12,3 +12,6 @@ export type { UseScenarioDragDropOptions, UseScenarioDragDropReturn } from './us
 
 export { useCaseReview } from './useCaseReview'
 export type { UseCaseReviewOptions, UseCaseReviewReturn } from './useCaseReview'
+
+export { useCaseAttempts } from './useCaseAttempts'
+export type { UseCaseAttemptsOptions, UseCaseAttemptsReturn } from './useCaseAttempts'

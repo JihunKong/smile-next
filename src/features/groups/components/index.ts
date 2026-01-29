@@ -9,3 +9,10 @@ export { InviteLink } from './InviteLink'
 export { GroupCard } from './GroupCard'
 export { GroupForm } from './GroupForm'
 export { GroupImageUpload } from './GroupImageUpload'
+
+// Members page components
+export { MembersHeader } from './MembersHeader'
+export { MemberFilters } from './MemberFilters'
+export { MemberStatsGrid } from './MemberStatsGrid'
+export { MembersTable } from './MembersTable'
+export { RemoveMemberModal } from './RemoveMemberModal'

@@ -24,3 +24,11 @@ export type { CertificateFormFieldsProps } from './CertificateFormFields'
 
 export { BadgePlacer } from './BadgePlacer'
 export type { BadgePlacerProps, BadgeType } from './BadgePlacer'
+
+// Designer page components
+export { DesignSection } from './DesignSection'
+export { QRCodeSection } from './QRCodeSection'
+export { DesignerHeader } from './DesignerHeader'
+export { SectionNavigation } from './SectionNavigation'
+export type { SectionId } from './SectionNavigation'
+export { DesignerActions } from './DesignerActions'
