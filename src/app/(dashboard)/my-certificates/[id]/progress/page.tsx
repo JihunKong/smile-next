@@ -1,48 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-interface ActivityProgress {
-  id: string
-  activity: {
-    id: string
-    name: string
-    description: string | null
-    activityType: string
-    owningGroupId: string
-  }
-  sequenceOrder: number
-  required: boolean
-  status: 'not_started' | 'in_progress' | 'completed'
-  score?: number
-}
-
-interface CertificateProgress {
-  id: string
-  status: string
-  enrollmentDate: string
-  completionDate: string | null
-  verificationCode: string
-  certificate: {
-    id: string
-    name: string
-    organizationName: string | null
-    programName: string | null
-    certificateStatement: string | null
-    logoImageUrl: string | null
-  }
-  activities: ActivityProgress[]
-  progress: {
-    completed: number
-    inProgress: number
-    notStarted: number
-    total: number
-    percentage: number
-  }
-}
+// Feature module imports
+import {
+  useCertificateProgress,
+  ProgressTracker,
+} from '@/features/certificates'
 
 export default function CertificateProgressPage() {
   const { data: session } = useSession()
@@ -50,41 +17,25 @@ export default function CertificateProgressPage() {
   const router = useRouter()
   const enrollmentId = params.id as string
 
-  const [progress, setProgress] = useState<CertificateProgress | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  // Use the certificate progress hook for data fetching
+  const {
+    progress,
+    activities,
+    stats,
+    isCompleted,
+    isLoading,
+    isRefetching,
+    error,
+    refetch,
+  } = useCertificateProgress({ enrollmentId })
+
+  // Local state for download
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
 
-  const fetchProgress = async () => {
-    try {
-      const response = await fetch(`/api/my-certificates/${enrollmentId}/progress`)
-      if (response.ok) {
-        const data = await response.json()
-        setProgress(data)
-      } else if (response.status === 404) {
-        router.push('/my-certificates')
-      }
-    } catch (error) {
-      console.error('Failed to fetch progress:', error)
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }
+  const handleDownloadCertificate = useCallback(async () => {
+    if (!progress) return
 
-  useEffect(() => {
-    if (enrollmentId && session) {
-      fetchProgress()
-    }
-  }, [enrollmentId, session])
-
-  const handleRefresh = () => {
-    setIsRefreshing(true)
-    fetchProgress()
-  }
-
-  const handleDownloadCertificate = async () => {
     setIsDownloading(true)
     setDownloadError(null)
 
@@ -96,40 +47,36 @@ export default function CertificateProgressPage() {
         throw new Error(errorData.error || 'Failed to download certificate')
       }
 
-      // Check content type
       const contentType = response.headers.get('content-type')
 
       if (contentType?.includes('application/pdf')) {
-        // Download as PDF
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
         a.download = response.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] ||
-          `Certificate_${progress?.verificationCode || 'download'}.pdf`
+          `Certificate_${progress.verificationCode || 'download'}.pdf`
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
       } else if (contentType?.includes('text/html')) {
-        // Fallback: Open HTML in new tab for manual printing
         const html = await response.text()
         const blob = new Blob([html], { type: 'text/html' })
         const url = window.URL.createObjectURL(blob)
         window.open(url, '_blank')
-        // Note: URL will be revoked when tab is closed by browser
       } else {
         throw new Error('Unexpected response format')
       }
-    } catch (error) {
-      console.error('Failed to download certificate:', error)
-      setDownloadError(error instanceof Error ? error.message : 'Failed to download certificate')
+    } catch (err) {
+      console.error('Failed to download certificate:', err)
+      setDownloadError(err instanceof Error ? err.message : 'Failed to download certificate')
     } finally {
       setIsDownloading(false)
     }
-  }
+  }, [progress, enrollmentId])
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     if (!progress) return
 
     const shareUrl = `${window.location.origin}/verify/${progress.verificationCode}`
@@ -143,7 +90,6 @@ export default function CertificateProgressPage() {
           url: shareUrl,
         })
       } catch (err) {
-        // User cancelled or share failed, fall back to clipboard
         if ((err as Error).name !== 'AbortError') {
           await copyToClipboard(shareUrl)
         }
@@ -151,7 +97,7 @@ export default function CertificateProgressPage() {
     } else {
       await copyToClipboard(shareUrl)
     }
-  }
+  }, [progress])
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -163,6 +109,7 @@ export default function CertificateProgressPage() {
     }
   }
 
+  // Auth check
   if (!session) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -171,6 +118,7 @@ export default function CertificateProgressPage() {
     )
   }
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -179,11 +127,14 @@ export default function CertificateProgressPage() {
     )
   }
 
-  if (!progress) {
+  // Error or not found
+  if (error || !progress) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Certificate not found</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            {error || 'Certificate not found'}
+          </h2>
           <Link href="/my-certificates" className="text-[#8C1515] hover:underline">
             View my certificates
           </Link>
@@ -191,8 +142,6 @@ export default function CertificateProgressPage() {
       </div>
     )
   }
-
-  const isCompleted = progress.status === 'completed'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -209,9 +158,7 @@ export default function CertificateProgressPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-green-800">Congratulations!</h3>
-                  <p className="text-green-700">
-                    You have completed this certificate program.
-                  </p>
+                  <p className="text-green-700">You have completed this certificate program.</p>
                 </div>
               </div>
               <div className="flex space-x-3">
@@ -274,12 +221,12 @@ export default function CertificateProgressPage() {
               )}
             </div>
             <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
+              onClick={() => refetch()}
+              disabled={isRefetching}
               className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               <svg
-                className={`w-5 h-5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`}
+                className={`w-5 h-5 mr-2 ${isRefetching ? 'animate-spin' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -290,114 +237,38 @@ export default function CertificateProgressPage() {
             </button>
           </div>
 
-          {/* Progress Bar */}
-          <div className="mt-6">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-gray-600">Overall Progress</span>
-              <span className="font-semibold text-[#8C1515]">{progress.progress.percentage}%</span>
+          {/* Stats Grid */}
+          {stats && (
+            <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+                <div className="text-sm text-gray-500">Completed</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">{stats.inProgress}</div>
+                <div className="text-sm text-gray-500">In Progress</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-400">{stats.notStarted}</div>
+                <div className="text-sm text-gray-500">Not Started</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#8C1515]">{stats.total}</div>
+                <div className="text-sm text-gray-500">Total</div>
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-4">
-              <div
-                className={`h-4 rounded-full transition-all ${
-                  isCompleted ? 'bg-green-500' : 'bg-[#8C1515]'
-                }`}
-                style={{ width: `${progress.progress.percentage}%` }}
-              ></div>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{progress.progress.completed}</div>
-              <div className="text-sm text-gray-500">Completed</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{progress.progress.inProgress}</div>
-              <div className="text-sm text-gray-500">In Progress</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-400">{progress.progress.notStarted}</div>
-              <div className="text-sm text-gray-500">Not Started</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#8C1515]">{progress.progress.total}</div>
-              <div className="text-sm text-gray-500">Total</div>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Activity List */}
+        {/* Activity List - Using Feature Component */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-[#2E2D29] mb-4">Activities</h2>
-          <div className="space-y-4">
-            {progress.activities
-              .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
-              .map((item, index) => (
-                <div
-                  key={item.id}
-                  className={`flex items-center p-4 border rounded-lg ${
-                    item.status === 'completed'
-                      ? 'border-green-200 bg-green-50'
-                      : item.status === 'in_progress'
-                      ? 'border-yellow-200 bg-yellow-50'
-                      : 'border-gray-200'
-                  }`}
-                >
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 ${
-                      item.status === 'completed'
-                        ? 'bg-green-500 text-white'
-                        : item.status === 'in_progress'
-                        ? 'bg-yellow-500 text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}
-                  >
-                    {item.status === 'completed' ? (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      index + 1
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{item.activity.name}</h4>
-                    <p className="text-sm text-gray-500">
-                      {item.activity.activityType}
-                      {item.score !== undefined && (
-                        <span className="ml-2 text-green-600">Score: {item.score}%</span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        item.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : item.status === 'in_progress'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {item.status === 'completed'
-                        ? 'Completed'
-                        : item.status === 'in_progress'
-                        ? 'In Progress'
-                        : 'Not Started'}
-                    </span>
-                    {item.status !== 'completed' && (
-                      <Link
-                        href={`/groups/${item.activity.owningGroupId}/activities/${item.activity.id}`}
-                        className="text-[#8C1515] hover:underline text-sm font-medium"
-                      >
-                        {item.status === 'in_progress' ? 'Continue' : 'Start'}
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              ))}
-          </div>
+          {stats && (
+            <ProgressTracker
+              activities={activities}
+              progress={stats}
+            />
+          )}
         </div>
 
         {/* Enrollment Info */}
