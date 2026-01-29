@@ -4,12 +4,6 @@
  * Export all inquiry-related UI components.
  */
 
-/**
- * Inquiry Mode Components
- *
- * Export all inquiry-related UI components.
- */
-
 // Core display components
 export { BloomsBadge } from './BloomsBadge'
 export { QualityScoreDisplay } from './QualityScoreDisplay'
