@@ -1,14 +1,15 @@
 ---
 id: VIBE-0008
 title: Refactor Settings & Profile pages for AI-friendly development (2474 total lines)
-status: backlog
+status: done
 priority: high
 category: refactoring
 component: ui
 created: 2026-01-17
-updated: 2026-01-17
+updated: 2026-01-28
 effort: m
 assignee: ai-agent
+completedDate: 2026-01-28
 ---
 
 # Refactor Settings & Profile Pages for Vibe Coding

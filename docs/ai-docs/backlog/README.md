@@ -67,12 +67,12 @@ The codebase has **20+ files over 500 lines**, with the largest at **1134 lines*
 | 🔴 **1** | [VIBE-0001](./critical/VIBE-0001-activity-edit-refactor.md) | Activity Edit | 1134 | **Largest file** - break into feature folder |
 | 🔴 **2** | [VIBE-0002](./critical/VIBE-0002-case-mode-refactor.md) | Case Mode (all) | 3806 | **Most complex** - broken into 4 sub-items |
 | 🔴 **3** | [VIBE-0003](./critical/VIBE-0003-dashboard-refactor.md) | Dashboard | 977 | **Central hub** - high visibility for redesign |
-| 🔴 **4** | [VIBE-0004](./critical/VIBE-0004-exam-mode-refactor.md) | Exam Mode (all) | 1924 | Exam take + analytics + results |
+| ✅ **4** | [VIBE-0004](./completed/VIBE-0004-exam-mode-refactor.md) | Exam Mode (all) | 1924 | ✅ Completed 2026-01-29 |
 | 🟠 **5** | [VIBE-0005](./high/VIBE-0005-activity-pages-refactor.md) | Activity Create/Detail | 1464 | Core user journey pages |
 | 🟠 **6** | [VIBE-0006](./high/VIBE-0006-groups-pages-refactor.md) | Groups (all) | 2259 | Member management, group creation |
 | 🟠 **7** | [VIBE-0007](./high/VIBE-0007-certificates-refactor.md) | Certificates (all) | 2333 | Designer + progress tracking |
-| 🟠 **8** | [VIBE-0008](./high/VIBE-0008-settings-profile-refactor.md) | Settings & Profile | 2916 | User-facing settings pages |
-| 🟠 **9** | [VIBE-0009](./high/VIBE-0009-inquiry-mode-refactor.md) | Inquiry Mode (all) | 1476 | Third activity mode |
+| ✅ **8** | [VIBE-0008](./completed/VIBE-0008-settings-profile-refactor.md) | Settings & Profile | 2916 | ✅ Completed 2026-01-28 |
+| ✅ **9** | [VIBE-0009](./completed/VIBE-0009-inquiry-mode-refactor.md) | Inquiry Mode (all) | 1476 | ✅ Completed 2026-01-29 |
 
 **Total Lines to Refactor**: ~18,289 lines across 9 initiatives
 
@@ -108,7 +108,7 @@ src/features/
 | 🟠 High | 13 | **VIBE refactoring (5)**, Conventions, Error Handling, Toast, CI Testing |
 | 🟡 Medium | 7 | API Client, Form Validation, TypeScript, DB Migrations |
 | 🟢 Low | 5 | Keyboard Nav, i18n, Dark Mode, Code Splitting |
-| ✅ Completed | 2 | VIBE-0002B, VIBE-0002C |
+| ✅ Completed | 5 | VIBE-0002B, VIBE-0002C, VIBE-0004, VIBE-0008, VIBE-0009 |
 
 **Total Active Items**: 43 (including VIBE-0002 and VIBE-0003 sub-items)
 
@@ -135,7 +135,7 @@ src/features/
 | ↳ [VIBE-0003F](./critical/VIBE-0003F-dashboard-achievement-showcase.md) | Achievement Showcase with Tests | backlog | S | - |
 | ↳ [VIBE-0003G](./critical/VIBE-0003G-dashboard-certificate-progress.md) | Certificate Progress with Tests | backlog | M | - |
 | ↳ [VIBE-0003H](./critical/VIBE-0003H-dashboard-final-composition.md) | Final Composition & Validation | backlog | S | - |
-| [VIBE-0004](./critical/VIBE-0004-exam-mode-refactor.md) | Refactor Exam Mode pages | backlog | L | 1924 |
+| [VIBE-0004](./completed/VIBE-0004-exam-mode-refactor.md) | Refactor Exam Mode pages | ✅ done | L | 1924 |
 
 ### Other Critical Items
 
@@ -152,11 +152,11 @@ src/features/
 
 | ID | Title | Status | Effort | Lines |
 |----|-------|--------|--------|-------|
-| [VIBE-0005](./high/VIBE-0005-activity-pages-refactor.md) | Refactor Activity Create/Detail | backlog | M | 1464 |
-| [VIBE-0006](./high/VIBE-0006-groups-pages-refactor.md) | Refactor Groups pages | backlog | M | 2259 |
+| [VIBE-0005](./completed/VIBE-0005-activity-pages-refactor.md) | Refactor Activity Create/Detail | backlog | M | 1464 |
+| [VIBE-0006](./completed/VIBE-0006-groups-pages-refactor.md) | Refactor Groups pages | backlog | L | 2259 |
 | [VIBE-0007](./high/VIBE-0007-certificates-refactor.md) | Refactor Certificates pages | backlog | M | 2333 |
-| [VIBE-0008](./high/VIBE-0008-settings-profile-refactor.md) | Refactor Settings & Profile | backlog | M | 2916 |
-| [VIBE-0009](./high/VIBE-0009-inquiry-mode-refactor.md) | Refactor Inquiry Mode pages | backlog | M | 1476 |
+| [VIBE-0008](./completed/VIBE-0008-settings-profile-refactor.md) | Refactor Settings & Profile | ✅ done | M | 2916 |
+| [VIBE-0009](./completed/VIBE-0009-inquiry-mode-refactor.md) | Refactor Inquiry Mode pages | ✅ done | M | 1476 |
 
 ### Other High Items
 
