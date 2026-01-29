@@ -1,12 +1,13 @@
 ---
 id: VIBE-0006
 title: Refactor Groups pages for AI-friendly development (2259 total lines)
-status: backlog
+status: done
 priority: high
 category: refactoring
 component: ui
 created: 2026-01-17
-updated: 2026-01-23
+updated: 2026-01-29
+completedDate: 2026-01-29
 effort: l
 assignee: ai-agent
 children: [VIBE-0006A, VIBE-0006B, VIBE-0006C, VIBE-0006D, VIBE-0006E, VIBE-0006F]

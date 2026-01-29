@@ -1,12 +1,13 @@
 ---
 id: VIBE-0005
 title: Refactor Activity Create & Detail pages (1464 total lines)
-status: backlog
+status: done
 priority: high
 category: refactoring
 component: ui
 created: 2026-01-17
-updated: 2026-01-17
+updated: 2026-01-29
+completedDate: 2026-01-29
 effort: m
 assignee: ai-agent
 ---
