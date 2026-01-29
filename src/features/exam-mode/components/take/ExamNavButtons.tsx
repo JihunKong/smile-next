@@ -3,8 +3,24 @@
  *
  * Navigation buttons for moving between questions.
  *
- * @see VIBE-0004D
+ * @see VIBE-0004D, VIBE-0010
  */
+
+export interface ExamNavButtonsLabels {
+    previous: string
+    next: string
+    progress: string
+    of: string
+    answered: string
+}
+
+export const defaultExamNavButtonsLabels: ExamNavButtonsLabels = {
+    previous: 'Previous',
+    next: 'Next',
+    progress: 'Progress',
+    of: 'of',
+    answered: 'answered',
+}
 
 interface ExamNavButtonsProps {
     isFirstQuestion: boolean
@@ -14,6 +30,7 @@ interface ExamNavButtonsProps {
     onPrevious: () => void
     onNext: () => void
     onSubmit: () => void
+    labels?: Partial<ExamNavButtonsLabels>
 }
 
 export function ExamNavButtons({
@@ -24,7 +41,10 @@ export function ExamNavButtons({
     onPrevious,
     onNext,
     onSubmit,
+    labels: customLabels = {},
 }: ExamNavButtonsProps) {
+    const labels = { ...defaultExamNavButtonsLabels, ...customLabels }
+
     return (
         <div className="bg-white rounded-lg shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between">
@@ -36,11 +56,11 @@ export function ExamNavButtons({
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                    Previous
+                    {labels.previous}
                 </button>
 
                 <div className="flex-1 mx-4 text-center">
-                    <p className="text-sm text-gray-600 mb-2">Progress</p>
+                    <p className="text-sm text-gray-600 mb-2">{labels.progress}</p>
                     <div className="bg-gray-200 rounded-full h-3">
                         <div
                             className="bg-green-500 h-3 rounded-full transition-all"
@@ -48,7 +68,7 @@ export function ExamNavButtons({
                         />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                        {answeredCount} of {totalQuestions} answered
+                        {answeredCount} {labels.of} {totalQuestions} {labels.answered}
                     </p>
                 </div>
 
@@ -60,7 +80,7 @@ export function ExamNavButtons({
                             : 'bg-blue-600 hover:bg-blue-700 text-white'
                         }`}
                 >
-                    Next
+                    {labels.next}
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>

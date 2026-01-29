@@ -3,8 +3,40 @@
  *
  * Modal for confirming exam submission with summary statistics.
  *
- * @see VIBE-0004D
+ * @see VIBE-0004D, VIBE-0010
  */
+
+export interface SubmitConfirmModalLabels {
+    title: string
+    subtitle: string
+    warningTitle: string
+    warningText: string
+    totalQuestions: string
+    answered: string
+    unanswered: string
+    flaggedForReview: string
+    timeRemaining: string
+    cancel: string
+    submit: string
+    submitting: string
+    submitWithUnanswered: string
+}
+
+export const defaultSubmitConfirmModalLabels: SubmitConfirmModalLabels = {
+    title: 'Submit Exam?',
+    subtitle: 'Are you sure you want to submit? This action cannot be undone.',
+    warningTitle: 'Warning: Unanswered Questions',
+    warningText: 'They will be marked as incorrect.',
+    totalQuestions: 'Total Questions:',
+    answered: 'Answered:',
+    unanswered: 'Unanswered:',
+    flaggedForReview: 'Flagged for Review:',
+    timeRemaining: 'Time Remaining:',
+    cancel: 'Cancel',
+    submit: 'Submit',
+    submitting: 'Submitting...',
+    submitWithUnanswered: 'Submit with {count} Unanswered',
+}
 
 interface SubmitConfirmModalProps {
     isOpen: boolean
@@ -15,6 +47,7 @@ interface SubmitConfirmModalProps {
     flaggedCount: number
     remainingTime: string
     isSubmitting: boolean
+    labels?: Partial<SubmitConfirmModalLabels>
 }
 
 export function SubmitConfirmModal({
@@ -26,10 +59,16 @@ export function SubmitConfirmModal({
     flaggedCount,
     remainingTime,
     isSubmitting,
+    labels: customLabels = {},
 }: SubmitConfirmModalProps) {
+    const labels = { ...defaultSubmitConfirmModalLabels, ...customLabels }
     const unansweredCount = totalQuestions - answeredCount
 
     if (!isOpen) return null
+
+    const submitButtonText = unansweredCount > 0
+        ? labels.submitWithUnanswered.replace('{count}', unansweredCount.toString())
+        : labels.submit
 
     return (
         <div
@@ -43,8 +82,8 @@ export function SubmitConfirmModal({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Submit Exam?</h2>
-                    <p className="text-gray-600">Are you sure you want to submit? This action cannot be undone.</p>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{labels.title}</h2>
+                    <p className="text-gray-600">{labels.subtitle}</p>
                 </div>
 
                 {/* Unanswered Questions Warning Banner */}
@@ -55,10 +94,10 @@ export function SubmitConfirmModal({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                             <div>
-                                <p className="font-bold text-yellow-800">Warning: Unanswered Questions</p>
+                                <p className="font-bold text-yellow-800">{labels.warningTitle}</p>
                                 <p className="text-sm text-yellow-700">
                                     You have <span className="font-bold">{unansweredCount}</span> unanswered question(s).
-                                    <strong> They will be marked as incorrect.</strong>
+                                    <strong> {labels.warningText}</strong>
                                 </p>
                             </div>
                         </div>
@@ -68,19 +107,19 @@ export function SubmitConfirmModal({
                 {/* Submission Summary */}
                 <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2 text-sm">
                     <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Total Questions:</span>
+                        <span className="text-gray-600">{labels.totalQuestions}</span>
                         <span className="font-semibold">{totalQuestions}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Answered:</span>
+                        <span className="text-gray-600">{labels.answered}</span>
                         <span className="font-semibold text-green-600">{answeredCount}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Unanswered:</span>
+                        <span className="text-gray-600">{labels.unanswered}</span>
                         <span className="font-semibold text-red-600">{unansweredCount}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Flagged for Review:</span>
+                        <span className="text-gray-600">{labels.flaggedForReview}</span>
                         <span className="font-semibold text-yellow-600">{flaggedCount}</span>
                     </div>
                 </div>
@@ -89,7 +128,7 @@ export function SubmitConfirmModal({
                     <svg className="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Time Remaining: <span className="font-semibold">{remainingTime}</span>
+                    {labels.timeRemaining} <span className="font-semibold">{remainingTime}</span>
                 </p>
 
                 <div className="flex space-x-3">
@@ -98,7 +137,7 @@ export function SubmitConfirmModal({
                         disabled={isSubmitting}
                         className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50"
                     >
-                        Cancel
+                        {labels.cancel}
                     </button>
                     <button
                         onClick={onConfirm}
@@ -111,14 +150,14 @@ export function SubmitConfirmModal({
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                 </svg>
-                                Submitting...
+                                {labels.submitting}
                             </>
                         ) : (
                             <>
                                 <svg className="w-4 h-4 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
-                                {unansweredCount > 0 ? `Submit with ${unansweredCount} Unanswered` : 'Submit'}
+                                {submitButtonText}
                             </>
                         )}
                     </button>

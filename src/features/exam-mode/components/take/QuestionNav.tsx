@@ -3,8 +3,24 @@
  *
  * Displays question navigation dots/buttons with status indicators.
  *
- * @see VIBE-0004D
+ * @see VIBE-0004D, VIBE-0010
  */
+
+export interface QuestionNavLabels {
+    progress: string
+    of: string
+    answered: string
+    questionTitle: string
+    flagged: string
+}
+
+export const defaultQuestionNavLabels: QuestionNavLabels = {
+    progress: 'Progress',
+    of: 'of',
+    answered: 'answered',
+    questionTitle: 'Question',
+    flagged: '(Flagged)',
+}
 
 interface QuestionNavProps {
     questions: { id: string }[]
@@ -12,6 +28,7 @@ interface QuestionNavProps {
     answers: Record<string, string[]>
     flaggedQuestions: Set<string>
     onSelectQuestion: (index: number) => void
+    labels?: Partial<QuestionNavLabels>
 }
 
 export function QuestionNav({
@@ -20,28 +37,27 @@ export function QuestionNav({
     answers,
     flaggedQuestions,
     onSelectQuestion,
+    labels: customLabels = {},
 }: QuestionNavProps) {
+    const labels = { ...defaultQuestionNavLabels, ...customLabels }
+    const answeredCount = Object.keys(answers).filter((qId) => answers[qId]?.length > 0).length
+
     return (
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             {/* Progress Bar */}
             <div className="mb-4">
                 <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                    <span className="font-medium">Progress</span>
+                    <span className="font-medium">{labels.progress}</span>
                     <span>
-                        <span className="font-semibold">
-                            {Object.keys(answers).filter((qId) => answers[qId]?.length > 0).length}
-                        </span>{' '}
-                        of {questions.length} answered
+                        <span className="font-semibold">{answeredCount}</span>{' '}
+                        {labels.of} {questions.length} {labels.answered}
                     </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                     <div
                         className="bg-green-500 h-3 rounded-full transition-all"
                         style={{
-                            width: `${(Object.keys(answers).filter((qId) => answers[qId]?.length > 0).length /
-                                    questions.length) *
-                                100
-                                }%`,
+                            width: `${(answeredCount / questions.length) * 100}%`,
                         }}
                     />
                 </div>
@@ -64,7 +80,7 @@ export function QuestionNav({
                                         ? 'bg-green-500 text-white border-green-600'
                                         : 'bg-yellow-100 text-yellow-800 border-yellow-400'
                                 }`}
-                            title={`Question ${index + 1}${isFlagged ? ' (Flagged)' : ''}`}
+                            title={`${labels.questionTitle} ${index + 1}${isFlagged ? ` ${labels.flagged}` : ''}`}
                         >
                             {index + 1}
                         </button>

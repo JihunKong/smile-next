@@ -3,8 +3,20 @@
  *
  * Displays the exam countdown timer with visual indicators for warning states.
  *
- * @see VIBE-0004D
+ * @see VIBE-0004D, VIBE-0010
  */
+
+export interface ExamTimerLabels {
+    timeRemaining: string
+    question: string
+    of: string
+}
+
+export const defaultExamTimerLabels: ExamTimerLabels = {
+    timeRemaining: 'Time Remaining',
+    question: 'Question',
+    of: 'of',
+}
 
 interface ExamTimerProps {
     formattedTime: string
@@ -14,6 +26,7 @@ interface ExamTimerProps {
     isCritical?: boolean
     questionNumber: number
     totalQuestions: number
+    labels?: Partial<ExamTimerLabels>
 }
 
 export function ExamTimer({
@@ -24,7 +37,10 @@ export function ExamTimer({
     isCritical = false,
     questionNumber,
     totalQuestions,
+    labels: customLabels = {},
 }: ExamTimerProps) {
+    const labels = { ...defaultExamTimerLabels, ...customLabels }
+
     const timerColorClass = isCritical
         ? 'text-red-600'
         : isWarning
@@ -46,14 +62,14 @@ export function ExamTimer({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <div>
-                            <div className="text-xs text-gray-500">Time Remaining</div>
+                            <div className="text-xs text-gray-500">{labels.timeRemaining}</div>
                             <div className={`text-2xl font-bold ${timerColorClass}`}>
                                 {formattedTime}
                             </div>
                         </div>
                     </div>
                     <div className="text-sm text-gray-600">
-                        Question <span className="font-semibold">{questionNumber}</span> of <span>{totalQuestions}</span>
+                        {labels.question} <span className="font-semibold">{questionNumber}</span> {labels.of} <span>{totalQuestions}</span>
                     </div>
                 </div>
                 <div className="mt-2 bg-gray-200 rounded-full h-2">

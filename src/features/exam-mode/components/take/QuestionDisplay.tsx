@@ -3,11 +3,21 @@
  *
  * Displays the current question with answer choices.
  *
- * @see VIBE-0004D
+ * @see VIBE-0004D, VIBE-0010
  */
 
 import type { Question } from '@/features/exam-mode/types'
 import { AnswerChoice } from './AnswerChoice'
+
+export interface QuestionDisplayLabels {
+    of: string
+    contentProtected: string
+}
+
+export const defaultQuestionDisplayLabels: QuestionDisplayLabels = {
+    of: 'of',
+    contentProtected: 'Content Protected',
+}
 
 interface QuestionDisplayProps {
     question: Question
@@ -18,6 +28,7 @@ interface QuestionDisplayProps {
     isFlagged: boolean
     onSelectAnswer: (originalIndex: number) => void
     onToggleFlag: () => void
+    labels?: Partial<QuestionDisplayLabels>
 }
 
 export function QuestionDisplay({
@@ -29,12 +40,15 @@ export function QuestionDisplay({
     isFlagged,
     onSelectAnswer,
     onToggleFlag,
+    labels: customLabels = {},
 }: QuestionDisplayProps) {
+    const labels = { ...defaultQuestionDisplayLabels, ...customLabels }
+
     return (
         <div className="bg-white rounded-lg shadow-xl p-8 mb-6 exam-content relative">
             {/* Content Protection Notice */}
             <div className="absolute top-3 right-3 text-xs text-gray-400 opacity-50 pointer-events-none">
-                🔒 Content Protected
+                {labels.contentProtected}
             </div>
 
             {/* Question Number Badge */}
@@ -43,7 +57,7 @@ export function QuestionDisplay({
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-xl font-bold text-blue-600">{questionNumber}</span>
                     </div>
-                    <span className="text-sm text-gray-500">of {totalQuestions}</span>
+                    <span className="text-sm text-gray-500">{labels.of} {totalQuestions}</span>
                 </div>
                 <button
                     onClick={onToggleFlag}
@@ -63,7 +77,7 @@ export function QuestionDisplay({
 
             {/* Question Content */}
             <div className="mb-8 question-text">
-                <p className="text-xl text-gray-900 leading-relaxed" id="question-content">
+                <p className="text-xl text-gray-900 leading-relaxed" id="question-content" data-testid="question">
                     {question.content}
                 </p>
             </div>
